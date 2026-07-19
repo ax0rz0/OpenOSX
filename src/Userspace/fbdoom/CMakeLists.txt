@@ -31,6 +31,18 @@ if(NOT EXISTS "${PUREDARWIN_FBDOOM_SOURCE}/i_main.c")
     message(FATAL_ERROR "PUREDARWIN_FBDOOM_SOURCE='${PUREDARWIN_FBDOOM_SOURCE}' has no i_main.c")
 endif()
 
+if(NOT PUREDARWIN_CHOCOLATE_DOOM_SOURCE AND DEFINED ENV{PUREDARWIN_CHOCOLATE_DOOM_SOURCE})
+    set(PUREDARWIN_CHOCOLATE_DOOM_SOURCE "$ENV{PUREDARWIN_CHOCOLATE_DOOM_SOURCE}")
+endif()
+
+if(NOT PUREDARWIN_CHOCOLATE_DOOM_SOURCE)
+    message(FATAL_ERROR "PUREDARWIN_CHOCOLATE_DOOM_SOURCE must point to the patched chocolate-doom source (midifile.c, mus2mid.c, opl/)")
+endif()
+
+if(NOT EXISTS "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/midifile.c")
+    message(FATAL_ERROR "PUREDARWIN_CHOCOLATE_DOOM_SOURCE='${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}' has no midifile.c")
+endif()
+
 # Same file list as fbDOOM's own Makefile SRC_DOOM, minus i_joystick.o (no
 # joystick support glued up) and i_sound.o/i_cdmus.o (replaced by
 # i_sound_pd.c - real fbDOOM's i_sound_dummy.c is, despite the name, a real
@@ -58,10 +70,18 @@ foreach(_src ${_fbdoom_upstream_srcs})
     target_sources(fbdoom PRIVATE "${PUREDARWIN_FBDOOM_SOURCE}/${_src}")
 endforeach()
 target_sources(fbdoom PRIVATE
+    "${PUREDARWIN_FBDOOM_SOURCE}/i_oplmusic.c"
     i_video_pd.c
     i_input_pd.c
     i_sound_pd.c
-    i_music_pd.c
+    i_music_opl_glue.c
+    pd_choco_compat.c
+    opl/opl_pd.c
+    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/midifile.c"
+    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/mus2mid.c"
+    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/opl/opl.c"
+    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/opl/opl_queue.c"
+    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/opl/opl3.c"
 )
 
 get_target_property(_fbdoom_opts fbdoom COMPILE_OPTIONS)
@@ -71,7 +91,11 @@ if(_fbdoom_opts)
 endif()
 
 target_include_directories(fbdoom PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/opl"
     "${PUREDARWIN_FBDOOM_SOURCE}"
+    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}"
+    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/opl"
     "${CMAKE_SOURCE_DIR}/src/Libraries/PDGOP/include"
 )
 target_compile_definitions(fbdoom PRIVATE NORMALUNIX)

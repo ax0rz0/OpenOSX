@@ -1,0 +1,41 @@
+--- a/midifile.c	1969-12-31 19:00:01.000000000 -0500
++++ b/midifile.c	2026-07-19 07:19:01.354440932 -0400
+@@ -26,6 +26,14 @@
+ #include "m_misc.h"
+ #include "midifile.h"
+ 
++/* PureDarwin: prototypes for the pd_choco_compat.c helpers (this file's
++ * chocolate-doom 3.x home declares these in i_swap.h/i_system.h/m_misc.h,
++ * which the older fbDOOM base tree here does not). */
++unsigned short SDL_SwapBE16(unsigned short x);
++unsigned int SDL_SwapBE32(unsigned int x);
++void *I_Realloc(void *ptr, size_t size);
++FILE *M_fopen(const char *filename, const char *mode);
++
+ #define HEADER_CHUNK_ID "MThd"
+ #define TRACK_CHUNK_ID  "MTrk"
+ #define MAX_BUFFER_SIZE 0x10000
+@@ -35,19 +43,19 @@
+ #pragma pack(push, 1)
+ #endif
+ 
+-typedef PACKED_STRUCT (
++typedef struct
+ {
+     byte chunk_id[4];
+     unsigned int chunk_size;
+-}) chunk_header_t;
++} PACKEDATTR chunk_header_t;
+ 
+-typedef PACKED_STRUCT (
++typedef struct
+ {
+     chunk_header_t chunk_header;
+     unsigned short format_type;
+     unsigned short num_tracks;
+     unsigned short time_division;
+-}) midi_header_t;
++} PACKEDATTR midi_header_t;
+ 
+ // haleyjd 09/09/10: packing off.
+ #ifdef _MSC_VER

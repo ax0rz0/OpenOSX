@@ -99,6 +99,9 @@ bool RavynHDAudio::init(OSDictionary *properties)
     fPcmPhys = 0;
     fOutStreamIndex = 0;
     fWriteOffset = 0;
+    fTotalWritten = 0;
+    fConsumedBase = 0;
+    fLastLpib = 0;
     fLock = IOSimpleLockAlloc();
     return fLock != 0;
 }
@@ -604,6 +607,9 @@ void RavynHDAudio::stopStream()
     uint32_t ctl = *(volatile uint32_t *)(fRegs + sdBase + SD_CTL_STS);
     *(volatile uint32_t *)(fRegs + sdBase + SD_CTL_STS) = ctl & ~SD_CTL_RUN;
     fWriteOffset = 0;
+    fTotalWritten = 0;
+    fConsumedBase = 0;
+    fLastLpib = 0;
     IOSimpleLockUnlock(fLock);
 }
 
@@ -624,18 +630,44 @@ size_t RavynHDAudio::writePCM(const uint8_t *data, size_t len)
 
     size_t written = 0;
     while (written < len) {
-        // Free space = distance from the write pointer forward to the
-        // hardware read pointer, minus a one-byte gap to disambiguate
-        // "empty" from "full" (both look like writeOffset == lpib
-        // otherwise). Once the stream isn't running yet, LPIB reads 0 and
-        // the whole ring counts as free.
+        // Free space comes from absolute producer/consumer positions, NOT
+        // from the raw ring-offset distance: with offsets alone, the
+        // moment DMA overtakes the write pointer (one late burst from a
+        // bursty producer is enough) the distance calculation inverts -
+        // the ring looks almost empty, the producer starts writing BEHIND
+        // the hardware read pointer, and the device spends the rest of
+        // the ring replaying stale data while fresh audio lands where it
+        // won't play until the next wrap. Once out of phase it never
+        // recovers, which garbled all tonal audio into ~40ms smear.
+        // Tracking bytes-written vs bytes-consumed (LPIB + wrap count)
+        // makes underrun detectable, and the recovery below resyncs.
         uint32_t ctl = *(volatile uint32_t *)(fRegs + sdBase + SD_CTL_STS);
         size_t freeSpace;
         if (!(ctl & SD_CTL_RUN)) {
             freeSpace = kHDARingBufBytes - 1;
         } else {
             uint32_t lpib = *(volatile uint32_t *)(fRegs + sdBase + SD_LPIB) % kHDARingBufBytes;
-            freeSpace = (lpib + kHDARingBufBytes - 1 - fWriteOffset) % kHDARingBufBytes;
+            if (lpib < fLastLpib)
+                fConsumedBase += kHDARingBufBytes;
+            fLastLpib = lpib;
+            uint64_t consumed = fConsumedBase + lpib;
+
+            if (consumed >= fTotalWritten) {
+                // Underrun: DMA ran past everything we wrote and is now
+                // playing stale ring contents. Silence the ring so the
+                // stale data can't be heard again, and restart the
+                // producer a small lead ahead of the hardware so the next
+                // writes play promptly but can't be immediately lapped.
+                const uint32_t lead = 8192; // ~42ms at 48k/16/stereo
+                bzero(fPcmVirt, kHDARingBufBytes);
+                fWriteOffset = (lpib + lead) % kHDARingBufBytes;
+                fTotalWritten = consumed + lead;
+            }
+
+            uint64_t queued = fTotalWritten - consumed;
+            freeSpace = (queued >= kHDARingBufBytes - 1)
+                            ? 0
+                            : (kHDARingBufBytes - 1 - (size_t)queued);
         }
         if (freeSpace == 0) {
             IOSimpleLockUnlock(fLock);
@@ -649,11 +681,15 @@ size_t RavynHDAudio::writePCM(const uint8_t *data, size_t len)
         if (chunk > freeSpace) chunk = freeSpace;
         bcopy(data + written, fPcmVirt + fWriteOffset, chunk);
         fWriteOffset = (fWriteOffset + chunk) % kHDARingBufBytes;
+        fTotalWritten += chunk;
         written += chunk;
     }
 
     uint32_t ctl = *(volatile uint32_t *)(fRegs + sdBase + SD_CTL_STS);
     if (!(ctl & SD_CTL_RUN)) {
+        fConsumedBase = 0;
+        fLastLpib = 0;
+        fTotalWritten = fWriteOffset; // bytes staged before the stream ran
         *(volatile uint32_t *)(fRegs + sdBase + SD_CTL_STS) = ctl | SD_CTL_RUN;
     }
 

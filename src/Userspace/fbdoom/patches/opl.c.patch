@@ -1,0 +1,119 @@
+--- a/opl/opl.c	1969-12-31 19:00:01.000000000 -0500
++++ b/opl/opl.c	2026-07-19 07:14:17.879907080 -0400
+@@ -21,33 +21,18 @@
+ #include <stdlib.h>
+ #include <string.h>
+ 
+-#include "SDL.h"
+ 
+ #include "opl.h"
+ #include "opl_internal.h"
+ 
+ //#define OPL_DEBUG_TRACE
+ 
+-#ifdef EMSCRIPTEN
+-#include <emscripten.h>
+-#endif
+ 
+ 
+ static opl_driver_t *drivers[] =
+ {
+-#if (defined(__i386__) || defined(__x86_64__)) && defined(HAVE_IOPERM)
+-    &opl_linux_driver,
+-#endif
+-#if defined(HAVE_LIBI386) || defined(HAVE_LIBAMD64)
+-    &opl_openbsd_driver,
+-#endif
+-#ifdef _WIN32
+-    &opl_win32_driver,
+-#endif
+-#ifndef DISABLE_SDL2MIXER
+-    &opl_sdl_driver,
+-#endif // DISABLE_SDL2MIXER
+-    NULL
++    &opl_pd_driver,
++    NULL,
+ };
+ 
+ static opl_driver_t *driver = NULL;
+@@ -447,69 +432,26 @@
+     }
+ }
+ 
+-typedef struct
+-{
+-    int finished;
+-
+-    SDL_mutex *mutex;
+-    SDL_cond *cond;
+-} delay_data_t;
+-
+-static void DelayCallback(void *_delay_data)
+-{
+-    delay_data_t *delay_data = _delay_data;
+-
+-    SDL_LockMutex(delay_data->mutex);
+-    delay_data->finished = 1;
+-
+-    SDL_CondSignal(delay_data->cond);
+-
+-    SDL_UnlockMutex(delay_data->mutex);
+-}
++// Delay for the specified number of microseconds after the OPL
++// subsystem is initialized.
++//
++// The stock implementation schedules a callback and blocks on an SDL
++// condvar until the (separate) audio thread renders far enough to fire
++// it. PureDarwin's driver is single-threaded pull - there is no audio
++// thread to make progress while we block, so instead the driver advances
++// the emulated clock synchronously (rendering into a scratch buffer and
++// firing any due callbacks along the way).
+ 
+-// Delay for specified number of microseconds after OPL subsystem is initialized
++void I_PD_OPL_AdvanceSync(uint64_t us);
+ 
+ void OPL_Delay(uint64_t us)
+ {
+-    delay_data_t delay_data;
+-
+     if (driver == NULL)
+     {
+         return;
+     }
+ 
+-    // Create a callback that will signal this thread after the
+-    // specified time.
+-
+-    // Note that this is not just a simple time-based delay, it will ensure
+-    // that the OPL system is initialized and the queue has begun processing
+-    // before releasing the mutex lock
+-
+-    delay_data.finished = 0;
+-    delay_data.mutex = SDL_CreateMutex();
+-    delay_data.cond = SDL_CreateCond();
+-
+-    OPL_SetCallback(us, DelayCallback, &delay_data);
+-
+-    // Wait until the callback is invoked.
+-
+-    SDL_LockMutex(delay_data.mutex);
+-
+-    while (!delay_data.finished)
+-    {
+-        SDL_CondWait(delay_data.cond, delay_data.mutex);
+-#ifdef EMSCRIPTEN
+-        // Use async sleep to avoid locking browser main thread
+-        emscripten_sleep(us / 1000);
+-#endif
+-    }
+-
+-    SDL_UnlockMutex(delay_data.mutex);
+-
+-    // Clean up.
+-
+-    SDL_DestroyMutex(delay_data.mutex);
+-    SDL_DestroyCond(delay_data.cond);
++    I_PD_OPL_AdvanceSync(us);
+ }
+ 
+ void OPL_SetPaused(int paused)

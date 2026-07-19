@@ -64,6 +64,9 @@ private:
     uint64_t             fPcmPhys;
     uint32_t             fOutStreamIndex;  // which SDn register block is our output stream
     uint32_t             fWriteOffset;     // producer position in fPcmVirt, bytes
+    uint64_t             fTotalWritten;    // producer bytes since stream start
+    uint64_t             fConsumedBase;    // LPIB wrap accumulator (bytes)
+    uint32_t             fLastLpib;        // last LPIB sample, for wrap detection
     IOSimpleLock         *fLock;
 
     bool  resetController();

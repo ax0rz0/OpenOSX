@@ -424,7 +424,7 @@ EOF
     chmod 755  $staging/var/empty
 
     echo "Image X11 executables:"
-    for executable in Xvfb Xorg xeyes xterm i3 i3bar i3-msg startx; do
+    for executable in Xvfb Xorg xeyes xterm i3 i3bar i3-msg startx dmenu; do
       found=
       for candidate in \
         "$staging/bin/$executable" \

@@ -19,9 +19,10 @@
 //	i_sound_dummy.c for the same access pattern), resampled and
 //	panned to 16-bit/48000 Hz/stereo and streamed to /dev/dsp0 (real
 //	Intel HDAudio via RavynHDAudio - see src/Userspace/pcmplay, the
-//	existing minimal CLI player for the same device/format). Music
-//	(MUS parsing + synthesis) lives in i_music_pd.c; I_PD_MixMusicSample()
-//	is mixed in here alongside the sfx channels each output sample.
+//	existing minimal CLI player for the same device/format). Music is
+//	real OPL: i_oplmusic.c (fbDOOM's own DMX-style driver + the WAD's
+//	GENMIDI patches) through software OPL3 emulation (see opl/);
+//	I_PD_OPL_Mix() adds its output into each rendered chunk here.
 //
 //-----------------------------------------------------------------------------
 
@@ -34,6 +35,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 #define SRC_RATE 11025
 #define OUT_RATE 48000
@@ -51,11 +53,14 @@ struct pd_channel {
 static struct pd_channel channels[MAX_CHANNELS];
 static int dsp_fd = -1;
 
-extern int I_PD_MixMusicSample(void); /* i_music_pd.c */
+extern void I_PD_OPL_Mix(short *dest, unsigned int nframes); /* opl/opl_pd.c */
 
 int snd_sfxdevice = 0;
 int snd_musicdevice = 0;
-int snd_samplerate = SRC_RATE;
+/* Rate the OPL music synth runs at (i_oplmusic.c passes this to
+ * OPL_SetSampleRate) - the OUTPUT rate, not the sfx lumps' 11025 Hz
+ * source rate (that is SRC_RATE, used only by the resampler here). */
+int snd_samplerate = OUT_RATE;
 
 void I_InitSound(boolean use_sfx_prefix)
 {
@@ -101,7 +106,7 @@ int I_StartSound(sfxinfo_t *sfxinfo, int channel, int vol, int sep)
     if (lumplen <= 8)
         return -1;
 
-    const unsigned char *raw = (const unsigned char *)W_CacheLumpNum(lumpnum, PU_CACHE);
+    const unsigned char *raw = (const unsigned char *)W_CacheLumpNum(lumpnum, PU_STATIC);
 
     channels[channel].data = raw + 8;
     channels[channel].length = lumplen - 8;
@@ -140,12 +145,40 @@ void I_PrecacheSounds(sfxinfo_t *sounds, int num_sounds)
 
 void I_UpdateSound(void)
 {
-    /* Called once per game tic (35 Hz); write that tic's worth of mixed
-     * audio. Accumulate the fractional frame count so 48000/35 (not an
-     * integer) doesn't drift over time. */
+    /* Called once per D_DoomLoop() iteration - NOT once per game tic:
+     * TryRunTics() may run several tics back-to-back when catching up
+     * after a stall (slow render, scheduling jitter), but S_UpdateSounds()
+     * (and so this function) still only fires once per iteration. Assuming
+     * a fixed 1/35s of audio per call falls behind real time under any
+     * hitch, starving the HDAudio DMA ring; real hardware then just
+     * replays its last buffer forever (heard as crackling settling into a
+     * frozen, looping sound). Pace by actual elapsed wall-clock time
+     * instead so we always produce however much audio real time demands,
+     * however irregularly we're called. */
+    static struct timespec prev;
+    static boolean have_prev = false;
     static unsigned accum_milli = 0; /* fractional frames, in thousandths */
-    unsigned frames_milli = 48000000u / 35u;
-    accum_milli += frames_milli;
+
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+
+    if (!have_prev) {
+        prev = now;
+        have_prev = true;
+    }
+
+    long long elapsed_ns = (long long)(now.tv_sec - prev.tv_sec) * 1000000000ll +
+                           (now.tv_nsec - prev.tv_nsec);
+    if (elapsed_ns < 0)
+        elapsed_ns = 0;
+    /* Cap a single catch-up burst so a genuine long pause (e.g. paused in a
+     * debugger) doesn't demand seconds of audio in one shot. */
+    if (elapsed_ns > 200000000ll)
+        elapsed_ns = 200000000ll;
+    prev = now;
+
+    unsigned long long frames_milli = (unsigned long long)elapsed_ns * OUT_RATE / 1000000ull;
+    accum_milli += (unsigned)frames_milli;
     unsigned frames = accum_milli / 1000u;
     accum_milli -= frames * 1000u;
 
@@ -160,8 +193,7 @@ void I_UpdateSound(void)
             chunk = 1024;
 
         for (unsigned i = 0; i < chunk; i++) {
-            int music = I_PD_MixMusicSample();
-            int left = music, right = music;
+            int left = 0, right = 0;
 
             for (int c = 0; c < MAX_CHANNELS; c++) {
                 struct pd_channel *ch = &channels[c];
@@ -174,7 +206,14 @@ void I_UpdateSound(void)
                     continue;
                 }
 
-                int sample = ((int)ch->data[idx] - 128) << 8;
+                /* Linear interpolation between adjacent source samples
+                 * instead of nearest-neighbor: point-sampling an 8-bit
+                 * source up to 48000 Hz (~4.35x) is a well-known source of
+                 * audible aliasing/crackling. */
+                int s0 = (int)ch->data[idx] - 128;
+                int s1 = (idx + 1 < ch->length) ? (int)ch->data[idx + 1] - 128 : s0;
+                unsigned frac = ch->pos & 0xffffu; /* Q16 fractional position */
+                int sample = (s0 * (int)(65536u - frac) + s1 * (int)frac) >> 8;
                 left += (sample * ch->leftvol) / 127;
                 right += (sample * ch->rightvol) / 127;
 
@@ -189,6 +228,10 @@ void I_UpdateSound(void)
             buf[i * 2] = (short)left;
             buf[i * 2 + 1] = (short)right;
         }
+
+        /* Add the OPL music on top of the sfx mix (renders the song
+         * sample-accurately and advances its sequencer clock). */
+        I_PD_OPL_Mix(buf, chunk);
 
         ssize_t want = (ssize_t)chunk * 4;
         ssize_t off = 0;

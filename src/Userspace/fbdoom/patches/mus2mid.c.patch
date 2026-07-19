@@ -1,0 +1,20 @@
+--- a/mus2mid.c	1969-12-31 19:00:01.000000000 -0500
++++ b/mus2mid.c	2026-07-19 07:17:05.423137149 -0400
+@@ -54,7 +54,7 @@
+ } midievent;
+ 
+ // Structure to hold MUS file header
+-typedef PACKED_STRUCT (
++typedef struct
+ {
+     byte id[4];
+     unsigned short scorelength;
+@@ -62,7 +62,7 @@
+     unsigned short primarychannels;
+     unsigned short secondarychannels;
+     unsigned short instrumentcount;
+-}) musheader;
++} PACKEDATTR musheader;
+ 
+ // Standard MIDI type 0 header + track header
+ static const byte midiheader[] =
