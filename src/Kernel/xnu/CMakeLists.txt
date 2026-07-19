@@ -182,12 +182,10 @@ target_include_directories(xnu_kernel_private_headers INTERFACE
     ${CMAKE_CURRENT_BINARY_DIR}/xnu_header_install/System/Library/Frameworks/Kernel.framework/Versions/A/PrivateHeaders
 )
 
-
-
 externalproject_add(xnu
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/xnu_build
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
-    CONFIGURE_COMMAND "" # disable auto CMake configure - see xnu_headers.extproj comment above
+    CONFIGURE_COMMAND "" # disable auto CMake configure
     BUILD_COMMAND
         ${CMAKE_COMMAND}
             -D XNU_SRC=${CMAKE_CURRENT_SOURCE_DIR}
