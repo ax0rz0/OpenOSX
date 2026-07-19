@@ -119,7 +119,7 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/xnu_header_install)
 externalproject_add(xnu_headers.extproj
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/xnu_header_build
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
-    CONFIGURE_COMMAND true # disable auto CMake configure
+    CONFIGURE_COMMAND "" # disable auto CMake configure
     BUILD_COMMAND
         ${CMAKE_COMMAND}
             -D XNU_SRC=${CMAKE_CURRENT_SOURCE_DIR}
@@ -149,7 +149,7 @@ externalproject_add(xnu_headers.extproj
             BUILD_WERROR=0 DO_CTFMERGE=0 KERNEL_CONFIGS=${PUREDARWIN_XNU_KERNEL_CONFIG}
             SRCROOT=${CMAKE_CURRENT_SOURCE_DIR} OBJROOT=<BINARY_DIR>
             DSTROOT=${CMAKE_CURRENT_BINARY_DIR}/xnu_header_install
-    INSTALL_COMMAND true # installed during build
+    INSTALL_COMMAND "" # installed during build
     USES_TERMINAL_CONFIGURE TRUE
     USES_TERMINAL_BUILD TRUE
 )
@@ -187,7 +187,7 @@ target_include_directories(xnu_kernel_private_headers INTERFACE
 externalproject_add(xnu
     PREFIX ${CMAKE_CURRENT_BINARY_DIR}/xnu_build
     SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}
-    CONFIGURE_COMMAND true # disable auto CMake configure
+    CONFIGURE_COMMAND "" # disable auto CMake configure - see xnu_headers.extproj comment above
     BUILD_COMMAND
         ${CMAKE_COMMAND}
             -D XNU_SRC=${CMAKE_CURRENT_SOURCE_DIR}
@@ -231,7 +231,7 @@ externalproject_add(xnu
             BUILD_WERROR=0 DO_CTFMERGE=0 KERNEL_CONFIGS=${PUREDARWIN_XNU_KERNEL_CONFIG}
             SRCROOT=${CMAKE_CURRENT_SOURCE_DIR} OBJROOT=<BINARY_DIR>
             SYMROOT=${CMAKE_CURRENT_BINARY_DIR}/xnu_sym DSTROOT=${CMAKE_CURRENT_BINARY_DIR}/xnu
-    INSTALL_COMMAND true # installed during build
+    INSTALL_COMMAND "" # installed during build
     USES_TERMINAL_CONFIGURE TRUE
     USES_TERMINAL_BUILD TRUE
 )
