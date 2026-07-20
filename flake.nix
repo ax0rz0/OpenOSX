@@ -29,18 +29,6 @@
             if fbdoomExternalSrcEnv == "" then null
             else builtins.path { path = /. + fbdoomExternalSrcEnv; name = "fbdoom-external-src"; };
 
-          # Real OPL music (i_music_opl_glue.c/opl_pd.c drive fbDOOM's own
-          # i_oplmusic.c against software OPL3 emulation) needs
-          # midifile.c/mus2mid.c and the opl/ library, which fbDOOM's own
-          # tree doesn't ship (it predates chocolate-doom's OPL rewrite).
-          # Rather than vendoring edited copies of someone else's GPL
-          # source into this repo, fetch nixpkgs' own pinned
-          # chocolate-doom release tarball and apply our small patch set
-          # on top at build time - same "treat upstream as hostile,
-          # narrow patches only" spirit as the rest of this component.
-          # opl_pd.c (the PureDarwin single-threaded pull backend replacing
-          # opl_sdl.c) and i_music_opl_glue.c are entirely our own files and
-          # live directly in src/Userspace/fbdoom, not here.
           chocolateDoomPatchedSrc = pkgs.runCommand "puredarwin-chocolate-doom-patched" { } ''
             mkdir -p $out
             cp -r ${pkgs.chocolate-doom.src}/opl $out/opl

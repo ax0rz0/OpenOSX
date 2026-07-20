@@ -132,6 +132,7 @@ ${if rootFsType == "hfs" then ''
       var/cache \
       var/cache/fontconfig \
       var/root \
+      var/root/.cache \
       var/run \
       var/log \
       var/tmp \
@@ -486,6 +487,7 @@ EOF
       "$staging/tmp/.X11-unix"
 
     chmod 700  $staging/var/root
+    chmod 755  $staging/var/root/.cache
     chmod 755  $staging/var/empty
 
     echo "Image X11 executables:"

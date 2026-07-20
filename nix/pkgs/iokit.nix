@@ -24,13 +24,6 @@ stdenv.mkDerivation {
 
   dontUnpack = true;
 
-  # Just the final dylib link step: libIOKitCF.a (src/Libraries/IOKit/
-  # IOKitLibCF.c, real MIG-based IOServiceGetMatchingService/
-  # IORegistryEntryCreateCFProperty/etc - see that file's own comment)
-  # already got compiled as part of the main in-tree libSystem build
-  # (which has the XNU-header/MIG machinery this needs), deliberately
-  # without CoreFoundation's real headers. Link it against real CF here,
-  # matching every other "-lCoreFoundation" consumer (fastfetch.nix etc).
   buildPhase = ''
     runHook preBuild
 

@@ -60,7 +60,6 @@ stdenv.mkDerivation {
       -kext "$KEXTS/IONetworkingFamily.kext" \
       -kext "$KEXTS/PDE1000.kext" \
       -kext "$KEXTS/RavynHDAudio.kext" \
-      -kext "$KEXTS/ApplePS2Controller.kext" \
       "''${codeless[@]}" \
       ${lib.optionalString classic "-classic"} \
       -o kernel
