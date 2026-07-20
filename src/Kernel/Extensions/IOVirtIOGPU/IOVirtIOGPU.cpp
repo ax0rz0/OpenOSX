@@ -13,8 +13,12 @@
 
 #include "IOVirtIOGPU.h"
 #include <IOKit/IOLib.h>
+#include <IOKit/IOPlatformExpert.h>
 #include <kern/thread_call.h>
 #include <sys/errno.h>
+
+extern "C" int switch_to_video_console(void);
+extern "C" boolean_t PE_parse_boot_argn(const char *arg_string, void *arg_ptr, int max_arg);
 
 #define super IOFramebuffer
 OSDefineMetaClassAndStructors(IOVirtIOGPU, IOFramebuffer);
@@ -354,6 +358,35 @@ IOVirtIOGPU::start(IOService *provider)
 
     DEBUG("virtio-gpu scanout ready: %ux%u pitch=%u fb=%p (phys 0x%llx)\n",
           fWidth, fHeight, fPitch, fFbBase, fFbPhys);
+
+    IOPlatformExpert *pe = getPlatform();
+    if (pe) {
+        PE_Video consoleInfo;
+        consoleInfo.v_baseAddr = (unsigned long)fFbPhys | 1; // force mapping
+        consoleInfo.v_width = fWidth;
+        consoleInfo.v_height = fHeight;
+        consoleInfo.v_depth = 32;
+        consoleInfo.v_rowBytes = fPitch;
+        consoleInfo.v_display = GRAPHICS_MODE;
+        consoleInfo.v_offset = 0;
+        consoleInfo.v_length = 0;
+        consoleInfo.v_rotate = 0;
+        consoleInfo.v_scale = kPEScaleFactor1x;
+
+        IOReturn ret = pe->setConsoleInfo(&consoleInfo, kPEGraphicsMode);
+        if (ret != kIOReturnSuccess) {
+            DEBUG("setConsoleInfo failed: %d\n", ret);
+        } else {
+            DEBUG("kernel graphics console initialized on virtio-gpu\n");
+            boolean_t useGopConsole = false;
+            if (PE_parse_boot_argn("gopconsole", &useGopConsole, sizeof(useGopConsole)) && useGopConsole) {
+                int oldConsole = switch_to_video_console();
+                pe->setConsoleInfo(&consoleInfo, kPEAcquireScreen);
+                pe->setConsoleInfo(&consoleInfo, kPETextScreen);
+                DEBUG("active console switched to virtio-gpu video, old console=%d\n", oldConsole);
+            }
+        }
+    }
 
     fFlushCall = thread_call_allocate(flushCallback, this);
     if (fFlushCall)

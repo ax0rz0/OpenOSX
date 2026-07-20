@@ -26,7 +26,7 @@
   # xnu-loader reads this off the ESP at \EFI\BOOT\boot-args.txt
   # it falls back if it cannot find a boot-args.txt, so not strictly needed here
   # but generally nice to have so we can override things easily now
-, bootArgs ? "-v debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1"
+, bootArgs ? "-v debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 vgpu_debug=1"
 }:
 
 assert lib.isDerivation baseSystem;
@@ -122,6 +122,7 @@ ${if rootFsType == "hfs" then ''
       usr/share/X11 \
       bin \
       sbin \
+      boot \
       dev \
       etc \
       etc/fonts \
@@ -220,7 +221,48 @@ EOF
     cat > $staging/etc/init/rc.boot <<'EOF'
 #!/bin/sh
 
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+for svc in /etc/init/services/*; do
+    [ -d "$svc" ] || continue
+    if [ -x "$svc/start" ]; then
+        "$svc/start"
+    fi
+done
+EOF
+    cat > $staging/etc/init/rc.shutdown <<'EOF'
+#!/bin/sh
+
+export PATH=/bin:/sbin:/usr/bin:/usr/sbin
+
+for svc in /etc/init/services/*; do
+    [ -d "$svc" ] || continue
+    if [ -x "$svc/stop" ]; then
+        "$svc/stop"
+    fi
+done
+EOF
+
+    mkdir -p $staging/etc/init/services/hostname
+    cat > $staging/etc/init/services/hostname/start <<'EOF'
+#!/bin/sh
+if test -x /bin/hostname; then
+    /bin/hostname puredarwin
+fi
+EOF
+
+    mkdir -p $staging/etc/init/services/network
+    cat > $staging/etc/init/services/network/start <<'EOF'
+#!/bin/sh
+if test -x /bin/netsetup; then
+    /bin/netsetup
+fi
+EOF
+
 ${lib.optionalString (rootFsType == "hfs") ''
+    mkdir -p $staging/etc/init/services/root-remount
+    cat > $staging/etc/init/services/root-remount/start <<'EOF'
+#!/bin/sh
 # The kernel mounts the root volume read-only and hfs.kext honors that
 # (ext4.kext force-clears MNT_RDONLY instead, which is why the ext4 image
 # never needed this). Classic Darwin does mount -uw / from /etc/rc.
@@ -234,13 +276,32 @@ if test -x /bin/mount; then
     done
     /bin/mount -t hfs -o update,rw /dev/disk0s2 /
 fi
+EOF
 ''}
-if test -x /bin/hostname; then
-    /bin/hostname puredarwin
-fi
 
-if test -x /bin/netsetup; then
-    /bin/netsetup
+    mkdir -p $staging/etc/init/services/boot-partition
+    cat > $staging/etc/init/services/boot-partition/start <<'EOF'
+#!/bin/sh
+# Auto-mount the EFI System Partition (disk0s1, FAT via msdosfs.kext) at
+# /boot. IOMediaBSDClient may not have published the device node yet when
+# rc.boot runs (it's created asynchronously off the config-scan retry loop
+# in IOMediaBSDClient::scheduleCreateNodesRetry), so poll for it first,
+# same as the root-remount service's retry above.
+if test -x /bin/mount; then
+    n=0
+    while test ! -c /dev/disk0s1 -a ! -b /dev/disk0s1 -a $n -lt 50; do
+        /bin/sleep 0.2
+        n=$((n+1))
+    done
+    if test -c /dev/disk0s1 -o -b /dev/disk0s1; then
+        /bin/mount -t msdos -o rdonly /dev/disk0s1 /boot
+    fi
+fi
+EOF
+    cat > $staging/etc/init/services/boot-partition/stop <<'EOF'
+#!/bin/sh
+if test -x /bin/umount; then
+    /bin/umount /boot 2>/dev/null
 fi
 EOF
     cat > $staging/var/root/.profile <<'EOF'
@@ -276,7 +337,8 @@ EOF
       $staging/var/root/.profile \
       $staging/var/root/.zprofile \
       $staging/var/root/.zshrc
-    chmod 755 $staging/etc/init/rc.boot
+    chmod 755 $staging/etc/init/rc.boot $staging/etc/init/rc.shutdown
+    find $staging/etc/init/services -mindepth 2 -maxdepth 2 -type f -exec chmod 755 {} +
 
     ${lib.optionalString (testAudioFile != null) ''
       cp ${testAudioFile} $staging/badapple.pcm
@@ -414,6 +476,9 @@ EOF
       ln -s toybox "$staging/bin/$applet"
     done
     ln -sf zsh "$staging/bin/sh"
+
+    # Scripts widely assume `#!/usr/bin/env foo` works, not just `/bin/foo`.
+    ln -sf ../../bin/env "$staging/usr/bin/env"
 
     chmod 1777 \
       "$staging/tmp" \

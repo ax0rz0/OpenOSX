@@ -1271,9 +1271,11 @@
                 kexts = kextsBuild;
                 kcTools = kc-tools.packages.${system}.default;
               };
+              imageExtraPackages = lib.attrValues imageExtraPackageSet
+                ++ lib.optional (fbdoomExternalSrc != null) fbdoomBuild;
               imageBuild = pkgs.callPackage ./image.nix {
                 baseSystem = splitBaseSystem;
-                extraPackages = lib.attrValues imageExtraPackageSet;
+                extraPackages = imageExtraPackages;
                 kc = kcBuild;
                 xnuLoader = xnu-loader.packages.${system}.default;
                 apfsprogs = pkgs.apfsprogs;
@@ -1281,7 +1283,7 @@
               };
               imageHfsBuild = pkgs.callPackage ./image.nix {
                 baseSystem = splitBaseSystem;
-                extraPackages = lib.attrValues imageExtraPackageSet;
+                extraPackages = imageExtraPackages;
                 kc = kcBuild;
                 xnuLoader = xnu-loader.packages.${system}.default;
                 apfsprogs = pkgs.apfsprogs;
@@ -1334,7 +1336,10 @@
                   exec qemu-system-x86_64 \
                     -M q35 \
                     -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
+                    -smp "''${PUREDARWIN_VM_SMP:-4}" \
+                    -vga "''${PUREDARWIN_VM_VGA:-std}" \
                     -cpu IvyBridge,vendor=GenuineIntel \
+                    -fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=2048 \
                     -drive if=pflash,format=raw,unit=0,readonly=on,file="$ovmf_code" \
                     -drive if=pflash,format=raw,unit=1,file="$ovmf_vars" \
                     -drive id=root,format=raw,file="$image"$image_readonly_opt \
@@ -1389,6 +1394,7 @@
                     -smp "''${PUREDARWIN_VM_SMP:-4}" \
                     -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
                     -vga "''${PUREDARWIN_VM_VGA:-std}" \
+                    -fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=2048 \
                     -drive if=pflash,format=raw,unit=0,readonly=on,file="$ovmf_code" \
                     -drive if=pflash,format=raw,unit=1,file="$ovmf_vars" \
                     -device ich9-ahci,id=sata \
