@@ -1,18 +1,3 @@
-# x86_64-apple-darwin cross toolchain built entirely from nixpkgs' own
-# unwrapped LLVM/clang/lld - no osxcross build.sh, no compiling a second
-# copy of LLVM from source. Verified end-to-end: nixpkgs clang emits real
-# Mach-O objects for -target x86_64-apple-macosx*, and nixpkgs' ld64.lld
-# links directly against Apple's .tbd (TAPI) stub libraries with no shims
-# needed - and -fuse-ld=lld (resolved by PATH, not by absolute path - see
-# compilerWrapper below) makes clang's Darwin driver auto-derive
-# -arch/-platform_version/-syslibroot correctly, matching what osxcross's
-# own from-source clang wrapper does.
-#
-# Produces osxcross-name-compatible wrapper binaries
-# (x86_64-apple-darwin20.4-clang, -clang++, -ar, -ranlib, -strip, -nm, -ld,
-# -dsymutil, -install_name_tool, -lipo, plus an xcrun shim) so it's a
-# drop-in alternative to /usr/local/osxcross/bin, and is usable directly
-# via cmake/nix-toolchain.cmake.
 { lib
 , writeShellScriptBin
 , symlinkJoin

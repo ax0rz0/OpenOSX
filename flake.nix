@@ -1388,6 +1388,7 @@
                     -cpu "''${PUREDARWIN_KVM_CPU:-host}" \
                     -smp "''${PUREDARWIN_VM_SMP:-4}" \
                     -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
+                    -vga "''${PUREDARWIN_VM_VGA:-std}" \
                     -drive if=pflash,format=raw,unit=0,readonly=on,file="$ovmf_code" \
                     -drive if=pflash,format=raw,unit=1,file="$ovmf_vars" \
                     -device ich9-ahci,id=sata \
