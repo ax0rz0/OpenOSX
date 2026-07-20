@@ -181,6 +181,9 @@
             "src/Libraries/CoreFoundation"
             "src/Libraries/libSystem/libc/pd-compat-include"
           ];
+          securitySource = sourceWith "puredarwin-security-source" [
+            "src/Libraries/Security"
+          ];
 
           mkPureDarwinBuild = args: pkgs.callPackage ./build.nix ({
             inherit darwinCrossToolchain nativeLd nativeUnifdef nativeMigcom iig;
@@ -1027,6 +1030,13 @@
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
             };
+          securityBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/security.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              corefoundation = coreFoundationBuild;
+              src = "${securitySource}/src/Libraries/Security";
+            };
           libSystemBuild = mkPureDarwinBuild {
             pname = "puredarwin-libsystem";
             src = libSystemSource;
@@ -1171,6 +1181,7 @@
             corefoundation = coreFoundationBuild;
             icucore = icuCoreBuild;
             iokit = iokitBuild;
+            security = securityBuild;
             i3 = i3Build;
             i3status = i3statusShimBuild;
             startup-notification = startupNotificationBuild;
@@ -1404,6 +1415,7 @@
               corefoundation = coreFoundationBuild;
               icucore = icuCoreBuild;
               iokit = iokitBuild;
+              security = securityBuild;
               image = imageBuild;
               image-hfs = imageHfsBuild;
               image-debug = imageDebugBuild;
