@@ -1749,8 +1749,8 @@
             gnum4 = gnum4Build;
             bison = bisonBuild;
             flex = flexBuild;
-            python = pythonBuild;
-            perl = perlBuild;
+            #python = pythonBuild;
+            #perl = perlBuild;
           };
 
           linuxPackages =
