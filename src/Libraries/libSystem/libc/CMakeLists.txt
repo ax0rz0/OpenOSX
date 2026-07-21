@@ -50,6 +50,10 @@ target_include_directories(libc_headers_gen_private INTERFACE
 # This is the only public header directory
 install(DIRECTORY ${libc_headers_dir}/usr/include DESTINATION usr COMPONENT DeveloperTools)
 
+# openlibm (vendored PureDarwin/Libm fork) replaces the hand-rolled
+# pd_libm_*.c files below - see libm/openlibm/CMakeLists.txt.
+add_subdirectory(libm/openlibm)
+
 # pd-compat-include holds headers we hand-wrote (real Apple's makeheaders.pl
 # script above never generates them, since they don't exist upstream) that
 # other consumers besides libc itself need too - CoreFoundation's
@@ -147,7 +151,6 @@ target_sources(libc_static PRIVATE
     stdio/FreeBSD/ungetwc.c
     stdio/FreeBSD/fwide.c
     stdio/FreeBSD/wprintf.c
-    libm/pd_libm_floor.c         # floor/ceil/trunc/round (from-scratch libm)
     gen/get_compat.c             # _compat_mode (uname/ps COMMAND_MODE checks)
     gen/FreeBSD/setmode.c        # _setmode/_getmode (uudecode -m, chmod-style modes)
     string/FreeBSD/wcscoll.c     # _wcscoll (comm)
@@ -215,14 +218,11 @@ target_sources(libc_static PRIVATE
     stdtime/FreeBSD/strftime.c   # _strftime
     stdtime/FreeBSD/asctime.c    # _asctime
     stdtime/timezone_unix03.c    # _st_get_timezone / _st_set_timezone (strftime %z)
-    gen/pd_libm_builtins.c       # nan/nanf/nanl + fegetenv/fesetenv (no libm yet)
     gen/pd_notify_stub.c         # notify_post shim (real libnotify needs XPC)
     gen/pd_getgrent.c            # getgrnam/getgrgid/getgrouplist (/etc/group reader; no libinfo)
     gen/pd_netdb_stub.c          # gethostbyname/h_errno/hstrerror (no libinfo/libresolv yet)
     gen/pd_getservbyname.c       # getservbyname (/etc/services reader; no libinfo)
-    libm/pd_libm_trig.c          # sin/cos/atan/atan2/asin/acos (from-scratch libm)
-    libm/pd_libm_pow.c           # log/exp/pow/cbrt/hypot (from-scratch libm)
-    libm/pd_libm_misc.c
+    libm/pd_libm_sincos_stret.c  # __sincos*_stret / __sincospi*_stret (Apple-only wrappers, not in openlibm; -fno-builtin below)
     gen/clock_gettime.c          # _clock_gettime / _clock_settime (BusyBox date -s)
     gen/FreeBSD/sethostname.c    # _sethostname (BusyBox hostname; sysctl-backed)
     net/FreeBSD/inet_ntoa.c      # _inet_ntoa
@@ -232,6 +232,7 @@ target_sources(libc_static PRIVATE
     string/FreeBSD/strcasestr.c  # _strcasestr (BusyBox grep -F paths)
     string/FreeBSD/strspn.c      # _strspn
     string/FreeBSD/memmem.c      # _memmem (file(1) magic buffer scans)
+    string/NetBSD/memset_s.c     # _memset_s (C11 Annex K; curl's curlx_freezero)
     gen/FreeBSD/fmtcheck.c       # _fmtcheck (file(1) locale-safe strerror formatting)
     secure/strcat_chk.c          # ___strcat_chk
     # POSIX regex: Apple's TRE engine (regcomp/regexec) + BSD regerror.
@@ -311,6 +312,9 @@ target_sources(libc_static PRIVATE
 )
 set_target_properties(libc_static PROPERTIES EXCLUDE_FROM_ALL TRUE)
 
+set_source_files_properties(libm/pd_libm_sincos_stret.c PROPERTIES
+    COMPILE_OPTIONS "-fno-builtin-sincos;-fno-builtin-sincosf")
+
 get_target_property(_libc_copts libc_static COMPILE_OPTIONS)
 list(REMOVE_ITEM _libc_copts -nostdinc)
 set_target_properties(libc_static PROPERTIES COMPILE_OPTIONS "${_libc_copts}")
@@ -328,6 +332,7 @@ target_compile_definitions(libc_static PRIVATE __DARWIN_ONLY_UNIX_CONFORMANCE=1)
 # xnu_private_headers for the pthread QoS chain (pthread/priority_private.h in
 # usr/local/include). dyld links this alongside -isysroot too.
 target_link_libraries(libc_static PRIVATE xnu_private_headers)
+target_link_libraries(libc_static PUBLIC openlibm_static)
 add_dependencies(libc_static libc_features libsystem_kernel_static)
 target_include_directories(libc_static PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/include/${PUREDARWIN_ARCH}   # generated libc-features.h

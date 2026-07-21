@@ -14,7 +14,7 @@
 , libdmg-hfsplus ? null
 , cacert
 , espMB ? 64
-, rootMB ? 640
+, rootMB ? 896
 , apfsMB ? 128
   # "ext4": ext4 root + APFS test partition (default, historical layout).
   # "hfs":  EFI + HFS+ root ONLY - no ext4, no APFS. Root is mounted by the
@@ -184,6 +184,7 @@ export LOGNAME=''${LOGNAME:-root}
 export FONTCONFIG_FILE=''${FONTCONFIG_FILE:-/etc/fonts/fonts.conf}
 export XDG_CONFIG_DIRS=''${XDG_CONFIG_DIRS:-/etc}
 export XDG_DATA_DIRS=''${XDG_DATA_DIRS:-/usr/share:/share}
+export XLOCALEDIR=''${XLOCALEDIR:-/usr/share/X11/locale}
 export PS1='# '
 EOF
     cat > $staging/etc/zshenv <<'EOF'
@@ -196,6 +197,7 @@ export LOGNAME=''${LOGNAME:-root}
 export FONTCONFIG_FILE=''${FONTCONFIG_FILE:-/etc/fonts/fonts.conf}
 export XDG_CONFIG_DIRS=''${XDG_CONFIG_DIRS:-/etc}
 export XDG_DATA_DIRS=''${XDG_DATA_DIRS:-/usr/share:/share}
+export XLOCALEDIR=''${XLOCALEDIR:-/usr/share/X11/locale}
 EOF
     cat > $staging/etc/zprofile <<'EOF'
 test -r /etc/profile && . /etc/profile

@@ -452,6 +452,7 @@ _mktemp
 _vsprintf
 _freelocale
 _memmem
+_memset_s
 _res_init
 _res_9_init
 _res_9_dn_expand
@@ -699,6 +700,8 @@ ___sincos_stret
 ___sincosf_stret
 ___sincospi_stret
 ___sincospif_stret
+_sincos
+_sincosf
 _connect
 _isascii
 _mbtowc

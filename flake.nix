@@ -216,7 +216,16 @@
           cctoolsBuild = mkPureDarwinBuild {
             pname = "puredarwin-cctools";
             src = cctoolsSource;
-            buildTargets = [ "lipo_selfhost" "size_selfhost" "strings_selfhost" "checksyms_selfhost" "iig_selfhost" "ld64_selfhost" ];
+            buildTargets = [
+              "lipo_selfhost" "size_selfhost" "strings_selfhost" "checksyms_selfhost"
+              "iig_selfhost" "ld64_selfhost"
+              "nm_selfhost" "redo_prebinding_selfhost"
+              "seg_hack_selfhost" "install_name_tool_selfhost"
+              "indr_selfhost" "strip_selfhost" "segedit_selfhost" "pagestuff_selfhost"
+              "codesign_allocate_selfhost" "bitcode_strip_selfhost" "ctf_insert_selfhost"
+              "check_dylib_selfhost" "cmpdylib_selfhost" "inout_selfhost"
+              "nmedit_selfhost"
+            ];
             enableProjects = false;
             enableKernel = false;
             enableLibraries = false;
@@ -318,6 +327,7 @@
               ];
               configureFlags = [
                 "--disable-specs"
+                "--enable-xlocaledir"
               ];
             };
           xcbBuild =
@@ -743,6 +753,26 @@
                 chmod -R u+w "$out/usr/share/X11/xkb"
               fi
             '';
+          xlibLocaleBuild =
+            if isDarwin then null else pkgs.runCommand "puredarwin-libx11-locale" { } ''
+              mkdir -p "$out/usr/share/X11"
+              cp -a ${pkgs.libX11}/share/X11/locale "$out/usr/share/X11/locale"
+              chmod -R u+w "$out/usr/share/X11/locale"
+            '';
+          libzDylibBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libz-dylib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) zlib;
+            };
+          libcurlDylibBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libcurl-dylib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              zlib = xvfbZlibBuild;
+              openssl = opensslBuild;
+              inherit (pkgs) curl;
+            };
           xvfbBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -867,6 +897,107 @@
               libXt = xvfbLibXtBuild;
               libICE = xvfbLibICEBuild;
               libSM = xvfbLibSMBuild;
+              inherit (pkgs) xorgproto;
+            };
+          xclockBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xclock.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              xclock = pkgs.xclock;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXrender = xvfbLibXrenderBuild;
+              libXmu = xvfbLibXmuBuild;
+              libXt = xvfbLibXtBuild;
+              libXaw = xvfbLibXawBuild;
+              libXft = libXftBuild;
+              libxkbfile = xvfbLibXkbfileBuild;
+              freetype2 = freetype2Build;
+              fontconfig = fontconfigBuild;
+              expat = expatBuild;
+              libICE = xvfbLibICEBuild;
+              libSM = xvfbLibSMBuild;
+              inherit (pkgs) xorgproto;
+            };
+          xcalcBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xcalc.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              xcalc = pkgs.xcalc;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXmu = xvfbLibXmuBuild;
+              libXt = xvfbLibXtBuild;
+              libXaw = xvfbLibXawBuild;
+              libICE = xvfbLibICEBuild;
+              libSM = xvfbLibSMBuild;
+              inherit (pkgs) xorgproto;
+            };
+          xmessageBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xmessage.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              xmessage = pkgs.xmessage;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXmu = xvfbLibXmuBuild;
+              libXt = xvfbLibXtBuild;
+              libXaw = xvfbLibXawBuild;
+              libICE = xvfbLibICEBuild;
+              libSM = xvfbLibSMBuild;
+              inherit (pkgs) xorgproto;
+            };
+          fltkBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/fltk.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) fltk_1_3 util-macros;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXrender = xvfbLibXrenderBuild;
+              libXfixes = xvfbLibXfixesBuild;
+              libXft = libXftBuild;
+              libxcbcursor = xcbCursorBuild;
+              libICE = xvfbLibICEBuild;
+              libSM = xvfbLibSMBuild;
+              fontconfig = fontconfigBuild;
+              freetype2 = freetype2Build;
+              expat = expatBuild;
+              inherit (pkgs) xorgproto;
+            };
+          dilloBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/dillo.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) dillo util-macros;
+              fltk = fltkBuild;
+              openssl = opensslBuild;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXrender = xvfbLibXrenderBuild;
+              libXfixes = xvfbLibXfixesBuild;
+              libXft = libXftBuild;
+              libxcbcursor = xcbCursorBuild;
+              libICE = xvfbLibICEBuild;
+              libSM = xvfbLibSMBuild;
+              fontconfig = fontconfigBuild;
+              freetype2 = freetype2Build;
+              expat = expatBuild;
               inherit (pkgs) xorgproto;
             };
           ncursesBuild =
@@ -1148,9 +1279,16 @@
             xorg = xorgBuild;
             libxcvt = xvfbLibxcvtBuild;
             xeyes = xeyesBuild;
+            xclock = xclockBuild;
+            xcalc = xcalcBuild;
+            xmessage = xmessageBuild;
+            dillo = dilloBuild;
+            libz-dylib = libzDylibBuild;
+            libcurl-dylib = libcurlDylibBuild;
             xterm = xtermBuild;
             xkbcomp = xkbcompBuild;
             xkeyboard-config = xkeyboardConfigBuild;
+            libx11-locale = xlibLocaleBuild;
             fonts = xvfbFontsBuild;
             libiconv = libiconvBuild;
             nano = nanoBuild;
@@ -1196,6 +1334,14 @@
             pango = pangoBuild;
             libXft = libXftBuild;
             dmenu = dmenuBuild;
+            zlib = xvfbZlibBuild;
+            libXau = xvfbLibXauBuild;
+            libXdmcp = xvfbLibXdmcpBuild;
+            libXext = xvfbLibXextBuild;
+            libXrender = xvfbLibXrenderBuild;
+            libXfixes = xvfbLibXfixesBuild;
+            libICE = xvfbLibICEBuild;
+            libSM = xvfbLibSMBuild;
           };
 
           commonPackages = {

@@ -44,13 +44,14 @@ add_dependencies(libSystem_B_stub
     libsystem_kernel_static libplatform_static pthread_static
     libc_static libc_internal_static libmalloc_static
     corecrypto_static CrashReporterClient libresolv_static
-    libdispatch_static)
+    libdispatch_static openlibm_static)
 if(PUREDARWIN_USE_LD64_LLD)
     target_link_libraries(libSystem_B_stub PRIVATE
         $<TARGET_FILE:libplatform_static>
         $<TARGET_FILE:pthread_static>
         $<TARGET_FILE:libc_static>
         $<TARGET_FILE:libc_internal_static>
+        $<TARGET_FILE:openlibm_static>
         $<TARGET_FILE:libmalloc_static>
         $<TARGET_FILE:libdispatch_static>
         $<TARGET_FILE:libsystem_kernel_static>
@@ -65,6 +66,7 @@ else()
         $<TARGET_FILE:pthread_static>
         $<TARGET_FILE:libc_static>
         $<TARGET_FILE:libc_internal_static>
+        $<TARGET_FILE:openlibm_static>
         $<TARGET_FILE:libmalloc_static>
         $<TARGET_FILE:libdispatch_static>
         ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/syscalls.a
