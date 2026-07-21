@@ -651,8 +651,10 @@ _dlopen
 _dlsym
 _fdopen$DARWIN_EXTSN
 _fopen$DARWIN_EXTSN
+_fgetpos
 _fread
 _fseek
+_fsetpos
 _ftell
 _fwrite
 _isdigit

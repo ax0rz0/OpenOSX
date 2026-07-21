@@ -570,6 +570,8 @@ target_sources(libc_internal_static PRIVATE
     stdio/FreeBSD/putchar.c       # _putchar
     stdio/FreeBSD/vprintf.c       # _vprintf
     stdio/FreeBSD/fseek.c         # _fseeko (rewind.c)
+    stdio/FreeBSD/fgetpos.c       # _fgetpos (flex table serialization)
+    stdio/FreeBSD/fsetpos.c       # _fsetpos (flex table serialization)
     locale/FreeBSD/localeconv.c   # _localeconv/_localeconv_l (vfprintf's grouping_init)
     stdio/FreeBSD/xprintf_str.c
     stdio/FreeBSD/xprintf_int.c    # also chr/ptr
