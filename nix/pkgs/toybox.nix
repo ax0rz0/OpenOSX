@@ -102,9 +102,6 @@ stdenv.mkDerivation {
     runHook preInstall
     mkdir -p $out/bin
     cp toybox $out/bin/toybox
-    # toybox is cross-compiled (Mach-O) and can't run on this Linux build
-    # host to self-report its applet list, so derive it from the enabled
-    # Kconfig options instead (CONFIG_FOO -> lowercase "foo" applet name).
     LC_ALL=C grep -oE '^CONFIG_[A-Z0-9_]+=y$' .config \
       | sed -e 's/^CONFIG_//' -e 's/=y$//' \
       | tr 'A-Z' 'a-z' > $out/applets.txt

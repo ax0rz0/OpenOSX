@@ -7,7 +7,11 @@ macro(cctools_selfhost_executable name)
     endif()
     target_sources(${name}_selfhost PRIVATE ../misc/${name}.c)
     target_include_directories(${name}_selfhost PRIVATE ../include ../include/foreign ../libstuff)
-    target_compile_definitions(${name}_selfhost PRIVATE -D__DARWIN_UNIX03)
+    target_compile_definitions(${name}_selfhost PRIVATE
+        __DARWIN_UNIX03=1
+        _DARWIN_USE_64_BIT_INODE=1
+        PUREDARWIN_SELFHOST_CCTOOLS=1
+    )
     target_compile_options(${name}_selfhost PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
     target_link_options(${name}_selfhost PRIVATE
         -nostdlib
@@ -59,7 +63,12 @@ macro(cctools_selfhost_executable_alias name source extra_define)
     endif()
     target_sources(${name}_selfhost PRIVATE ../misc/${source})
     target_include_directories(${name}_selfhost PRIVATE ../include ../include/foreign ../libstuff)
-    target_compile_definitions(${name}_selfhost PRIVATE -D__DARWIN_UNIX03 ${extra_define})
+    target_compile_definitions(${name}_selfhost PRIVATE
+        __DARWIN_UNIX03=1
+        _DARWIN_USE_64_BIT_INODE=1
+        PUREDARWIN_SELFHOST_CCTOOLS=1
+        ${extra_define}
+    )
     target_compile_options(${name}_selfhost PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
     target_link_options(${name}_selfhost PRIVATE
         -nostdlib

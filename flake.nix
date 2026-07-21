@@ -221,6 +221,7 @@
               "lipo_selfhost" "size_selfhost" "strings_selfhost" "checksyms_selfhost"
               "iig_selfhost" "ld64_selfhost"
               "ar_selfhost" "nm_selfhost" "libtool_selfhost" "ranlib_selfhost"
+              "otool_selfhost"
               "redo_prebinding_selfhost"
               "seg_hack_selfhost" "install_name_tool_selfhost"
               "indr_selfhost" "strip_selfhost" "segedit_selfhost" "pagestuff_selfhost"
@@ -1583,7 +1584,6 @@
             netsurf = netsurfBuild;
             xxd = xxdBuild;
             xz = xzBuild;
-            host-otool = hostOtoolBuild;
             xterm = xtermBuild;
             xkbcomp = xkbcompBuild;
             xkeyboard-config = xkeyboardConfigBuild;

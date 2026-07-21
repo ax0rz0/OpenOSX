@@ -36,7 +36,7 @@ stdenv.mkDerivation {
     export RANLIB="${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ranlib"
     export STRIP="${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-strip"
     export CPPFLAGS="-I${libSystem}/usr/include -I${zlib}/include"
-    export CFLAGS="-isysroot $DARWIN_SDK_ROOT -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0"
+    export CFLAGS="-isysroot $DARWIN_SDK_ROOT -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -DMAGIC='\"/usr/share/misc/magic\"'"
     # Same trap as toybox: a real Apple SDK's -isysroot makes ld64 implicitly
     # find stub dylibs (libz.1.dylib etc.) that don't exist at runtime here,
     # so disable the implicit search path and force-load our real static zlib.
@@ -85,6 +85,12 @@ stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
     make install
+
+    # The image builder flattens package contents into the PureDarwin root,
+    # so file's compiled-in default must point at a guest path, not $out.
+    mkdir -p $out/usr/share/misc
+    cp -p $out/share/misc/magic.mgc $out/usr/share/misc/magic.mgc
+
     runHook postInstall
   '';
 

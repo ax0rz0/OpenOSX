@@ -21,7 +21,10 @@ if(_ar_selfhost_opts)
 endif()
 target_sources(ar_selfhost PRIVATE ${_ar_selfhost_sources})
 target_include_directories(ar_selfhost PRIVATE ../ar ../include ../include/foreign ../libstuff)
-target_compile_definitions(ar_selfhost PRIVATE -D__DARWIN_UNIX03)
+target_compile_definitions(ar_selfhost PRIVATE
+    __DARWIN_UNIX03=1
+    _DARWIN_USE_64_BIT_INODE=1
+)
 target_compile_options(ar_selfhost PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
 target_link_options(ar_selfhost PRIVATE
     -nostdlib
