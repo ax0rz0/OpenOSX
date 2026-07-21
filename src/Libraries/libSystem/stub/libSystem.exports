@@ -282,6 +282,8 @@ _malloc_default_zone
 _vm_page_size
 __NSGetArgv
 __NSGetArgc
+__NSGetEnviron
+__NSGetProgname
 _OSAtomicCompareAndSwapPtrBarrier
 __os_log_create
 _mach_vm_region
@@ -453,6 +455,7 @@ _vsprintf
 _freelocale
 _memmem
 _memset_s
+_backtrace
 _res_init
 _res_9_init
 _res_9_dn_expand

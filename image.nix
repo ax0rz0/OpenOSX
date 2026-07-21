@@ -134,6 +134,7 @@ ${if rootFsType == "hfs" then ''
       var/root \
       var/root/.cache \
       var/run \
+      var/run/dbus \
       var/log \
       var/tmp \
       var/empty \
@@ -164,12 +165,14 @@ ${if rootFsType == "hfs" then ''
 root:*:0:0:System Administrator:/var/root:/bin/sh
 daemon:*:1:1:System Services:/var/root:/usr/bin/false
 sshd:*:74:74:Privilege-separated SSH:/var/empty:/usr/bin/false
+messagebus:*:96:96:D-Bus Message Daemon User:/var/empty:/usr/bin/false
 nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
 EOF
     cat > $staging/etc/group <<'EOF'
 wheel:*:0:root
 daemon:*:1:root
 sshd:*:74:
+messagebus:*:96:
 nogroup:*:-1:
 nobody:*:-2:
 staff:*:20:root
@@ -259,6 +262,20 @@ EOF
 #!/bin/sh
 if test -x /bin/netsetup; then
     /bin/netsetup
+fi
+EOF
+
+    mkdir -p $staging/etc/init/services/dbus
+    cat > $staging/etc/init/services/dbus/start <<'EOF'
+#!/bin/sh
+if test -x /bin/dbus-daemon; then
+    /bin/dbus-daemon --config-file=/share/dbus-1/system.conf
+fi
+EOF
+    cat > $staging/etc/init/services/dbus/stop <<'EOF'
+#!/bin/sh
+if test -f /var/run/dbus/pid; then
+    kill "$(cat /var/run/dbus/pid)" 2>/dev/null
 fi
 EOF
 
@@ -487,6 +504,15 @@ EOF
       "$staging/tmp" \
       "$staging/var/tmp" \
       "$staging/tmp/.X11-unix"
+
+    # dbus-daemon --system runs as the messagebus user (see system.conf's
+    # <user>) after opening its listening socket, and needs to write its
+    # pidfile/socket here post-setuid. This project has no chown mechanism
+    # yet (no package assigns non-root file ownership), so - matching the
+    # existing world-writable-sticky precedent for /tmp/var-tmp above -
+    # this is 1777 rather than owned-by-messagebus 755, until real
+    # per-file ownership support exists.
+    chmod 1777 "$staging/var/run/dbus"
 
     chmod 700  $staging/var/root
     chmod 755  $staging/var/root/.cache

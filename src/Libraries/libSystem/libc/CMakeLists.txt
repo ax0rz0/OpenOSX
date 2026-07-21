@@ -233,6 +233,7 @@ target_sources(libc_static PRIVATE
     string/FreeBSD/strspn.c      # _strspn
     string/FreeBSD/memmem.c      # _memmem (file(1) magic buffer scans)
     string/NetBSD/memset_s.c     # _memset_s (C11 Annex K; curl's curlx_freezero)
+    gen/backtrace.c               # _backtrace/_backtrace_symbols/_backtrace_symbols_fd (dbus's execinfo.h use)
     gen/FreeBSD/fmtcheck.c       # _fmtcheck (file(1) locale-safe strerror formatting)
     secure/strcat_chk.c          # ___strcat_chk
     # POSIX regex: Apple's TRE engine (regcomp/regexec) + BSD regerror.
@@ -626,16 +627,6 @@ target_sources(libc_internal_static PRIVATE
     gdtoa/FreeBSD/machdep_ldisQ.c
     gdtoa/FreeBSD/machdep_ldisx.c
 )
-# __LIBC__: tells Apple's FreeBSD-derived sources (collate.h/_ctype.h/...) they
-# are being compiled AS libc itself, not a libc client -- exposes the internal
-# __collate_*/ctype-inline-externalizing declarations these .c files define.
-# NO_FLOATING_POINT was an early bring-up leftover: it compiles the entire
-# %e/%f/%g scanf conversion path out of vfscanf.c (CT_FLOAT is
-# #ifndef NO_FLOATING_POINT), even though this same target already builds
-# the full gdtoa/strtod/strtof stack right above. That made sscanf("%g", ...)
-# silently fail (0 items matched) for any real caller -- e.g. xkbcomp's
-# geometry-file number lexer, which reported every float as "Malformed
-# number" and aborted the whole keymap compile.
 target_compile_definitions(libc_internal_static PRIVATE
     __DARWIN_ONLY_UNIX_CONFORMANCE=1
     __DARWIN_UNIX03=1

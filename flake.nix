@@ -773,6 +773,14 @@
               openssl = opensslBuild;
               inherit (pkgs) curl;
             };
+          dbusBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/dbus.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              expat = expatBuild;
+              libX11 = xlibBuild;
+              inherit (pkgs) dbus meson ninja python3;
+            };
           xvfbBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -1285,6 +1293,7 @@
             dillo = dilloBuild;
             libz-dylib = libzDylibBuild;
             libcurl-dylib = libcurlDylibBuild;
+            dbus = dbusBuild;
             xterm = xtermBuild;
             xkbcomp = xkbcompBuild;
             xkeyboard-config = xkeyboardConfigBuild;
