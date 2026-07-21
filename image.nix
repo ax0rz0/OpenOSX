@@ -493,7 +493,7 @@ EOF
     ln -sf ../../bin/env "$staging/usr/bin/env"
 
     # Create a cc compat
-    ln -sf tcc "$staging/usr/bin/cc"
+    ln -sf ../../bin/tcc "$staging/usr/bin/cc"
 
     chmod 1777 \
       "$staging/tmp" \
