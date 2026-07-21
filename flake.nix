@@ -1294,6 +1294,18 @@
               nano = pkgs.nano;
               ncurses = ncursesBuild;
             };
+          xxdBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xxd.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              tinyxxd = pkgs.tinyxxd;
+            };
+          xzBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xz.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              xz = pkgs.xz;
+            };
           bmakeBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/bmake.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -1567,6 +1579,8 @@
             libcss = libcssBuild;
             libdom = libdomBuild;
             netsurf = netsurfBuild;
+            xxd = xxdBuild;
+            xz = xzBuild;
             host-otool = hostOtoolBuild;
             xterm = xtermBuild;
             xkbcomp = xkbcompBuild;
