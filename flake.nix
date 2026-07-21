@@ -162,6 +162,7 @@
             "src/Libraries/CommonCrypto/include"
             "src/Libraries/CommonCrypto/libcn/pd_cc_digest_bridge.c"
             "src/Libraries/libSystem/libc/stdlib/FreeBSD/reallocf.c"
+            "src/Libraries/libSystem/libc/string/FreeBSD/strmode.c"
             "src/Userspace"
             "tools"
           ];
@@ -219,7 +220,8 @@
             buildTargets = [
               "lipo_selfhost" "size_selfhost" "strings_selfhost" "checksyms_selfhost"
               "iig_selfhost" "ld64_selfhost"
-              "nm_selfhost" "redo_prebinding_selfhost"
+              "ar_selfhost" "nm_selfhost" "libtool_selfhost" "ranlib_selfhost"
+              "redo_prebinding_selfhost"
               "seg_hack_selfhost" "install_name_tool_selfhost"
               "indr_selfhost" "strip_selfhost" "segedit_selfhost" "pagestuff_selfhost"
               "codesign_allocate_selfhost" "bitcode_strip_selfhost" "ctf_insert_selfhost"

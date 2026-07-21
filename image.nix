@@ -364,14 +364,6 @@ EOF
       cp ${testAudioFile} $staging/badapple.pcm
     ''}
 
-    # Real Darwin's system-identity plist, read directly by lots of code
-    # (CoreFoundation's system-version APIs, etc) rather than through
-    # sw_vers - sw_vers itself (src/Userspace/sw_vers/sw_vers.c) still just
-    # uses its own compiled-in PRODUCT_NAME/PRODUCT_VERSION constants
-    # ("PureDarwin"/"11.3"), matched here so both report the same thing.
-    # curl (curl.nix) is built with --with-ca-bundle=/etc/ssl/cert.pem;
-    # stage a real CA bundle there so TLS verification actually has
-    # something to check against.
     mkdir -p $staging/etc/ssl
     cp ${cacert}/etc/ssl/certs/ca-bundle.crt $staging/etc/ssl/cert.pem
     chmod 644 $staging/etc/ssl/cert.pem
@@ -499,6 +491,9 @@ EOF
 
     # Scripts widely assume `#!/usr/bin/env foo` works, not just `/bin/foo`.
     ln -sf ../../bin/env "$staging/usr/bin/env"
+
+    # Create a cc compat
+    ln -sf tcc "$staging/usr/bin/cc"
 
     chmod 1777 \
       "$staging/tmp" \

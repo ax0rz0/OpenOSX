@@ -26,6 +26,7 @@ cctools_selfhost_executable(size)
 cctools_selfhost_executable(strings)
 cctools_selfhost_executable(checksyms)
 cctools_selfhost_executable(nm)
+cctools_selfhost_executable(libtool)
 cctools_selfhost_executable(redo_prebinding)
 cctools_selfhost_executable(seg_hack)
 cctools_selfhost_executable(install_name_tool)
@@ -44,6 +45,8 @@ cctools_selfhost_executable(inout)
 suppress_all_warnings(bitcode_strip_selfhost)
 suppress_all_warnings(install_name_tool_selfhost)
 suppress_all_warnings(strip_selfhost)
+
+set(_cctools_selfhost_reallocf "${CMAKE_SOURCE_DIR}/src/Libraries/libSystem/libc/stdlib/FreeBSD/reallocf.c")
 
 # Special cases: same source file as another tool, different behavior
 # selected via a preprocessor define at compile time (mirrors misc/CMakeLists.txt).
@@ -71,5 +74,7 @@ macro(cctools_selfhost_executable_alias name source extra_define)
 endmacro()
 
 cctools_selfhost_executable_alias(nmedit strip.c -DNMEDIT)
-# ranlib_selfhost (libtool.c -DRANLIB) excluded for the same reallocf reason
-# as libtool_selfhost above.
+cctools_selfhost_executable_alias(ranlib libtool.c -DRANLIB)
+
+target_sources(libtool_selfhost PRIVATE "${_cctools_selfhost_reallocf}")
+target_sources(ranlib_selfhost PRIVATE "${_cctools_selfhost_reallocf}")
