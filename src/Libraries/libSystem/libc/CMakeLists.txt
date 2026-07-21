@@ -284,6 +284,7 @@ target_sources(libc_static PRIVATE
     stdlib/FreeBSD/atoi.c      # _atoi
     stdlib/FreeBSD/strtol.c      # _strtol (libmalloc's env-var parsing, e.g. MallocNanoZone)
     stdlib/FreeBSD/strtoll.c     # _strtoll
+    stdlib/FreeBSD/atoll.c       # _atoll/_atoll_l
     stdlib/FreeBSD/strtoul.c     # _strtoul/_strtoul_l
     stdlib/FreeBSD/strtoull.c    # _strtoull/_strtoull_l
     stdlib/FreeBSD/rand.c        # _rand/_srand

@@ -1643,7 +1643,7 @@
             gnum4 = gnum4Build;
             bison = bisonBuild;
             flex = flexBuild;
-            #python = pythonBuild;
+            python = pythonBuild;
             #perl = perlBuild;
             zsh = zshBuild;
             toybox = toyboxBuild;
@@ -1749,7 +1749,7 @@
             gnum4 = gnum4Build;
             bison = bisonBuild;
             flex = flexBuild;
-            #python = pythonBuild;
+            python = pythonBuild;
             #perl = perlBuild;
           };
 

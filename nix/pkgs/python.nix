@@ -29,6 +29,26 @@ stdenv.mkDerivation {
 
   nativeBuildInputs = [ gnumake pkg-config python3 ];
 
+  postPatch = ''
+    substituteInPlace configure \
+      --replace-fail '*-*-cygwin*)
+		ac_sys_system=Cygwin
+		;;' '*-*-cygwin*)
+		ac_sys_system=Cygwin
+		;;
+	*-*-darwin*)
+		ac_sys_system=Darwin
+		;;' \
+      --replace-fail '*-*-cygwin*)
+		_host_ident=
+		;;' '*-*-cygwin*)
+		_host_ident=
+		;;
+	*-*-darwin*)
+		_host_ident=$host_cpu
+		;;'
+  '';
+
   configurePhase = ''
     runHook preConfigure
 
@@ -52,6 +72,48 @@ stdenv.mkDerivation {
     export ac_cv_buggy_getaddrinfo=no
     export ac_cv_little_endian_double=yes
     export ac_cv_working_tzset=yes
+    export ac_cv_func_clock_nanosleep=no
+    export ac_cv_func_close_range=no
+    export ac_cv_func_closefrom=no
+    export ac_cv_func_copy_file_range=no
+    export ac_cv_func_fdwalk=no
+    export ac_cv_func_dup3=no
+    export ac_cv_func_fexecve=no
+    export ac_cv_func_fork1=no
+    export ac_cv_func_futimesat=no
+    export ac_cv_func_getresgid=no
+    export ac_cv_func_getresuid=no
+    export ac_cv_func_memrchr=no
+    export ac_cv_func_mremap=no
+    export ac_cv_func_mkfifoat=no
+    export ac_cv_func_mknodat=no
+    export ac_cv_func_pipe2=no
+    export ac_cv_func_plock=no
+    export ac_cv_func_posix_spawn_file_actions_addclosefrom_np=no
+    export ac_cv_func_posix_fadvise=no
+    export ac_cv_func_posix_fallocate=no
+    export ac_cv_func_preadv2=no
+    export ac_cv_func_process_vm_readv=no
+    export ac_cv_func_pthread_condattr_setclock=no
+    export ac_cv_func_pthread_getcpuclockid=no
+    export ac_cv_func_pwritev2=no
+    export ac_cv_func_rtpSpawn=no
+    export ac_cv_func_sched_rr_get_interval=no
+    export ac_cv_func_sched_setaffinity=no
+    export ac_cv_func_sched_setparam=no
+    export ac_cv_func_sched_setscheduler=no
+    export ac_cv_func_sem_clockwait=no
+    export ac_cv_func_sendfile=no
+    export ac_cv_func_setns=no
+    export ac_cv_func_setresgid=no
+    export ac_cv_func_setresuid=no
+    export ac_cv_func_sigtimedwait=no
+    export ac_cv_func_sigwaitinfo=no
+    export ac_cv_func_splice=no
+    export ac_cv_func_unshare=no
+    export ac_cv_func_explicit_bzero=no
+    export ac_cv_func_explicit_memset=no
+    export ac_cv_func_sem_timedwait=no
 
     ./configure \
       --host=x86_64-apple-darwin20.4 \
@@ -65,6 +127,18 @@ stdenv.mkDerivation {
       --with-system-ffi \
       --with-openssl=${openssl} \
       --with-openssl-rpath=no
+
+    substituteInPlace Makefile \
+      --replace-fail ' -framework CoreFoundation' "" \
+      --replace-fail '-framework SystemConfiguration' "" \
+      --replace-fail 'LIBS=		 -latomic' 'LIBS=' \
+      --replace-fail 'none required' "" \
+      --replace-fail \
+        'MODULE_PYEXPAT_LDFLAGS=-lm $(LIBEXPAT_A)' \
+        'MODULE_PYEXPAT_LDFLAGS=$(LIBEXPAT_A)' \
+      --replace-fail \
+        'MODULE__DECIMAL_LDFLAGS=-lm $(LIBMPDEC_A)' \
+        'MODULE__DECIMAL_LDFLAGS=$(LIBMPDEC_A)'
 
     runHook postConfigure
   '';

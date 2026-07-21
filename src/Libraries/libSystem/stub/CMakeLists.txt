@@ -125,3 +125,6 @@ target_link_options(libSystem_B_stub PRIVATE
     -Wl,-reexport_library,$<TARGET_FILE:libdyld>)
 
 install(TARGETS libSystem_B_stub LIBRARY DESTINATION usr/lib COMPONENT BaseSystem)
+install_symlink(usr/lib/libSystem.dylib libSystem.B.dylib COMPONENT BaseSystem)
+install_symlink(usr/lib/libc.dylib libSystem.B.dylib COMPONENT BaseSystem)
+install_symlink(usr/lib/libm.dylib libSystem.B.dylib COMPONENT BaseSystem)

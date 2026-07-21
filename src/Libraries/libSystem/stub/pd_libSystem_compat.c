@@ -1285,30 +1285,6 @@ twalk(const void *root, void (*action)(const void *, VISIT, int))
     pd_twalk_r((const struct pd_tnode *)root, action, 0);
 }
 
-long long
-atoll(const char *nptr)
-{
-    return strtoll(nptr, NULL, 10);
-}
-
-double
-sqrt(double x)
-{
-    return __builtin_sqrt(x);
-}
-
-double
-trunc(double x)
-{
-    return __builtin_trunc(x);
-}
-
-double
-fmod(double x, double y)
-{
-    return __builtin_fmod(x, y);
-}
-
 int
 dprintf(int fd, const char *fmt, ...)
 {

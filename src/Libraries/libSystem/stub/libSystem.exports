@@ -504,6 +504,7 @@ _link
 _listen
 _localtime
 _longjmp
+__longjmp
 _lseek
 _lstat$INODE64
 _memcmp
@@ -545,6 +546,7 @@ _seteuid
 _setgid
 _setgroups
 _setjmp
+__setjmp
 _setresgid
 _setresuid
 _setrlimit

@@ -1577,17 +1577,29 @@ _pthread_set_self_dyld(void)
 	_thread_set_tsd_base(&p->tsd[0]);
 
 	/* PureDarwin: real Darwin's __pthread_init() (compiled out here, see the
-	 * `#if !VARIANT_DYLD` around it -- that full init lives only in the
+	 * `#if !VARIANT_DYLD` around it - that full init lives only in the
 	 * separate, non-VARIANT_DYLD libsystem_pthread.dylib on real Darwin, not
 	 * in this minimal copy statically linked into dyld/libSystem) is what
 	 * normally signs the main thread's pthread_t via _pthread_init_signature()
 	 * shortly after this function runs. Since we never call it, pthread_self()
 	 * would otherwise return an unsigned (sig == 0) struct and the very first
 	 * _pthread_validate_signature() check (e.g. inside pthread_mutex_lock)
-	 * aborts with "pthread_t was corrupted". Sign it here instead -- with
+	 * aborts with "pthread_t was corrupted". Sign it here instead - with
 	 * _pthread_ptr_munge_token at its default 0 value, this is self-consistent
 	 * even though it's not the real kernel-supplied token. */
 	_pthread_init_signature(p);
+
+	/* PureDarwin: __pthread_init() being compiled out also means its call to
+	 * _pthread_main_thread_init(thread) never happens, so MACH_THREAD_SELF
+	 * (along with MIG_REPLY/MACH_SPECIAL_REPLY/SEMAPHORE_CACHE and the
+	 * __pthread_head list registration) was never populated for the main
+	 * thread. pthread_kill(pthread_self(), sig) reads MACH_THREAD_SELF as the
+	 * kernel port to signal; left at 0, __pthread_kill's port_name_to_thread()
+	 * silently fails (ESRCH, ignored by abort()/raise()), so every abort()
+	 * fell through both pthread_kill attempts straight to __builtin_trap()
+	 * (observed as a bare "#UD -> SIGILL" instead of a real SIGABRT). Run the
+	 * same main-thread init real __pthread_init() would have. */
+	_pthread_main_thread_init(p);
 }
 #endif // VARIANT_DYLD
 
