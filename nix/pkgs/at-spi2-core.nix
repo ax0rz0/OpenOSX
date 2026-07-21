@@ -122,10 +122,15 @@ EOF
       [ ! -d "$out/lib" ] || find "$out/lib" -type f
       [ ! -d "$out/libexec" ] || find "$out/libexec" -type f
     )
+    load_paths="$out ${lib.concatStringsSep " " deps}"
     for f in $allfiles; do
-      for dylib in $dylibs; do
-        base=$(basename "$dylib")
-        "$INSTALL_NAME_TOOL" -change "@rpath/$base" "/lib/$base" "$f" 2>/dev/null || true
+      for dep in $load_paths; do
+        for dylib in "$dep"/lib/*.dylib; do
+          [ -e "$dylib" ] || continue
+          base=$(basename "$dylib")
+          "$INSTALL_NAME_TOOL" -change "@rpath/$base" "/lib/$base" "$f" 2>/dev/null || true
+          "$INSTALL_NAME_TOOL" -change "$dep/lib/$base" "/lib/$base" "$f" 2>/dev/null || true
+        done
       done
     done
 
