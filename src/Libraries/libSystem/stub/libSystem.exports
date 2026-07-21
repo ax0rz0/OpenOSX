@@ -287,6 +287,7 @@ __NSGetProgname
 _OSAtomicCompareAndSwapPtrBarrier
 __os_log_create
 _mach_vm_region
+_vm_region_64
 _pthread_getugid_np
 _fprintf_l
 _readdir_r$INODE64
@@ -519,6 +520,7 @@ _optreset
 _pipe
 _poll
 _ptrace
+_putc_unlocked
 _putc
 _putchar
 _puts
@@ -824,6 +826,7 @@ _fstatvfs
 _funlockfile
 _getlogin_r
 _getpwent
+_getloadavg
 _isblank
 _iscntrl
 _ispunct
@@ -840,13 +843,18 @@ _iswspace
 _iswupper
 _iswxdigit
 ____mb_cur_max
+____mb_cur_max_l
 _mbrtowc
 _mbsinit
 _mkstemps
 _rewinddir$INODE64
+_bsd_signal
 _sigaddset
+_sigaltstack
+_sigdelset
 _sigemptyset
 _sigfillset
+_sigismember
 ___srget
 _tcgetpgrp
 _tcsetpgrp

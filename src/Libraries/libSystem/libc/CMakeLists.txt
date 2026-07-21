@@ -271,8 +271,12 @@ target_sources(libc_static PRIVATE
     gen/FreeBSD/arc4random.c     # corecrypto-backed arc4random/arc4random_buf/arc4random_uniform
     gen/FreeBSD/daemon.c         # _daemon$1050
     gen/FreeBSD/signal.c         # _signal (libmalloc's pguard_malloc.c installs a SIGSEGV handler)
+    gen/sigsetops.c              # sigemptyset/sigfillset/sigaddset/sigdelset/sigismember
+    compat-43/sigaltstk.c        # _sigaltstack public wrapper over the raw syscall
+    emulated/bsd_signal.c        # _bsd_signal (POSIX legacy signal wrapper)
     sys/sigaction.c              # __sigaction_nobind (signal.c's underlying raw syscall wrapper)
     gen/raise.c                  # _raise (signal.c's SIG_DFL/SIG_IGN cleanup path)
+    gen/getloadavg.c             # _getloadavg
     gen/FreeBSD/sleep.c          # _sleep (pguard_malloc.c's crash-report-wait path)
     gen/nanosleep.c              # _nanosleep (sleep.c's underlying wrapper)
     gen/FreeBSD/isatty.c         # _isatty (pguard_malloc.c's tty-detection for its diagnostic output)

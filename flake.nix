@@ -1315,6 +1315,52 @@
               libSystem = libSystemBuild;
               bmake = pkgs.bmake;
             };
+          gnumakeBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gnumake.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              gnumake = pkgs.gnumake;
+            };
+          pkgconfBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/pkgconf.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pkgconf = pkgs.pkgconf-unwrapped;
+            };
+          gnum4Build =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gnum4.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              gnum4 = pkgs.gnum4;
+            };
+          bisonBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/bison.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              bison = pkgs.bison;
+            };
+          flexBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/flex.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              flex = pkgs.flex;
+            };
+          pythonBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/python.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              python3 = pkgs.python3;
+              zlib = xvfbZlibBuild;
+              openssl = opensslBuild;
+              libffi = libffiBuild;
+            };
+          perlBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/perl.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              perl = pkgs.perl;
+              zlib = xvfbZlibBuild;
+            };
           zshBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/zsh.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -1592,6 +1638,13 @@
             libiconv = libiconvBuild;
             nano = nanoBuild;
             bmake = bmakeBuild;
+            gnumake = gnumakeBuild;
+            pkgconf = pkgconfBuild;
+            gnum4 = gnum4Build;
+            bison = bisonBuild;
+            flex = flexBuild;
+            python = pythonBuild;
+            perl = perlBuild;
             zsh = zshBuild;
             toybox = toyboxBuild;
             file = fileBuild;
@@ -1691,6 +1744,13 @@
             i3 = i3Build;
             i3status = i3statusShimBuild;
             openssh = opensshBuild;
+            gnumake = gnumakeBuild;
+            pkgconf = pkgconfBuild;
+            gnum4 = gnum4Build;
+            bison = bisonBuild;
+            flex = flexBuild;
+            python = pythonBuild;
+            perl = perlBuild;
           };
 
           linuxPackages =
