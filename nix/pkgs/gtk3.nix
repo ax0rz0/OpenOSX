@@ -38,6 +38,7 @@
 , libXrender
 , libXrandr
 , libXfixes
+, libXcursor
 , xorgproto
 , libpng
 }:
@@ -51,7 +52,7 @@ let
     libepoxy
     atspi2Core
     dbus
-    libX11 libxcb libXau libXdmcp libXext libXi libXrender libXrandr libXfixes
+    libX11 libxcb libXau libXdmcp libXext libXi libXrender libXrandr libXfixes libXcursor
     xorgproto libpng
   ];
   depPcPaths = map lib.getDev deps;
@@ -75,11 +76,6 @@ stdenv.mkDerivation {
   postPatch = ''
     patchShebangs .
 
-    # meson.build hard-forces x11_enabled=false/quartz_enabled=true whenever
-    # host_machine.system() == 'darwin' - correct for a real macOS cross
-    # target, wrong for us (no Cocoa/Quartz exists here; we want the X11
-    # backend). Force the values we actually want instead of letting the
-    # os_darwin branch pick them.
     python3 - <<'PYEOF'
 import re
 with open('meson.build') as f:
@@ -116,6 +112,45 @@ PYEOF
     # gtk_progress_get_type marker as present even though no loaded image
     # exports it.
     sed -i '/_gtk_module_has_mixed_deps (NULL)/,+1d' gtk/gtkmain.c
+
+    # Keep GtkEntry robust if the X11 backend cannot construct the named
+    # invisible cursor for any reason.
+    python3 - <<'PYEOF'
+from pathlib import Path
+
+path = Path('gtk/gtkentry.c')
+content = path.read_text()
+old = """static void
+set_invisible_cursor (GdkWindow *window)
+{
+  GdkCursor *cursor;
+
+  cursor = gdk_cursor_new_from_name (gdk_window_get_display (window), "none");
+  gdk_window_set_cursor (window, cursor);
+  g_object_unref (cursor);
+}
+"""
+new = """static void
+set_invisible_cursor (GdkWindow *window)
+{
+  GdkDisplay *display;
+  GdkCursor *cursor;
+
+  display = gdk_window_get_display (window);
+  cursor = gdk_cursor_new_from_name (display, "none");
+  if (cursor == NULL)
+    cursor = gdk_cursor_new_for_display (display, GDK_BLANK_CURSOR);
+
+  if (cursor != NULL)
+    {
+      gdk_window_set_cursor (window, cursor);
+      g_object_unref (cursor);
+    }
+}
+"""
+assert old in content, "GtkEntry invisible cursor helper not found"
+path.write_text(content.replace(old, new))
+PYEOF
   '';
 
   configurePhase = ''

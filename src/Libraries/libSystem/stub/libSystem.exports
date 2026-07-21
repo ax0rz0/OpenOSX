@@ -953,6 +953,10 @@ _pid_for_task
 _task_info
 _thread_info
 _thread_policy_set
+_clock_get_time
+_host_get_clock_service
+_clock_get_attributes
+_clock_alarm
 _mach_reply_port
 _mach_msg_overwrite_trap
 _semaphore_wait_trap

@@ -15,10 +15,11 @@
 , libffi
 , zlib
 , libiconv
+, libpng
 }:
 
 let
-  deps = [ glib pcre2 libffi zlib libiconv ];
+  deps = [ glib pcre2 libffi zlib libiconv libpng ];
   depPcPaths = map lib.getDev deps;
   sdkTarball = requireFile {
     name = "MacOSX11.3.sdk.tar.xz";
@@ -90,7 +91,7 @@ EOF
       -Dman=false \
       -Ddocumentation=false \
       -Dintrospection=disabled \
-      -Dpng=disabled \
+      -Dpng=enabled \
       -Djpeg=disabled \
       -Dtiff=disabled \
       -Dgif=disabled \
@@ -99,7 +100,7 @@ EOF
       -Dothers=disabled \
       -Dthumbnailer=disabled \
       -Dlegacy_xpm=disabled \
-      -Dbuiltin_loaders=none \
+      -Dbuiltin_loaders=png \
       -Drelocatable=false
 
     runHook postConfigure

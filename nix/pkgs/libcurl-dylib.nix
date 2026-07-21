@@ -114,10 +114,23 @@ stdenv.mkDerivation {
 
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/usr/lib $out/usr/include
+    mkdir -p $out/usr/lib/pkgconfig $out/usr/include
     cp libcurl.4.dylib $out/usr/lib/
     ln -sf libcurl.4.dylib $out/usr/lib/libcurl.dylib
     cp -r include/curl $out/usr/include/
+
+    cat > $out/usr/lib/pkgconfig/libcurl.pc <<EOF
+prefix=$out/usr
+libdir=\''${prefix}/lib
+includedir=\''${prefix}/include
+
+Name: libcurl
+Description: Library to transfer files with ftp, http, etc.
+Version: ${curl.version}
+Libs: -L\''${libdir} -lcurl
+Cflags: -I\''${includedir}
+EOF
+
     runHook postInstall
   '';
 

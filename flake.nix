@@ -806,6 +806,120 @@
               libiconv = libiconvBuild;
               inherit (pkgs) at-spi2-core meson ninja python3;
             };
+          libwapcapletBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libwapcaplet.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) libwapcaplet;
+            };
+          libparserutilsBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libparserutils.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libiconv = libiconvBuild;
+              inherit (pkgs) libparserutils perl;
+            };
+          libnsutilsBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libnsutils.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) libnsutils;
+            };
+          libnsgifBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libnsgif.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) libnsgif;
+            };
+          libnsbmpBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libnsbmp.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) libnsbmp;
+            };
+          libutf8procBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libutf8proc.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) libutf8proc;
+            };
+          libhubbubBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libhubbub.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libwapcaplet = libwapcapletBuild;
+              libparserutils = libparserutilsBuild;
+              inherit (pkgs) libhubbub perl gperf gnused;
+            };
+          libcssBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libcss.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libwapcaplet = libwapcapletBuild;
+              libparserutils = libparserutilsBuild;
+              inherit (pkgs) libcss perl python3;
+            };
+          libdomBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libdom.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libwapcaplet = libwapcapletBuild;
+              libparserutils = libparserutilsBuild;
+              libhubbub = libhubbubBuild;
+              expat = expatBuild;
+              inherit (pkgs) libdom;
+            };
+          netsurfBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/netsurf.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              hostOtool = hostOtoolBuild;
+              glibNative = pkgs.glib.dev;
+              gdkPixbufNative = pkgs.gdk-pixbuf.dev;
+              inherit (pkgs) inetutils;
+              gtk3 = gtk3Build;
+              glib = glibBuild;
+              cairo = cairoBuild;
+              cairoGobject = cairoGobjectBuild;
+              pango = pangoBuild;
+              gdkPixbuf = gdkPixbufBuild;
+              libepoxy = libepoxyBuild;
+              atspi2Core = atspi2CoreBuild;
+              dbus = dbusBuild;
+              libcurl = libcurlDylibBuild;
+              openssl = opensslBuild;
+              zlib = xvfbZlibBuild;
+              libpng = libpngBuild;
+              libiconv = libiconvBuild;
+              libwapcaplet = libwapcapletBuild;
+              libparserutils = libparserutilsBuild;
+              libhubbub = libhubbubBuild;
+              libcss = libcssBuild;
+              libdom = libdomBuild;
+              libnsgif = libnsgifBuild;
+              libnsbmp = libnsbmpBuild;
+              libnsutils = libnsutilsBuild;
+              libutf8proc = libutf8procBuild;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXi = xvfbLibXiBuild;
+              libXrender = xvfbLibXrenderBuild;
+              libXrandr = xvfbLibXrandrBuild;
+              libXfixes = xvfbLibXfixesBuild;
+              libXcursor = xvfbLibXcursorBuild;
+              xorgproto = pkgs.xorgproto;
+              expat = expatBuild;
+              pcre2 = pcre2Build;
+              libffi = libffiBuild;
+              fribidi = fribidiBuild;
+              harfbuzz = harfbuzzBuild;
+              freetype2 = freetype2Build;
+              fontconfig = fontconfigBuild;
+              inherit (pkgs) perl pkg-config nsgenbind;
+            };
           libepoxyBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/libepoxy.nix {
               nativeMesonTools = nativeMesonToolsDir;
@@ -847,6 +961,7 @@
               libffi = libffiBuild;
               zlib = xvfbZlibBuild;
               libiconv = libiconvBuild;
+              libpng = libpngBuild;
               inherit (pkgs) gdk-pixbuf meson ninja python3;
             };
           gtk3Build =
@@ -881,26 +996,10 @@
               libXrender = xvfbLibXrenderBuild;
               libXrandr = xvfbLibXrandrBuild;
               libXfixes = xvfbLibXfixesBuild;
+              libXcursor = xvfbLibXcursorBuild;
               libpng = libpngBuild;
               glibNative = pkgs.glib.dev;
               inherit (pkgs) gtk3 xorgproto;
-            };
-          gtk3HelloBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk3-hello.nix {
-              inherit darwinCrossToolchain nativeLd;
-              libSystem = libSystemBuild;
-              gtk3 = gtk3Build;
-              glib = glibBuild;
-              cairo = cairoBuild;
-              cairoGobject = cairoGobjectBuild;
-              pango = pangoBuild;
-              harfbuzz = harfbuzzBuild;
-              freetype2 = freetype2Build;
-              fontconfig = fontconfigBuild;
-              gdkPixbuf = gdkPixbufBuild;
-              libepoxy = libepoxyBuild;
-              atspi2Core = atspi2CoreBuild;
-              dbus = dbusBuild;
             };
           xvfbBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb.nix {
@@ -958,6 +1057,37 @@
               version = pkgs.libXfixes.version;
               src = pkgs.libXfixes.src;
               deps = [ pkgs.xorgproto xlibBuild ];
+            };
+          xvfbLibXcursorBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libXcursor";
+              version = pkgs.libXcursor.version;
+              src = pkgs.libXcursor.src;
+              deps = [ pkgs.xorgproto xlibBuild xvfbLibXfixesBuild xvfbLibXrenderBuild ];
+              postInstallExtra = ''
+                mkdir -p .libXcursor-dylib
+                (
+                  cd .libXcursor-dylib
+                  ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar x "$out/lib/libXcursor.a"
+                  ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-clang \
+                    -isysroot "$DARWIN_SDK_ROOT" \
+                    -mmacosx-version-min=11.0 \
+                    -fuse-ld=${nativeLd}/bin/ld \
+                    -nostdlib \
+                    -dynamiclib \
+                    -Wl,-install_name,/lib/libXcursor.1.dylib \
+                    -Wl,-compatibility_version,1.0.0 \
+                    -Wl,-current_version,1.0.2 \
+                    -Wl,-undefined,dynamic_lookup \
+                    -L${libSystemBuild}/usr/lib \
+                    -o "$out/lib/libXcursor.1.dylib" \
+                    ./*.o \
+                    -lSystem
+                )
+                ln -sf libXcursor.1.dylib "$out/lib/libXcursor.dylib"
+              '';
             };
           xvfbLibXrandrBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
@@ -1427,7 +1557,16 @@
             libXrandr = xvfbLibXrandrBuild;
             gtk3 = gtk3Build;
             libpng = libpngBuild;
-            gtk3-hello = gtk3HelloBuild;
+            libwapcaplet = libwapcapletBuild;
+            libparserutils = libparserutilsBuild;
+            libnsutils = libnsutilsBuild;
+            libnsgif = libnsgifBuild;
+            libnsbmp = libnsbmpBuild;
+            libutf8proc = libutf8procBuild;
+            libhubbub = libhubbubBuild;
+            libcss = libcssBuild;
+            libdom = libdomBuild;
+            netsurf = netsurfBuild;
             host-otool = hostOtoolBuild;
             xterm = xtermBuild;
             xkbcomp = xkbcompBuild;
@@ -1484,6 +1623,7 @@
             libXext = xvfbLibXextBuild;
             libXrender = xvfbLibXrenderBuild;
             libXfixes = xvfbLibXfixesBuild;
+            libXcursor = xvfbLibXcursorBuild;
             libICE = xvfbLibICEBuild;
             libSM = xvfbLibSMBuild;
           };
