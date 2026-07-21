@@ -111,6 +111,11 @@ for line in ["subdir('docs/tools')", "subdir('docs/reference')"]:
 with open('meson.build', 'w') as f:
     f.write(content)
 PYEOF
+
+    # PureDarwin's current dlsym/dlopen(NULL) path can report GTK2's
+    # gtk_progress_get_type marker as present even though no loaded image
+    # exports it.
+    sed -i '/_gtk_module_has_mixed_deps (NULL)/,+1d' gtk/gtkmain.c
   '';
 
   configurePhase = ''

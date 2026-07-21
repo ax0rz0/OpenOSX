@@ -1039,17 +1039,6 @@ _swap_fat_arch_64
 _dlopen_preflight
 _qsort_r
 _qsort_b
-
-
-
-# std::string / std::stdexcept / std::to_string out-of-line members (narrow
-# char only - string.cpp/stdexcept.cpp/charconv.cpp are already compiled into
-# libcxx_static for the ICU mutex/string subset - see
-# src/Libraries/libcxxabi/CMakeLists.txt - but weren't force-rooted here, so
-# -dead_strip discarded them. Rooted for the self-hosted iig build.
-# string.cpp is compiled -DPD_LIBCXX_NARROW_STRING_ONLY (see string.cpp) to
-# skip std::wstring entirely - we have no real wide-character printf/wcstod
-# and nothing here needs it.
 ___clang_call_terminate
 __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE12find_last_ofEPKcmm
 __ZNKSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE13find_first_ofEPKcmm
@@ -1146,34 +1135,18 @@ __ZNSt3__19to_stringEx
 __ZNSt3__19to_stringEy
 __ZNSt3__1plIcNS_11char_traitsIcEENS_9allocatorIcEEEENS_12basic_stringIT_T0_T1_EEPKS6_RKS9_
 __ZNSt3__1plIcNS_11char_traitsIcEENS_9allocatorIcEEEENS_12basic_stringIT_T0_T1_EERKS9_PKS6_
-
-# std::vector's __vector_base_common (needed by std::vector::at/reserve/etc's
-# length_error/out_of_range paths). See the string.cpp block above.
 __ZNKSt3__120__vector_base_commonILb1EE20__throw_length_errorEv
 __ZNKSt3__120__vector_base_commonILb1EE20__throw_out_of_rangeEv
-
-# Legacy OSAtomic (libplatform) + Mach host_statistics MIG client, needed by
-# ld64's InputFiles.cpp/ld.cpp. Real implementations already exist in
-# libplatform_static/libsystem_kernel_static, just weren't rooted here yet.
 _OSAtomicAdd32
 _OSAtomicAdd64
 _host_statistics
 _host_statistics64
-
-# reallocf (real FreeBSD source, just registered) + truncate (real BSD
-# syscall #200, already generated, just wasn't rooted) - both needed by
-# ld64's ResponseFiles.cpp/Snapshot.cpp self-host build.
 _reallocf
 _truncate
 _shmat
 _shmctl
 _shmdt
 _shmget
-
-# std::sort/__insertion_sort/mersenne_twister out-of-line instantiations
-# (algorithm.cpp is now compiled into libcxx_static too - see
-# src/Libraries/libcxxabi/CMakeLists.txt) needed by ld64's OutputFile.cpp/
-# SymbolTable.cpp self-host build.
 ___clang_call_terminate
 __ZNSt3__112__rs_default4__c_E
 __ZNSt3__112__rs_defaultC1ERKS0_
@@ -1275,12 +1248,6 @@ __ZNSt3__17__sort5IRNS_6__lessIwwEEPwEEjT0_S5_S5_S5_S5_T_
 __ZNSt3__17__sort5IRNS_6__lessIxxEEPxEEjT0_S5_S5_S5_S5_T_
 __ZNSt3__17__sort5IRNS_6__lessIyyEEPyEEjT0_S5_S5_S5_S5_T_
 __ZNSt3__18__rs_getEv
-
-# Exception-handling runtime core (libcxxabi's cxa_exception.cpp/stdlib_new_
-# delete.cpp/stdlib_typeinfo.cpp/stdlib_stdexcept.cpp - already compiled,
-# just weren't rooted) + libunwind's _Unwind_Resume. Needed once real
-# throw/catch code (length_error etc.) is actually reachable, as it now is
-# via string.cpp/vector.cpp/algorithm.cpp above.
 ___cxa_allocate_exception
 ___cxa_free_exception
 __Unwind_Resume
@@ -1291,32 +1258,18 @@ __ZTISt12length_error
 __ZTVSt12length_error
 __ZSt7nothrow
 __ZnwmRKSt9nothrow_t
-
-# std::nothrow / __throw_bad_alloc (libcxx's new.cpp, compiled with
-# -D_LIBCPP_DISABLE_NEW_DELETE_DEFINITIONS to skip its duplicate operator
-# new/delete - see src/Libraries/libcxxabi/CMakeLists.txt) + std::bad_alloc
-# (already in libcxxabi's stdlib_exception.cpp). Needed by ld.cpp's
-# std::get_temporary_buffer.
 __ZSt7nothrow
 __ZSt17__throw_bad_allocv
 __ZNSt9bad_allocC1Ev
 __ZNSt9bad_allocD1Ev
 __ZTISt9bad_alloc
 _mkpath_np
-
-# std::unordered_map's hash-table rehash (hash.cpp, now compiled too) +
-# supporting exception types already compiled into libcxxabi/libcxx but not
-# yet rooted. Needed by ld64's ld.cpp (CStringHash/Atom-pointer hash maps).
 __ZNSt3__112__next_primeEm
 __ZNSt3__122__throw_overflow_errorEPKc
 __ZNSt13runtime_errorC2EPKc
 __ZNSt14overflow_errorD1Ev
 __ZTISt14overflow_error
 __ZTVSt14overflow_error
-
-# Real corecrypto digest API (already compiled into corecrypto_static, just
-# wasn't rooted) - needed by ld64's libcodedirectory.c (codesigning hashes)
-# and our own CC_MD5 bridge (pd_cc_digest_bridge.c).
 _ccdigest_init
 _ccdigest_update
 _ccmd5_di
