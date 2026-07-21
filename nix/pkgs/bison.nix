@@ -27,6 +27,20 @@ stdenv.mkDerivation {
 
   nativeBuildInputs = [ gnumake perl m4 ];
 
+  postPatch = ''
+    # gnulib's spawn.h template defines zero-valued sched flags when the
+    # system has posix_spawn(), but misses the replacement-posix_spawn path.
+    # PureDarwin currently has posix_spawnattr_t but no sched attr support.
+    substituteInPlace lib/spawn.in.h \
+      --replace-fail '#  undef POSIX_SPAWN_FORK_HANDLERS' '#  undef POSIX_SPAWN_FORK_HANDLERS
+#  ifndef POSIX_SPAWN_SETSCHEDPARAM
+#   define POSIX_SPAWN_SETSCHEDPARAM 0
+#  endif
+#  ifndef POSIX_SPAWN_SETSCHEDULER
+#   define POSIX_SPAWN_SETSCHEDULER 0
+#  endif'
+  '';
+
   configurePhase = ''
     runHook preConfigure
 
@@ -46,6 +60,9 @@ stdenv.mkDerivation {
 
     export gl_cv_func_gettimeofday_clobber=no
     export ac_cv_func_strerror_r_char_p=no
+    export ac_cv_func_opendir=yes
+    export ac_cv_func_readdir=yes
+    export ac_cv_func_rewinddir=yes
 
     ./configure \
       --host=x86_64-apple-darwin20.4 \
