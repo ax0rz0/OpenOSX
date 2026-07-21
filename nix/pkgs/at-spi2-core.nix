@@ -9,24 +9,18 @@
 , darwinCrossToolchain
 , nativeLd
 , libSystem
-, cairo
-, pixman
+, at-spi2-core
+, glib
+, libxml2
+, dbus
+, pcre2
+, libffi
 , zlib
-, xorgproto
-, libX11
-, libXext
-, libXrender
-, libxcb
-, libXau
-, libXdmcp
-, freetype
-, fontconfig
-, expat
-, libpng
+, libiconv
 }:
 
 let
-  deps = [ pixman zlib xorgproto libX11 libXext libXrender libxcb libXau libXdmcp freetype fontconfig expat libpng ];
+  deps = [ glib libxml2 dbus pcre2 libffi zlib libiconv ];
   depPcPaths = map lib.getDev deps;
   sdkTarball = requireFile {
     name = "MacOSX11.3.sdk.tar.xz";
@@ -39,17 +33,18 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-cairo";
-  version = cairo.version;
-
-  src = cairo.src;
+  pname = "puredarwin-at-spi2-core";
+  inherit (at-spi2-core) version src;
 
   nativeBuildInputs = [ meson ninja pkg-config python3 ];
   buildInputs = deps;
 
   postPatch = ''
-    patchShebangs version.py
-    sed -i "/subdir('util')/d" meson.build
+    patchShebangs .
+    # No gettext/libintl port exists yet; this header is included but the
+    # _()/N_() macros it defines are never actually called in this file.
+    sed -i '/^#include <libintl.h>$/d' atspi/atspi-gmain.c
+    sed -i "/subdir('tests')/d" meson.build
   '';
 
   configurePhase = ''
@@ -65,20 +60,25 @@ stdenv.mkDerivation {
     cat > puredarwin-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-clang'
+cpp = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-clang++'
 ar = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar'
 strip = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-strip'
 pkg-config = '${pkg-config}/bin/pkg-config'
 install_name_tool = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-install_name_tool'
 
 [built-in options]
-c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-DHAVE_UINT64_T=1', '-DHAVE___UINT128_T=1', '-DHAVE_XRENDERCREATESOLIDFILL=1', '-DHAVE_XRENDERCREATELINEARGRADIENT=1', '-DHAVE_XRENDERCREATERADIALGRADIENT=1', '-DHAVE_XRENDERCREATECONICALGRADIENT=1', '-DFC_RGBA_UNKNOWN=0', '-DFC_RGBA_RGB=1', '-DFC_RGBA_BGR=2', '-DFC_RGBA_VRGB=3', '-DFC_RGBA_VBGR=4', '-DFC_RGBA_NONE=5', '-DFC_HINT_NONE=0', '-DFC_HINT_SLIGHT=1', '-DFC_HINT_MEDIUM=2', '-DFC_HINT_FULL=3', '-DFC_LCD_NONE=0', '-DFC_LCD_DEFAULT=1', '-DFC_LCD_LIGHT=2', '-DFC_LCD_LEGACY=3', '-fno-stack-protector', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}]
-c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-force_load,${libXau}/lib/libXau.a', '-Wl,-force_load,${libXdmcp}/lib/libXdmcp.a', '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-lSystem']
+c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}]
+c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-Wl,-undefined,dynamic_lookup', '-lSystem']
 
 [host_machine]
 system = 'darwin'
+subsystem = 'macos'
 cpu_family = 'x86_64'
 cpu = 'x86_64'
 endian = 'little'
+
+[properties]
+needs_exe_wrapper = true
 EOF
 
     meson setup build \
@@ -87,20 +87,15 @@ EOF
       --libdir=lib \
       --buildtype=release \
       -Ddefault_library=shared \
-      -Dtests=disabled \
-      -Dgtk_doc=false \
-      -Dgtk2-utils=disabled \
-      -Dglib=disabled \
-      -Dlzo=disabled \
-      -Dpng=enabled \
-      -Dquartz=disabled \
-      -Dtee=disabled \
-      -Dfontconfig=enabled \
-      -Dfreetype=enabled \
-      -Dxlib=enabled \
-      -Dxcb=enabled \
-      -Dxlib-xcb=disabled \
-      -Dzlib=enabled
+      -Dx11=disabled \
+      -Dintrospection=disabled \
+      -Ddocs=false \
+      -Dgtk2_atk_adaptor=false \
+      -Ddbus_glib=disabled \
+      -Duse_systemd=false \
+      -Ddefault_bus=dbus-daemon \
+      -Ddbus_daemon=/bin/dbus-daemon \
+      -Datk_only=false
 
     runHook postConfigure
   '';
@@ -114,6 +109,7 @@ EOF
   installPhase = ''
     runHook preInstall
     ninja -C build install
+    sed -i 's/ -DG_LOG_DOMAIN="dbind"//' "$out/lib/pkgconfig/atspi-2.pc"
 
     INSTALL_NAME_TOOL="${nativeMesonTools}/bin/install_name_tool"
     dylibs=$(find "$out/lib" -maxdepth 1 -name "*.dylib" -not -type l)
@@ -124,6 +120,7 @@ EOF
     allfiles=$(
       [ ! -d "$out/bin" ] || find "$out/bin" -type f
       [ ! -d "$out/lib" ] || find "$out/lib" -type f
+      [ ! -d "$out/libexec" ] || find "$out/libexec" -type f
     )
     for f in $allfiles; do
       for dylib in $dylibs; do
@@ -138,6 +135,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
+    description = "AT-SPI2 core (libatspi, ATK, atk-bridge-2.0, registryd), cross-built for PureDarwin (X11/introspection/systemd disabled)";
     platforms = platforms.linux;
   };
 }

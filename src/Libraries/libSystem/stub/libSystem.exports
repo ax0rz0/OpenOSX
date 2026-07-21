@@ -394,6 +394,7 @@ _gmtime
 _closelog
 _openlog
 _syslog$DARWIN_EXTSN
+_vsyslog
 _recvmsg
 _sendmsg
 _strerror_r
@@ -439,7 +440,10 @@ _fnmatch
 _fputs
 _fstat$INODE64
 _getcwd
+_devname
+_devname_r
 _getegid
+_getpeereid
 _getenv
 _geteuid
 _getgid
@@ -449,6 +453,7 @@ _getopt_long
 _getopt_long_only
 _asctime_r
 _ctime_r
+_daemon$1050
 _gmtime_r
 _mktemp
 _vsprintf
@@ -470,6 +475,8 @@ _dns_open
 _dns_free
 _dns_search
 _arc4random
+_arc4random_addrandom
+_arc4random_stir
 _arc4random_uniform
 _getifaddrs
 _freeifaddrs
@@ -485,6 +492,8 @@ _getpwnam
 _getrlimit
 _getpeername
 _gettimeofday
+_getresgid
+_getresuid
 _getuid
 _glob$INODE64
 _globfree
@@ -509,6 +518,7 @@ _optopt
 _optreset
 _pipe
 _poll
+_ptrace
 _putc
 _putchar
 _puts
@@ -531,7 +541,10 @@ _in6addr_loopback
 _setegid
 _seteuid
 _setgid
+_setgroups
 _setjmp
+_setresgid
+_setresuid
 _setrlimit
 _settimeofday
 _setuid
@@ -597,6 +610,8 @@ _getgrouplist
 _gethostbyname
 _getpwuid
 _getsid
+_group_from_gid
+_user_from_uid
 _h_errno
 _err
 _errc
@@ -627,6 +642,7 @@ _strsep
 _strspn
 _ungetc
 _utimensat
+_dladdr
 _dlclose
 _dlerror
 _dlopen
@@ -766,9 +782,11 @@ _execlp
 _fpathconf
 _gethostbyaddr
 _getlogin
+_getentropy
 _getpwnam_r
 _getpwuid_r
 _getusershell
+_setusershell
 _initgroups
 _isgraph
 _iswcntrl
@@ -929,8 +947,11 @@ _task_resume
 _task_suspend
 _host_processors
 _task_for_pid
+_task_read_for_pid
 _task_name_for_pid
 _pid_for_task
+_task_info
+_thread_info
 _thread_policy_set
 _mach_reply_port
 _mach_msg_overwrite_trap
@@ -1144,6 +1165,10 @@ _host_statistics64
 # ld64's ResponseFiles.cpp/Snapshot.cpp self-host build.
 _reallocf
 _truncate
+_shmat
+_shmctl
+_shmdt
+_shmget
 
 # std::sort/__insertion_sort/mersenne_twister out-of-line instantiations
 # (algorithm.cpp is now compiled into libcxx_static too - see

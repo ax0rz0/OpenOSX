@@ -195,6 +195,7 @@ target_sources(libc_static PRIVATE
     db/recno/FreeBSD/rec_utils.c
     db/mpool/FreeBSD/mpool.c
     gen/devname.c                # _devname / _devname_r
+    gen/pwcache.c                # _user_from_uid / _group_from_gid (ps)
     gen/uname.c                  # _uname (BusyBox uname; sysctl-backed)
     gen/FreeBSD/exec.c           # _execvp / _execv / _execlp (BusyBox spawn)
     gen/FreeBSD/basename.c       # _basename
@@ -205,6 +206,7 @@ target_sources(libc_static PRIVATE
     gen/FreeBSD/clock.c          # _clock
     gen/FreeBSD/getlogin.c       # _getlogin / _getlogin_r
     gen/pd_getpwent.c            # getpwnam/getpwuid (/etc/passwd reader; no libinfo)
+    gen/getusershell.c           # getusershell/setusershell/endusershell (/etc/shells)
     string/FreeBSD/wcscmp.c      # _wcscmp (wcscoll)
     stdlib/FreeBSD/imaxabs.c     # _imaxabs (inttypes)
     stdlib/FreeBSD/strtoimax.c   # _strtoimax / _strtoimax_l (scanf)
@@ -234,6 +236,7 @@ target_sources(libc_static PRIVATE
     string/FreeBSD/memmem.c      # _memmem (file(1) magic buffer scans)
     string/NetBSD/memset_s.c     # _memset_s (C11 Annex K; curl's curlx_freezero)
     gen/backtrace.c               # _backtrace/_backtrace_symbols/_backtrace_symbols_fd (dbus's execinfo.h use)
+    gen/FreeBSD/getpeereid.c     # _getpeereid (dbus's unix-socket peer credential auth)
     gen/FreeBSD/fmtcheck.c       # _fmtcheck (file(1) locale-safe strerror formatting)
     secure/strcat_chk.c          # ___strcat_chk
     # POSIX regex: Apple's TRE engine (regcomp/regexec) + BSD regerror.
@@ -265,7 +268,8 @@ target_sources(libc_static PRIVATE
     gen/FreeBSD/assert.c         # __assert_rtn
     secure/chk_fail.c            # ___chk_fail_overflow (needs mach-o/dyld_priv.h, now vendored)
     darwin/pd_os_crash.c         # __os_crash (minimal real report-then-let-caller-trap; see file comment)
-    darwin/pd_arc4random.c       # _arc4random_uniform (real getentropy()-backed impl; see file comment)
+    gen/FreeBSD/arc4random.c     # corecrypto-backed arc4random/arc4random_buf/arc4random_uniform
+    gen/FreeBSD/daemon.c         # _daemon$1050
     gen/FreeBSD/signal.c         # _signal (libmalloc's pguard_malloc.c installs a SIGSEGV handler)
     sys/sigaction.c              # __sigaction_nobind (signal.c's underlying raw syscall wrapper)
     gen/raise.c                  # _raise (signal.c's SIG_DFL/SIG_IGN cleanup path)
@@ -301,10 +305,6 @@ target_sources(libc_static PRIVATE
     secure/sprintf_chk.c         # ___sprintf_chk
     gen/FreeBSD/termios.c        # _tcgetattr (isatty.c's underlying check)
     # TODO (need cross-deps beyond the SDK sysroot):
-    #  - gen/FreeBSD/arc4random.c: os/assumes.h -> corecrypto/ccrng.h chain has a
-    #    string.h asm-label redeclaration conflict under our include order; also
-    #    needs real corecrypto RNG wiring, not just headers. Deferred (libc_static
-    #    uses darwin/pd_arc4random.c instead, a real getentropy()-backed impl).
     #  - stdio/FreeBSD/mktemp.c (_mkstemp) needs BSD-internal TRUE/FALSE/bool
     # printf/fprintf/snprintf and the locale/rune chain are NOT deferred anymore
     # - resolved for real in libc_internal_static below (findfp.c/vfprintf.c/
@@ -349,6 +349,7 @@ target_include_directories(libc_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/locale          # xlocale_private.h
     ${CMAKE_CURRENT_SOURCE_DIR}/locale/FreeBSD   # setlocale.h + rune internals
     ${CMAKE_CURRENT_SOURCE_DIR}/stdtime/FreeBSD   # timelocal.h (locale chain)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../corecrypto/include # corecrypto-backed arc4random
     ${CMAKE_CURRENT_SOURCE_DIR}/../libplatform/private   # _simple.h (subsystem.c)
     ${CMAKE_CURRENT_SOURCE_DIR}/../pthread/private       # pthread/tsd_private.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../libsystem_kernel/private_include  # os/tsd.h
@@ -418,7 +419,7 @@ set_source_files_properties(
     stdlib/FreeBSD/rand.c gen/FreeBSD/ttyname.c gen/FreeBSD/exec.c
     stdtime/FreeBSD/localtime.c stdtime/FreeBSD/strftime.c stdtime/FreeBSD/asctime.c
     stdio/FreeBSD/setbuf.c stdio/FreeBSD/setbuffer.c stdio/FreeBSD/setvbuf.c
-    gen/FreeBSD/basename.c gen/FreeBSD/gethostname.c
+    gen/FreeBSD/basename.c gen/FreeBSD/gethostname.c gen/FreeBSD/daemon.c
     PROPERTIES COMPILE_FLAGS "-include${CMAKE_CURRENT_SOURCE_DIR}/fbsdcompat/_fbsd_compat_.h")
 # fnmatch.c needs the collate internals (__collate_*) gated behind __LIBC__ in
 # collate.h; no underscore-alias shim required.

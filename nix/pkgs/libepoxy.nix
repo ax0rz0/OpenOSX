@@ -5,15 +5,18 @@
 , ninja
 , pkg-config
 , python3
+, nativeMesonTools
 , darwinCrossToolchain
 , nativeLd
 , libSystem
-, harfbuzz
-, freetype
+, libepoxy
+, libX11
+, xorgproto
 }:
 
 let
-  deps = [ freetype ];
+  deps = [ libX11 xorgproto ];
+  depPcPaths = map lib.getDev deps;
   sdkTarball = requireFile {
     name = "MacOSX11.3.sdk.tar.xz";
     sha256 = "9adc1373d3879e1973d28ad9f17c9051b02931674a3ec2a2498128989ece2cb1";
@@ -25,25 +28,24 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-harfbuzz";
-  version = harfbuzz.version;
-
-  src = harfbuzz.src;
+  pname = "puredarwin-libepoxy";
+  inherit (libepoxy) version src;
 
   nativeBuildInputs = [ meson ninja pkg-config python3 ];
   buildInputs = deps;
 
   postPatch = ''
-    patchShebangs src
+    patchShebangs .
   '';
 
   configurePhase = ''
     runHook preConfigure
+    export PATH="${nativeMesonTools}/bin:$PATH"
 
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
-    export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" deps}:${lib.makeSearchPath "share/pkgconfig" deps}"
+    export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" depPcPaths}:${lib.makeSearchPath "share/pkgconfig" depPcPaths}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
     cat > puredarwin-cross.ini <<EOF
@@ -53,21 +55,21 @@ cpp = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-clang++'
 ar = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar'
 strip = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-strip'
 pkg-config = '${pkg-config}/bin/pkg-config'
+install_name_tool = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-install_name_tool'
 
 [built-in options]
 c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}]
-cpp_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}]
-c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-lSystem']
-cpp_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-lSystem']
-
-[properties]
-needs_exe_wrapper = true
+c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-Wl,-undefined,dynamic_lookup', '-lSystem']
 
 [host_machine]
 system = 'darwin'
+subsystem = 'macos'
 cpu_family = 'x86_64'
 cpu = 'x86_64'
 endian = 'little'
+
+[properties]
+needs_exe_wrapper = true
 EOF
 
     meson setup build \
@@ -75,23 +77,12 @@ EOF
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
-      -Ddefault_library=static \
-      -Dglib=disabled \
-      -Dgobject=disabled \
-      -Dcairo=disabled \
-      -Dchafa=disabled \
-      -Dpng=disabled \
-      -Dzlib=disabled \
-      -Dicu=disabled \
-      -Dfreetype=enabled \
-      -Dcoretext=disabled \
-      -Draster=disabled \
-      -Dvector=enabled \
-      -Dsubset=disabled \
-      -Dtests=disabled \
-      -Dintrospection=disabled \
-      -Ddocs=disabled \
-      -Dutilities=disabled
+      -Ddefault_library=shared \
+      -Dtests=false \
+      -Ddocs=false \
+      -Dglx=yes \
+      -Degl=no \
+      -Dx11=true
 
     runHook postConfigure
   '';
@@ -104,13 +95,33 @@ EOF
 
   installPhase = ''
     runHook preInstall
-    ninja -C build install
+    ninja -C build install || (find . -name install_name_tool_debug.log -exec cat {} \; 2>/dev/null; exit 1)
+    find . -name install_name_tool_debug.log -exec cat {} \; 2>/dev/null || true
+
+    INSTALL_NAME_TOOL="${nativeMesonTools}/bin/install_name_tool"
+    dylibs=$(find "$out/lib" -maxdepth 1 -name "*.dylib" -not -type l)
+    for dylib in $dylibs; do
+      base=$(basename "$dylib")
+      "$INSTALL_NAME_TOOL" -id "/lib/$base" "$dylib"
+    done
+    allfiles=$(
+      [ ! -d "$out/bin" ] || find "$out/bin" -type f
+      [ ! -d "$out/lib" ] || find "$out/lib" -type f
+    )
+    for f in $allfiles; do
+      for dylib in $dylibs; do
+        base=$(basename "$dylib")
+        "$INSTALL_NAME_TOOL" -change "@rpath/$base" "/lib/$base" "$f" 2>/dev/null || true
+      done
+    done
+
     runHook postInstall
   '';
 
   dontFixup = true;
 
   meta = with lib; {
+    description = "libepoxy, cross-built for PureDarwin";
     platforms = platforms.linux;
   };
 }

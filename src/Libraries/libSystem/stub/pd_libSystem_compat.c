@@ -12,6 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/mman.h>
+#include <sys/ptrace.h>
 #include <sys/resource.h>
 #include <grp.h>
 #include <sys/mount.h>
@@ -37,6 +38,7 @@ extern void *__pd_mmap_unix2003(void *addr, size_t len, int prot, int flags, int
 extern int __pd_mprotect_default(void *addr, size_t len, int prot) __asm("_mprotect");
 extern int __pd_munmap_unix2003(void *addr, size_t len) __asm("_munmap$UNIX2003");
 extern int __pd_open_unix2003(const char *path, int flags, mode_t mode) __asm("_open$UNIX2003");
+extern int __pd_ptrace_syscall(int request, pid_t pid, caddr_t addr, int data) __asm("___ptrace");
 extern int __pd_setrlimit_unix2003(int resource, const struct rlimit *rlp) __asm("_setrlimit$UNIX2003");
 extern int __pd_sigsuspend_syscall(const sigset_t *set) __asm("___sigsuspend");
 extern int __pd_nanosleep(const struct timespec *requested, struct timespec *remaining) __asm("_nanosleep");
@@ -61,6 +63,86 @@ extern int __pd_pthread_sigmask_unix2003(int how, const sigset_t *set, sigset_t 
 extern void __pd_pthread_testcancel_unix2003(void) __asm("_pthread_testcancel$UNIX2003");
 
 int
+getresuid(uid_t *ruid, uid_t *euid, uid_t *suid)
+{
+    uid_t real = getuid();
+    uid_t effective = geteuid();
+
+    if (ruid == NULL || euid == NULL || suid == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    *ruid = real;
+    *euid = effective;
+    *suid = effective;
+    return 0;
+}
+
+int
+getresgid(gid_t *rgid, gid_t *egid, gid_t *sgid)
+{
+    gid_t real = getgid();
+    gid_t effective = getegid();
+
+    if (rgid == NULL || egid == NULL || sgid == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    *rgid = real;
+    *egid = effective;
+    *sgid = effective;
+    return 0;
+}
+
+int
+setresuid(uid_t ruid, uid_t euid, uid_t suid)
+{
+    uid_t current_real = getuid();
+    uid_t current_effective = geteuid();
+
+    if (suid != (uid_t)-1 && suid != current_effective) {
+        errno = ENOSYS;
+        return -1;
+    }
+    if (ruid != (uid_t)-1 && ruid != current_real) {
+        if (euid != (uid_t)-1 && euid != ruid) {
+            errno = ENOSYS;
+            return -1;
+        }
+        return setuid(ruid);
+    }
+    if (euid != (uid_t)-1 && euid != current_effective) {
+        return seteuid(euid);
+    }
+    return 0;
+}
+
+int
+setresgid(gid_t rgid, gid_t egid, gid_t sgid)
+{
+    gid_t current_real = getgid();
+    gid_t current_effective = getegid();
+
+    if (sgid != (gid_t)-1 && sgid != current_effective) {
+        errno = ENOSYS;
+        return -1;
+    }
+    if (rgid != (gid_t)-1 && rgid != current_real) {
+        if (egid != (gid_t)-1 && egid != rgid) {
+            errno = ENOSYS;
+            return -1;
+        }
+        return setgid(rgid);
+    }
+    if (egid != (gid_t)-1 && egid != current_effective) {
+        return setegid(egid);
+    }
+    return 0;
+}
+
+int
 pause(void)
 {
     return __pd_sys_pause();
@@ -70,6 +152,12 @@ pid_t
 waitpid(pid_t pid, int *status, int options)
 {
     return __pd_sys_waitpid(pid, status, options);
+}
+
+int
+ptrace(int request, pid_t pid, caddr_t addr, int data)
+{
+    return __pd_ptrace_syscall(request, pid, addr, data);
 }
 
 int __pd_chmod_default(const char *path, mode_t mode) __asm("_chmod");
@@ -582,21 +670,10 @@ wcwidth(wchar_t wc)
     return 1;
 }
 
-/* Group- and shell-database iteration xterm touches on its setuid path (which
- * PureDarwin builds with --disable-setuid). Minimal, well-behaved stubs. */
+/* Group-database iteration xterm touches on its setuid path (which PureDarwin
+ * builds with --disable-setuid). Minimal, well-behaved stub. */
 void
 endgrent(void)
-{
-}
-
-char *
-getusershell(void)
-{
-    return NULL;                /* empty shell list -> caller uses its default */
-}
-
-void
-endusershell(void)
 {
 }
 

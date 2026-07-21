@@ -14,7 +14,7 @@
 , libdmg-hfsplus ? null
 , cacert
 , espMB ? 64
-, rootMB ? 896
+, rootMB ? 1536
 , apfsMB ? 128
   # "ext4": ext4 root + APFS test partition (default, historical layout).
   # "hfs":  EFI + HFS+ root ONLY - no ext4, no APFS. Root is mounted by the

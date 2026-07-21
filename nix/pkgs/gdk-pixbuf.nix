@@ -9,24 +9,16 @@
 , darwinCrossToolchain
 , nativeLd
 , libSystem
-, cairo
-, pixman
+, gdk-pixbuf
+, glib
+, pcre2
+, libffi
 , zlib
-, xorgproto
-, libX11
-, libXext
-, libXrender
-, libxcb
-, libXau
-, libXdmcp
-, freetype
-, fontconfig
-, expat
-, libpng
+, libiconv
 }:
 
 let
-  deps = [ pixman zlib xorgproto libX11 libXext libXrender libxcb libXau libXdmcp freetype fontconfig expat libpng ];
+  deps = [ glib pcre2 libffi zlib libiconv ];
   depPcPaths = map lib.getDev deps;
   sdkTarball = requireFile {
     name = "MacOSX11.3.sdk.tar.xz";
@@ -39,17 +31,18 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-cairo";
-  version = cairo.version;
-
-  src = cairo.src;
+  pname = "puredarwin-gdk-pixbuf";
+  inherit (gdk-pixbuf) version src;
 
   nativeBuildInputs = [ meson ninja pkg-config python3 ];
   buildInputs = deps;
 
   postPatch = ''
-    patchShebangs version.py
-    sed -i "/subdir('util')/d" meson.build
+    patchShebangs .
+    # No gettext/libintl port exists yet. gdk-pixbuf-util.c only calls
+    # g_dgettext() (glib's own NLS-gated wrapper, already handled by our
+    # glib patch), so the direct libintl.h include here is dead weight.
+    sed -i '/^#include <libintl.h>$/d' gdk-pixbuf/gdk-pixbuf-util.c
   '';
 
   configurePhase = ''
@@ -65,20 +58,25 @@ stdenv.mkDerivation {
     cat > puredarwin-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-clang'
+cpp = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-clang++'
 ar = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar'
 strip = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-strip'
 pkg-config = '${pkg-config}/bin/pkg-config'
 install_name_tool = '${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-install_name_tool'
 
 [built-in options]
-c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-DHAVE_UINT64_T=1', '-DHAVE___UINT128_T=1', '-DHAVE_XRENDERCREATESOLIDFILL=1', '-DHAVE_XRENDERCREATELINEARGRADIENT=1', '-DHAVE_XRENDERCREATERADIALGRADIENT=1', '-DHAVE_XRENDERCREATECONICALGRADIENT=1', '-DFC_RGBA_UNKNOWN=0', '-DFC_RGBA_RGB=1', '-DFC_RGBA_BGR=2', '-DFC_RGBA_VRGB=3', '-DFC_RGBA_VBGR=4', '-DFC_RGBA_NONE=5', '-DFC_HINT_NONE=0', '-DFC_HINT_SLIGHT=1', '-DFC_HINT_MEDIUM=2', '-DFC_HINT_FULL=3', '-DFC_LCD_NONE=0', '-DFC_LCD_DEFAULT=1', '-DFC_LCD_LIGHT=2', '-DFC_LCD_LEGACY=3', '-fno-stack-protector', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}]
-c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-force_load,${libXau}/lib/libXau.a', '-Wl,-force_load,${libXdmcp}/lib/libXdmcp.a', '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-lSystem']
+c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}]
+c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-Wl,-undefined,dynamic_lookup', '-lSystem']
 
 [host_machine]
 system = 'darwin'
+subsystem = 'macos'
 cpu_family = 'x86_64'
 cpu = 'x86_64'
 endian = 'little'
+
+[properties]
+needs_exe_wrapper = true
 EOF
 
     meson setup build \
@@ -87,20 +85,22 @@ EOF
       --libdir=lib \
       --buildtype=release \
       -Ddefault_library=shared \
-      -Dtests=disabled \
-      -Dgtk_doc=false \
-      -Dgtk2-utils=disabled \
-      -Dglib=disabled \
-      -Dlzo=disabled \
-      -Dpng=enabled \
-      -Dquartz=disabled \
-      -Dtee=disabled \
-      -Dfontconfig=enabled \
-      -Dfreetype=enabled \
-      -Dxlib=enabled \
-      -Dxcb=enabled \
-      -Dxlib-xcb=disabled \
-      -Dzlib=enabled
+      -Dtests=false \
+      -Dinstalled_tests=false \
+      -Dman=false \
+      -Ddocumentation=false \
+      -Dintrospection=disabled \
+      -Dpng=disabled \
+      -Djpeg=disabled \
+      -Dtiff=disabled \
+      -Dgif=disabled \
+      -Dglycin=disabled \
+      -Dandroid=disabled \
+      -Dothers=disabled \
+      -Dthumbnailer=disabled \
+      -Dlegacy_xpm=disabled \
+      -Dbuiltin_loaders=none \
+      -Drelocatable=false
 
     runHook postConfigure
   '';
@@ -138,6 +138,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
+    description = "gdk-pixbuf, cross-built for PureDarwin";
     platforms = platforms.linux;
   };
 }

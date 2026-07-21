@@ -79,6 +79,8 @@ CROSSFILE
       -Depoll=disabled -Dkqueue=disabled -Dx11_autolaunch=disabled \
       -Ddoxygen_docs=disabled -Dxml_docs=disabled -Dqt_help=disabled \
       -Dasserts=false -Dmodular_tests=disabled \
+      -Dsystem_socket=/var/run/dbus/system_bus_socket \
+      -Dsystem_pid_file=/var/run/dbus/pid \
       --prefix=$out
 
     runHook postConfigure

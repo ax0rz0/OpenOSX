@@ -47,6 +47,12 @@ arc4random(void)
 	return pd_random_u32();
 }
 
+void
+arc4random_stir(void)
+{
+	/* Stateless getentropy()-backed implementation; nothing to stir. */
+}
+
 /*
  * Every call draws from getentropy() (the kernel RNG) rather than a
  * userspace stream cipher: correct output distribution and fork-safety for
