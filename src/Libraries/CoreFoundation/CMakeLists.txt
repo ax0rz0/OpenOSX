@@ -338,14 +338,18 @@ add_framework(CoreFoundation
                 Preferences.subproj/CFPreferences.c
                 Preferences.subproj/CFXMLPreferencesDomain.c
                 # RunLoop
-                # TODO(compnerd) make this empty on non-Mach targets
-                # RunLoop.subproj/CFMachPort.c
-                # RunLoop.subproj/CFMachPort_Lifetime.c
+                # PureDarwin: real Mach target (actual XNU/Mach IPC, not the
+                # Linux-only swift-corelibs-foundation build these files were
+                # excluded for) - SystemStarter's real job-exit detection
+                # (task_name_for_pid + CFMachPort dead-name notification)
+                # needs the real CFMachPortCreateWithPort/
+                # CFMachPortCreateRunLoopSource/CFMachPortSetInvalidationCallBack.
+                RunLoop.subproj/CFMachPort.c
+                RunLoop.subproj/CFMachPort_Lifetime.c
                 # RunLoop.subproj/CFMessagePort.c
-                # PureDarwin: minimal stand-in for the two commented-out
-                # files above, whose __CFMachPortClass/__CFMessagePortClass
-                # CFRuntime.c's class table references unconditionally.
-                RunLoop.subproj/CFMachPort_PureDarwin_Stub.c
+                # PureDarwin: CFMessagePort.c itself still excluded - see
+                # CFMessagePort_PureDarwin_Stub.c for why.
+                RunLoop.subproj/CFMessagePort_PureDarwin_Stub.c
                 RunLoop.subproj/CFRunLoop.c
                 RunLoop.subproj/CFSocket.c
                 # Stream

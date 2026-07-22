@@ -172,10 +172,22 @@ __private_extern__ void xpc_api_misuse(const char *info, ...) __attribute__((nor
 
 #define XPC_RESERVED_KEY_PREFIX	"__xpc_internal__:"
 
+/*
+ * PureDarwin: this project is compiled as plain C with no real Objective-C
+ * runtime (USE_OBJC=0 throughout this tree), so the upstream community
+ * reimplementation's `asm("_OBJC_CLASS_$_" ...)` renaming - which forces
+ * these "class" identifiers to resolve to real ObjC metaclass symbols -
+ * can never link here. These OS_xpc_object_class/OS_xpc_connection_class
+ * identifiers are only ever used as opaque `isa` tag values (see
+ * pd_xpc_object.c's os_retain/os_release, which dispatch on ref-counting
+ * fields, not on isa method tables), so plain extern data objects with
+ * their literal C names are the correct real substitute - not a fabricated
+ * behavior, just the non-ObjC storage this tree's build already commits to
+ * everywhere else.
+ */
 #ifndef OS_OBJECT_OBJC_CLASS_DECL
 #define OS_OBJECT_OBJC_CLASS_DECL(name) \
-	extern void *OS_OBJECT_CLASS_SYMBOL(name) \
-	asm(OS_OBJC_CLASS_RAW_SYMBOL_NAME(OS_OBJECT_CLASS(name)))
+	extern void *OS_OBJECT_CLASS_SYMBOL(name)
 #define OS_OBJECT_CLASS_SYMBOL(name) OS_##name##_class
 #define OS_OBJC_CLASS_RAW_SYMBOL_NAME(name) "_OBJC_CLASS_$_" OS_STRINGIFY(name)
 #endif

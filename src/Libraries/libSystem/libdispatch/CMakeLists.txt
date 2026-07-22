@@ -10,6 +10,7 @@ target_sources(libdispatch_static PRIVATE
     src/allocator.c
     src/apply.c
     src/benchmark.c
+    src/block.cpp
     src/data.c
     src/init.c
     src/introspection.c
@@ -88,22 +89,15 @@ target_compile_options(libdispatch_static PRIVATE
     -isysroot ${PUREDARWIN_MACOSX_SDK}
     -Wno-availability
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../libplatform/pd_bridgeos_compat.h>
+    $<$<COMPILE_LANGUAGE:CXX>:-include${CMAKE_CURRENT_SOURCE_DIR}/compat-include/pd_bridgeos_compat_cxx.h>
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_SOURCE_DIR}/src/Libraries/dyld/dyld_sdk_compat.h>
-    # kdebug_trace() declaration (real implementation already exists and
-    # builds in libsystem_kernel/wrappers/kdebug_trace.c).
-    $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_SOURCE_DIR}/src/Kernel/xnu/bsd/sys_private/kdebug_private.h>
+    -include${CMAKE_SOURCE_DIR}/src/Kernel/xnu/bsd/sys_private/kdebug_private.h
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_SOURCE_DIR}/src/Kernel/xnu/libkern/os/base_private.h>
-    $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/compat-include/pd_work_interval_instance.h>)
+    $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/compat-include/pd_work_interval_instance.h>
+    $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++17;-fno-rtti;-fno-exceptions;-isystem${PUREDARWIN_MACOSX_SDK}/usr/include/c++/v1;-isystem${PUREDARWIN_MACOSX_SDK}/usr/include>)
 
-# The MIG-generated mach headers (public_include) must exist first.
 add_dependencies(libdispatch_static libsystem_kernel_static)
 
-# MacTypes.h: the generated libc header tree (libc_public_headers, above)
-# doesn't carry it, but libkern/OSTypes.h (pulled in via dyld_sdk_compat.h's
-# -include -> libkern/OSAtomic.h) wants it. Appended in its own call, after
-# target_link_libraries above, so it lands after the generated tree on the
-# command line and only fills this one gap - libc/include's own sys/cdefs.h
-# must NOT win over the generated tree's
 target_include_directories(libdispatch_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../libc/include)
 
@@ -112,3 +106,8 @@ target_include_directories(libdispatch_static PRIVATE
 
 target_include_directories(libdispatch_static PRIVATE
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/libkern)
+
+target_include_directories(libdispatch_static PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libc/locale
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libc/locale/FreeBSD
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libc/stdtime/FreeBSD)

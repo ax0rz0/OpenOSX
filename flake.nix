@@ -1480,10 +1480,34 @@
               corefoundation = coreFoundationBuild;
               src = "${securitySource}/src/Libraries/Security";
             };
+          systemStarterBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/systemstarter.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              corefoundation = coreFoundationBuild;
+              iokit = iokitBuild;
+              src = libSystemSource;
+            };
+          launchctlBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/launchctl.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              corefoundation = coreFoundationBuild;
+              iokit = iokitBuild;
+              src = libSystemSource;
+            };
+          launchdBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/launchd.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              corefoundation = coreFoundationBuild;
+              iokit = iokitBuild;
+              src = libSystemSource;
+            };
           libSystemBuild = mkPureDarwinBuild {
             pname = "puredarwin-libsystem";
             src = libSystemSource;
-            buildTargets = [ "libSystem_B_stub" "dyld" "libsystem_kernel_static" "libdispatch_static" "IOKitCF" "XPC_libnv_static" "XPC_libxpc_static" ];
+            buildTargets = [ "libSystem_B_stub" "dyld" "libsystem_kernel_static" "libdispatch_static" "IOKitCF" "XPC_libnv_static" "XPC_libinfo_static" "XPC_libxpc_static" "XPC_launchd_static" "XPC_launchd_mig_static" "XPC_notify_client_static" "notifyd" ];
             enableUserspace = false;
             enableKernel = false;
             installUserland = false;
@@ -1582,6 +1606,26 @@
             cp -a ${tccBuild}/. "$out/"
             chmod -R u+w "$out"
             cp -a ${cctoolsBuild}/. "$out/"
+          '' + lib.optionalString (!isDarwin && systemStarterBuild != null) ''
+            chmod -R u+w "$out"
+            cp -a ${systemStarterBuild}/. "$out/"
+            chmod -R u+w "$out"
+          '' + lib.optionalString (!isDarwin && launchdBuild != null) ''
+            cp -a ${launchdBuild}/. "$out/"
+            chmod -R u+w "$out"
+          '' + lib.optionalString (!isDarwin && launchctlBuild != null) ''
+            cp -a ${launchctlBuild}/. "$out/"
+            chmod -R u+w "$out"
+            if [ -e "$out/pd-sbin/launchd_real" ]; then
+              mkdir -p "$out/sbin"
+              cp "$out/pd-sbin/launchd_real" "$out/sbin/launchd_real"
+              if [ -e "$out/pd-sbin/launchd_diag_wrapper" ]; then
+                cp "$out/pd-sbin/launchd_diag_wrapper" "$out/sbin/launchd"
+              else
+                cp "$out/pd-sbin/launchd_real" "$out/sbin/launchd"
+              fi
+              rm -rf "$out/pd-sbin"
+            fi
           ''
           + lib.optionalString (!isDarwin) ''
             chmod -R u+w "$out"
@@ -1773,7 +1817,7 @@
                 kc = kcBuild;
                 xnuLoader = xnu-loader.packages.${system}.default;
                 apfsprogs = pkgs.apfsprogs;
-                testAudioFile = /home/vali/development/darwin/stillalive.pcm;
+                #testAudioFile = /home/vali/development/darwin/stillalive.pcm;
               };
               imageHfsBuild = pkgs.callPackage ./image.nix {
                 baseSystem = splitBaseSystem;
@@ -1784,7 +1828,7 @@
                 hfsprogs = pkgs.hfsprogs;
                 libdmg-hfsplus = pkgs.callPackage ./nix/pkgs/libdmg-hfsplus.nix { };
                 rootFsType = "hfs";
-                testAudioFile = /home/vali/development/darwin/badapple.pcm;
+                #testAudioFile = /home/vali/development/darwin/badapple.pcm;
               };
               imageDebugBuild = pkgs.callPackage ./image.nix {
                 baseSystem = splitBaseSystem;
@@ -1793,6 +1837,18 @@
                 xnuLoader = xnu-loader.packages.${system}.default;
                 apfsprogs = pkgs.apfsprogs;
                 imageFileName = "puredarwin-debug.img";
+              };
+              imageStrippedBuild = pkgs.callPackage ./image.nix {
+                baseSystem = splitBaseSystem;
+                # launchctl/SystemStarter link a CF-family dylib chain; ship the
+                # whole closure or dyld aborts them ("Library not loaded"):
+                # coreFoundationBuild=libCoreFoundation, icuCoreBuild=libicucore.A
+                # (CF dep), iokitBuild=libIOKitCF (their dep).
+                extraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild ];
+                kc = kcBuild;
+                xnuLoader = xnu-loader.packages.${system}.default;
+                apfsprogs = pkgs.apfsprogs;
+                imageFileName = "puredarwin-stripped.img";
               };
               runVm = pkgs.writeShellApplication {
                 name = "puredarwin-vm";
@@ -1917,9 +1973,12 @@
               icucore = icuCoreBuild;
               iokit = iokitBuild;
               security = securityBuild;
+              systemstarter = systemStarterBuild;
+              launchctl = launchctlBuild;
               image = imageBuild;
               image-hfs = imageHfsBuild;
               image-debug = imageDebugBuild;
+              image-stripped = imageStrippedBuild;
               xorg = xorgBuild;
               libxcvt = xvfbLibxcvtBuild;
               userland = userlandBuild;

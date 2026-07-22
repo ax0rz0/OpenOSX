@@ -9,7 +9,9 @@
 , dosfstools
 , mtools
 , e2fsprogs
+, fakeroot
 , apfsprogs
+, iana-etc
 , hfsprogs ? null
 , libdmg-hfsplus ? null
 , cacert
@@ -40,7 +42,7 @@ stdenv.mkDerivation {
 
   dontUnpack = true;
 
-  nativeBuildInputs = [ gptfdisk util-linux dosfstools mtools e2fsprogs apfsprogs ]
+  nativeBuildInputs = [ gptfdisk util-linux dosfstools mtools e2fsprogs fakeroot apfsprogs ]
     ++ lib.optionals (rootFsType == "hfs") [ hfsprogs libdmg-hfsplus ];
 
   buildPhase = ''
@@ -113,6 +115,7 @@ ${if rootFsType == "hfs" then ''
       copyPackage "${package}";
     '') extraPackages}
     for dir in \
+      System/Library/StartupItems \
       usr \
       usr/bin \
       usr/lib \
@@ -126,7 +129,6 @@ ${if rootFsType == "hfs" then ''
       dev \
       etc \
       etc/fonts \
-      etc/init \
       tmp \
       var \
       var/cache \
@@ -177,6 +179,12 @@ nogroup:*:-1:
 nobody:*:-2:
 staff:*:20:root
 EOF
+    cp ${iana-etc}/etc/services $staging/etc/services
+    cp ${iana-etc}/etc/protocols $staging/etc/protocols
+    cat > $staging/etc/hosts <<'EOF'
+127.0.0.1	localhost
+::1		localhost
+EOF
     cat > $staging/etc/profile <<'EOF'
 export PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export TERM=''${TERM:-vt220}
@@ -224,70 +232,104 @@ EOF
     cat > $staging/etc/ttys <<'EOF'
 /dev/console /bin/zsh -l
 EOF
-    cat > $staging/etc/init/rc.boot <<'EOF'
-#!/bin/sh
-
-export PATH=/bin:/sbin:/usr/bin:/usr/sbin
-
-for svc in /etc/init/services/*; do
-    [ -d "$svc" ] || continue
-    if [ -x "$svc/start" ]; then
-        "$svc/start"
-    fi
-done
-EOF
-    cat > $staging/etc/init/rc.shutdown <<'EOF'
-#!/bin/sh
-
-export PATH=/bin:/sbin:/usr/bin:/usr/sbin
-
-for svc in /etc/init/services/*; do
-    [ -d "$svc" ] || continue
-    if [ -x "$svc/stop" ]; then
-        "$svc/stop"
-    fi
-done
-EOF
-
-    mkdir -p $staging/etc/init/services/hostname
-    cat > $staging/etc/init/services/hostname/start <<'EOF'
+    # PureDarwin: real /System/Library/StartupItems bundles (script named
+    # same as its bundle dir + StartupParameters.plist), run by real
+    # SystemStarter - not PD's own ad hoc /etc/init/rc.boot for-loop. Real
+    # SystemStarter is now itself a real LaunchDaemon (com.apple.SystemStarter.plist,
+    # QueueDirectories-triggered - see pd_launchd_boot.c/pd_launchd_plist.c),
+    # so this is the real macOS boot-services shape end to end.
+    mkdir -p $staging/System/Library/StartupItems/Hostname
+    cat > $staging/System/Library/StartupItems/Hostname/Hostname <<'EOF'
 #!/bin/sh
 if test -x /bin/hostname; then
     /bin/hostname puredarwin
 fi
 EOF
+    cat > $staging/System/Library/StartupItems/Hostname/StartupParameters.plist <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Description</key>
+	<string>Set host name</string>
+	<key>Provides</key>
+	<array>
+		<string>Hostname</string>
+	</array>
+	<key>Requires</key>
+	<array/>
+</dict>
+</plist>
+EOF
 
-    mkdir -p $staging/etc/init/services/network
-    cat > $staging/etc/init/services/network/start <<'EOF'
+    mkdir -p $staging/System/Library/StartupItems/Network
+    cat > $staging/System/Library/StartupItems/Network/Network <<'EOF'
 #!/bin/sh
 if test -x /bin/netsetup; then
     /bin/netsetup
 fi
 EOF
-
-    mkdir -p $staging/etc/init/services/dbus
-    cat > $staging/etc/init/services/dbus/start <<'EOF'
-#!/bin/sh
-if test -x /bin/dbus-daemon; then
-    /bin/dbus-daemon --config-file=/share/dbus-1/system.conf
-fi
+    cat > $staging/System/Library/StartupItems/Network/StartupParameters.plist <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Description</key>
+	<string>Configure network interfaces</string>
+	<key>Provides</key>
+	<array>
+		<string>Network</string>
+	</array>
+	<key>Requires</key>
+	<array/>
+</dict>
+</plist>
 EOF
-    cat > $staging/etc/init/services/dbus/stop <<'EOF'
+
+    mkdir -p $staging/System/Library/StartupItems/DBus
+    cat > $staging/System/Library/StartupItems/DBus/DBus <<'EOF'
 #!/bin/sh
-if test -f /var/run/dbus/pid; then
-    kill "$(cat /var/run/dbus/pid)" 2>/dev/null
-fi
+case "$1" in
+start)
+    if test -x /bin/dbus-daemon; then
+        /bin/dbus-daemon --config-file=/share/dbus-1/system.conf
+    fi
+    ;;
+stop)
+    if test -f /var/run/dbus/pid; then
+        kill "$(cat /var/run/dbus/pid)" 2>/dev/null
+    fi
+    ;;
+esac
+EOF
+    cat > $staging/System/Library/StartupItems/DBus/StartupParameters.plist <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Description</key>
+	<string>D-Bus system message bus</string>
+	<key>Provides</key>
+	<array>
+		<string>DBus</string>
+	</array>
+	<key>Requires</key>
+	<array>
+		<string>Network</string>
+	</array>
+</dict>
+</plist>
 EOF
 
 ${lib.optionalString (rootFsType == "hfs") ''
-    mkdir -p $staging/etc/init/services/root-remount
-    cat > $staging/etc/init/services/root-remount/start <<'EOF'
+    mkdir -p $staging/System/Library/StartupItems/RootRemount
+    cat > $staging/System/Library/StartupItems/RootRemount/RootRemount <<'EOF'
 #!/bin/sh
 # The kernel mounts the root volume read-only and hfs.kext honors that
 # (ext4.kext force-clears MNT_RDONLY instead, which is why the ext4 image
 # never needed this). Classic Darwin does mount -uw / from /etc/rc.
-# IOMediaBSDClient may not have published /dev/disk0s2 yet when rc.boot
-# runs, so retry until the node shows up.
+# IOMediaBSDClient may not have published /dev/disk0s2 yet when this runs,
+# so retry until the node shows up.
 if test -x /bin/mount; then
     n=0
     while test ! -c /dev/disk0s2 -a ! -b /dev/disk0s2 -a $n -lt 50; do
@@ -297,33 +339,76 @@ if test -x /bin/mount; then
     /bin/mount -t hfs -o update,rw /dev/disk0s2 /
 fi
 EOF
+    cat > $staging/System/Library/StartupItems/RootRemount/StartupParameters.plist <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Description</key>
+	<string>Remount root read/write</string>
+	<key>Provides</key>
+	<array>
+		<string>Root Filesystem</string>
+	</array>
+	<key>Requires</key>
+	<array/>
+</dict>
+</plist>
+EOF
 ''}
 
-    mkdir -p $staging/etc/init/services/boot-partition
-    cat > $staging/etc/init/services/boot-partition/start <<'EOF'
+    mkdir -p $staging/System/Library/StartupItems/BootPartition
+    cat > $staging/System/Library/StartupItems/BootPartition/BootPartition <<'EOF'
 #!/bin/sh
 # Auto-mount the EFI System Partition (disk0s1, FAT via msdosfs.kext) at
 # /boot. IOMediaBSDClient may not have published the device node yet when
-# rc.boot runs (it's created asynchronously off the config-scan retry loop
-# in IOMediaBSDClient::scheduleCreateNodesRetry), so poll for it first,
-# same as the root-remount service's retry above.
-if test -x /bin/mount; then
-    n=0
-    while test ! -c /dev/disk0s1 -a ! -b /dev/disk0s1 -a $n -lt 50; do
-        /bin/sleep 0.2
-        n=$((n+1))
-    done
-    if test -c /dev/disk0s1 -o -b /dev/disk0s1; then
-        /bin/mount -t msdos -o rdonly /dev/disk0s1 /boot
+# this runs (it's created asynchronously off the config-scan retry loop in
+# IOMediaBSDClient::scheduleCreateNodesRetry), so poll for it first, same
+# as RootRemount's retry above.
+case "$1" in
+start)
+    if test -x /bin/mount; then
+        n=0
+        while test ! -c /dev/disk0s1 -a ! -b /dev/disk0s1 -a $n -lt 50; do
+            /bin/sleep 0.2
+            n=$((n+1))
+        done
+        if test -c /dev/disk0s1 -o -b /dev/disk0s1; then
+            /bin/mount -t msdos -o rdonly /dev/disk0s1 /boot
+        fi
     fi
-fi
+    ;;
+stop)
+    if test -x /bin/umount; then
+        /bin/umount /boot 2>/dev/null
+    fi
+    ;;
+esac
 EOF
-    cat > $staging/etc/init/services/boot-partition/stop <<'EOF'
-#!/bin/sh
-if test -x /bin/umount; then
-    /bin/umount /boot 2>/dev/null
-fi
+    cat > $staging/System/Library/StartupItems/BootPartition/StartupParameters.plist <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Description</key>
+	<string>Mount EFI System Partition</string>
+	<key>Provides</key>
+	<array>
+		<string>Boot Partition</string>
+	</array>
+	<key>Requires</key>
+	<array/>
+</dict>
+</plist>
 EOF
+    chmod 755 \
+      $staging/System/Library/StartupItems/Hostname/Hostname \
+      $staging/System/Library/StartupItems/Network/Network \
+      $staging/System/Library/StartupItems/DBus/DBus \
+      $staging/System/Library/StartupItems/BootPartition/BootPartition
+${lib.optionalString (rootFsType == "hfs") ''
+    chmod 755 $staging/System/Library/StartupItems/RootRemount/RootRemount
+''}
     cat > $staging/var/root/.profile <<'EOF'
 test -r /etc/profile && . /etc/profile
 EOF
@@ -357,8 +442,6 @@ EOF
       $staging/var/root/.profile \
       $staging/var/root/.zprofile \
       $staging/var/root/.zshrc
-    chmod 755 $staging/etc/init/rc.boot $staging/etc/init/rc.shutdown
-    find $staging/etc/init/services -mindepth 2 -maxdepth 2 -type f -exec chmod 755 {} +
 
     ${lib.optionalString (testAudioFile != null) ''
       cp ${testAudioFile} $staging/badapple.pcm
@@ -557,17 +640,12 @@ ${lib.optionalString (rootFsType == "hfs") ''
 
     tar --format=ustar --owner=0 --group=0 --hard-dereference \
       -cf staging.tar -C "$staging" .
-    # hfsplus is chatty (one line per file) and its ASSERTs print to stdout,
-    # so capture everything and only show it on failure.
     if ! hfsplus root.img untar staging.tar > untar.log 2>&1; then
       echo "hfsplus untar failed; last lines:" >&2
       tail -40 untar.log >&2
       exit 1
     fi
 
-    # Sanity check the populated catalog (fsck.hfsplus refuses plain files:
-    # "Can't get device block size"): key paths must be listable so a populate
-    # bug fails the build instead of surfacing as mystery corruption at boot.
     for path in /bin /usr/bin /usr/lib /etc; do
       hfsplus root.img ls "$path" >/dev/null
     done
@@ -577,20 +655,20 @@ ${lib.optionalString (rootFsType == "hfs") ''
     dd if=root.img of=$img bs=512 seek=$root_start count=$root_size conv=notrunc status=none
 ''}
 ${lib.optionalString (rootFsType == "ext4") ''
-    # ext4.kext now maintains metadata_csum checksums, initializes
-    # uninitialized (uninit_bg) block/inode groups on demand, handles 64-bit
-    # descriptors (ext4_csum.c), and journals metadata with replay-on-mount
-    # (ext4_jbd.c), so format with a journal. Keep ^orphan_file (no
-    # orphan-file recovery support).
+    # mke2fs -d records each source file's uid/gid, and under Nix the whole
+    # staging tree is owned by the unprivileged build user (uid 1000/gid 100),
+    # not root. That breaks anything that checks for root ownership. This fixes that issue.
+    fakeroot bash <<FAKESCRIPT
+    chown -R 0:0 "$staging"
     mke2fs -q -F -t ext4 \
       -b 4096 \
       -O ^orphan_file \
       -L darwin-ext4 \
-      -d $staging \
+      -d "$staging" \
       root.img >/dev/null
+FAKESCRIPT
+    # /var/empty must be 0755 (mke2fs -d may have staged it u+rwX-only).
     cat > root-debugfs.cmds <<'EOF'
-set_inode_field /var/empty uid 0
-set_inode_field /var/empty gid 0
 set_inode_field /var/empty mode 040755
 EOF
     debugfs -w -f root-debugfs.cmds root.img >/dev/null

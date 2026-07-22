@@ -37,10 +37,6 @@ stdenv.mkDerivation {
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
-    # cmake's try_compile() sub-invocations (used for compiler ABI/feature
-    # detection) don't reliably inherit -D cache variables from the outer
-    # configure - the toolchain file already falls back to reading these as
-    # environment variables, so set those instead of relying only on -D.
     export NIX_DARWIN_TOOLCHAIN_DIR="${darwinCrossToolchain}/bin"
 
     mkdir -p placeholder-libs
@@ -49,13 +45,20 @@ stdenv.mkDerivation {
     ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar crs placeholder-libs/libBlocksRuntime.a placeholder-libs/placeholder.o
     ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar crs placeholder-libs/libdispatch.a placeholder-libs/placeholder.o
 
+    # -Wl,-fixup_chains: PD's dyld lazy-binding/stub-resolution path is
+    # fragile (same reason launchd_real/SystemStarter/launchctl/notifyd
+    # already eager-bind themselves) - without it, CoreFoundation's own
+    # internal calls between its exported symbols go through dyld_stub_binder
+    # and can fault (executing from a freshly-written RW page instead of a
+    # resolved stub) the first time something loads this dylib early enough
+    # in boot to hit it before anything else has masked it.
     cmake -S . -B build -G Ninja \
       -DCMAKE_TOOLCHAIN_FILE=${../../cmake/nix-toolchain.cmake} \
       -DNIX_DARWIN_TOOLCHAIN_DIR=${darwinCrossToolchain}/bin \
       -DNIX_DARWIN_SDK_ROOT=$DARWIN_SDK_ROOT \
       -DBUILD_SHARED_LIBS=ON \
       -DCMAKE_C_FLAGS="-isysroot $DARWIN_SDK_ROOT -I${libSystem}/usr/include -I${pdCompatInclude} -I${lib.getDev icu}/include -DU_DISABLE_RENAMING=1 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0" \
-      -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=${nativeLd}/bin/ld -nostdlib -L$PWD/placeholder-libs -L${libSystem}/usr/lib -lSystem -Wl,-install_name,/usr/lib/libCoreFoundation.dylib -Wl,-platform_version,macos,11.0,11.5"
+      -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=${nativeLd}/bin/ld -nostdlib -L$PWD/placeholder-libs -L${libSystem}/usr/lib -lSystem -Wl,-install_name,/usr/lib/libCoreFoundation.dylib -Wl,-platform_version,macos,11.0,11.5 -Wl,-fixup_chains"
 
     runHook postConfigure
   '';

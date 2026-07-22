@@ -21,7 +21,9 @@
 #define HAVE_SANDBOX 0
 #endif
 
+#ifndef HAVE_LIBAUDITD
 #define HAVE_LIBAUDITD !TARGET_OS_EMBEDDED
+#endif
 
 #if !TARGET_OS_EMBEDDED && __has_include(<systemstats/systemstats.h>)
 #define HAVE_SYSTEMSTATS 1

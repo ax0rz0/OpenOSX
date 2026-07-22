@@ -26,10 +26,6 @@ stdenv.mkDerivation {
   src = openssh.src;
 
   postPatch = ''
-    # PureDarwin exports setresuid/setresgid from libSystem, but the SDK
-    # headers used for cross builds do not declare them. OpenSSH's compat
-    # header is included globally, so loosen its symbol-availability guard for
-    # Darwin targets to provide prototypes without forcing the compat bodies.
     substituteInPlace openbsd-compat/bsd-setres_id.h \
       --replace-fail '#ifndef HAVE_SETRESGID
 int	setresgid(gid_t, gid_t, gid_t);

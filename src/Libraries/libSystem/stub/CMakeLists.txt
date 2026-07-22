@@ -12,12 +12,9 @@ target_sources(libSystem_B_stub PRIVATE
     empty.c
     pd_libSystem_init.c
     pd_libSystem_compat.c
-    pd_libSystem_process.c
     pd_chkstk_darwin.s
     ${CMAKE_SOURCE_DIR}/src/Libraries/dyld/pd_libc_common_storage.c)
 
-# Match launchd-dummy's LC_LOAD_DYLIB expectation (from otool -L) so dyld's
-# compatibility-version check accepts this as a satisfying match.
 target_link_options(libSystem_B_stub PRIVATE
     -compatibility_version 1.0.0
     -current_version 1292.100.5)
@@ -41,14 +38,20 @@ foreach(_line ${_libsystem_export_lines})
     endif()
 endforeach()
 add_dependencies(libSystem_B_stub
-    libsystem_kernel_static libplatform_static pthread_static
+    libsystem_kernel_static libplatform_static pthread_full_static
     libc_static libc_internal_static libmalloc_static
     corecrypto_static CrashReporterClient libresolv_static
-    libdispatch_static openlibm_static)
+    libdispatch_static openlibm_static XPC_notify_client_static XPC_notifyd_mig_static
+    XPC_libxpc_static XPC_launchd_mig_static)
+target_link_options(libSystem_B_stub PRIVATE
+    -Wl,-force_load,$<TARGET_FILE:XPC_notify_client_static>
+    -Wl,-force_load,$<TARGET_FILE:XPC_libxpc_static>
+    $<TARGET_FILE:XPC_notifyd_mig_static>
+    $<TARGET_FILE:XPC_launchd_mig_static>)
 if(PUREDARWIN_USE_LD64_LLD)
     target_link_libraries(libSystem_B_stub PRIVATE
         $<TARGET_FILE:libplatform_static>
-        $<TARGET_FILE:pthread_static>
+        $<TARGET_FILE:pthread_full_static>
         $<TARGET_FILE:libc_static>
         $<TARGET_FILE:libc_internal_static>
         $<TARGET_FILE:openlibm_static>
@@ -63,7 +66,7 @@ else()
     target_link_libraries(libSystem_B_stub PRIVATE
         $<TARGET_FILE:libsystem_kernel_static>
         $<TARGET_FILE:libplatform_static>
-        $<TARGET_FILE:pthread_static>
+        $<TARGET_FILE:pthread_full_static>
         $<TARGET_FILE:libc_static>
         $<TARGET_FILE:libc_internal_static>
         $<TARGET_FILE:openlibm_static>
@@ -97,9 +100,6 @@ target_link_options(libSystem_B_stub PRIVATE
     # libsystem_kernel and pthread_static) by keeping only atoms reachable from
     # the exported roots and stripping the rest, instead of erroring on the dup.
     -Wl,-dead_strip
-    # Without -lSystem there is no dyld_stub_binder for lazy binding (some pulled
-    # code, e.g. __tlv_exit, would need it). Use chained fixups so ALL binds are
-    # eager - no lazy stubs, no dyld_stub_binder - exactly as libdyld.dylib does.
     -Wl,-fixup_chains
     -Wl,-exported_symbols_list,${LIBSYSTEM_EXPORTS})
 if(PUREDARWIN_USE_LD64_LLD)
@@ -110,15 +110,6 @@ if(PUREDARWIN_USE_LD64_LLD)
 endif()
 set_property(TARGET libSystem_B_stub APPEND PROPERTY LINK_DEPENDS ${LIBSYSTEM_EXPORTS})
 
-# Reexport libdyld (/usr/lib/system/libdyld.dylib) so that any binary depending
-# on libSystem.B.dylib, e.g. launchd, pulls libdyld into its load graph and
-# runs its initializer, which registers the dyld thread-helpers (required for
-# LC_MAIN launch). This mirrors real Darwin, where libSystem.B.dylib is an
-# umbrella that reexports libdyld and the other libsystem_* sub-libraries.
-# NB: -reexport_library alone did NOT resolve pd_libSystem_init.c's own
-# references to libdyld's `start` (start_glue.s) and `_dyld_func_lookup`
-# (dyldLibSystemGlue.c) - link libdyld directly too so those resolve normally;
-# -reexport_library still marks it LC_REEXPORT_DYLIB for dependents.
 add_dependencies(libSystem_B_stub libdyld)
 target_link_libraries(libSystem_B_stub PRIVATE $<TARGET_FILE:libdyld>)
 target_link_options(libSystem_B_stub PRIVATE

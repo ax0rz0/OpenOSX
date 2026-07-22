@@ -29,9 +29,6 @@ stdenv.mkDerivation {
   nativeBuildInputs = [ gnumake bison help2man perl ];
 
   postPatch = ''
-    # stage1flex is built for the build machine during cross compilation.
-    # Do not add old gnulib malloc/realloc replacement sources to that host
-    # binary; modern host compilers reject their K&R malloc declarations.
     perl -0pi -e 's/\@CROSS_TRUE\@am__append_1 = \\\n\@CROSS_TRUE\@\s+\.\.\/lib\/malloc\.c \\\n\@CROSS_TRUE\@\s+\.\.\/lib\/realloc\.c/\@CROSS_TRUE\@am__append_1 =/s' src/Makefile.in
     perl -0pi -e 's/\@CROSS_TRUE\@am__objects_3 = \.\.\/lib\/stage1flex-malloc\.\$\(OBJEXT\) \\\n\@CROSS_TRUE\@\s+\.\.\/lib\/stage1flex-realloc\.\$\(OBJEXT\)/\@CROSS_TRUE\@am__objects_3 =/s' src/Makefile.in
     perl -0pi -e 's/^\@AMDEP_TRUE\@\@am__include\@ \@am__quote\@\.\.\/lib\/\$\(DEPDIR\)\/stage1flex-(malloc|realloc)\.Po\@am__quote\@\n//mg' src/Makefile.in

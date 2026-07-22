@@ -115,11 +115,6 @@ stdenv.mkDerivation {
     export RANLIB="${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ranlib"
     export STRIP="${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-strip"
     export CPPFLAGS="-I${libSystem}/usr/include ${lib.concatMapStringsSep " " (dep: "-I${lib.getDev dep}/include") xDeps} -I${lib.getDev freetype2}/include/freetype2 -include limits.h"
-    # sincos() isn't declared in Apple's public math.h (it's a GNU/BSD
-    # extension, not part of the Darwin ABI's public surface) even though
-    # openlibm provides the symbol and links fine - silence the implicit-
-    # declaration error rather than add a private forward decl upstream
-    # doesn't ship.
     export CFLAGS="-isysroot $DARWIN_SDK_ROOT -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector -DNO_XPOLL_H -Wno-implicit-function-declaration"
     cp ${libXext}/lib/libXext.a libXext-trimmed.a
     chmod +w libXext-trimmed.a

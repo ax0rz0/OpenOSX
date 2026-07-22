@@ -97,7 +97,7 @@ add_darwin_static_library(libc_static)
 target_sources(libc_static PRIVATE
     string/strcat.c
     string/strncat.c
-    string/pd_strnlen.c          # _strnlen / _strlcpy (both real; libplatform/libsystem_kernel's copies are hidden)
+    string/pd_strnlen.c          # _strnlen / _strlcpy
     string/FreeBSD/strdup.c
     string/FreeBSD/strtok.c      # _strtok (init /etc/ttys tokenizing)
     string/pd_strtok_r.c         # _strtok_r forwarder (__weak_reference alias not emitted)
@@ -110,6 +110,9 @@ target_sources(libc_static PRIVATE
     gen/NetBSD/utmpx.c           # setutxent/getutxent/endutxent (fastfetch users detection)
     gen/utmpx-darwin.c          # __utx_magic__/_utmpx32_64 (utmpx.c internals)
     sys/posix_spawn.c           # posix_spawnp (fastfetch/popen/wordexp)
+    sys/fork.c                  # fork()
+    sys/_libc_init.c            # _libc_initializer/_libc_fork_init (wires fork()'s atfork hooks)
+    sys/_libc_fork_child.c      # _libc_fork_child (environ/arc4/clock-port fixup on the child side of fork)
     gen/FreeBSD/utime.c         # git
     gen/pd_wait.c                # _wait forwarder (__weak_reference alias not emitted)
     compat-43/FreeBSD/killpg.c   # _killpg (zsh job control)
@@ -323,7 +326,21 @@ target_sources(libc_static PRIVATE
     secure/strlcpy_chk.c         # ___strlcpy_chk
     secure/strncpy_chk.c         # ___strncpy_chk
     secure/sprintf_chk.c         # ___sprintf_chk
-    gen/FreeBSD/termios.c        # _tcgetattr (isatty.c's underlying check)
+    gen/FreeBSD/termios.c        # _tcgetattr
+    gen/setlogin.c               # _setlogin
+    net/pd_ether_addr.c          # _ether_aton/_ether_ntoa
+    string/FreeBSD/strnstr.c     # _strnstr
+    os/pd_assumes.c               # os_assumes/os_assert real-contract impl (see file comment: real os/assumes.c needs firehose/os_log private ABI logd doesn't back here)
+    emulated/lchflags.c           # _lchflags (real launchctl.c)
+    emulated/flock.c              # _flock
+    uuid/uuidsrc/gen_uuid.c      # uuid_generate/uuid_generate_random/uuid_generate_time (real Libinfo/launchd need the full uuid_* family)
+    uuid/uuidsrc/clear.c         # uuid_clear
+    uuid/uuidsrc/compare.c       # uuid_compare
+    uuid/uuidsrc/copy.c          # uuid_copy
+    uuid/uuidsrc/isnull.c        # uuid_is_null
+    uuid/uuidsrc/unparse.c       # uuid_unparse/uuid_unparse_lower/uuid_unparse_upper
+    uuid/uuidsrc/pack.c          # uuid_pack
+    uuid/uuidsrc/unpack.c        # uuid_unpack
     # TODO (need cross-deps beyond the SDK sysroot):
     #  - stdio/FreeBSD/mktemp.c (_mkstemp) needs BSD-internal TRUE/FALSE/bool
     # printf/fprintf/snprintf and the locale/rune chain are NOT deferred anymore
@@ -332,6 +349,22 @@ target_sources(libc_static PRIVATE
     # sub-project this comment used to point at).
 )
 set_target_properties(libc_static PROPERTIES EXCLUDE_FROM_ALL TRUE)
+
+set_source_files_properties(
+    uuid/uuidsrc/gen_uuid.c
+    uuid/uuidsrc/clear.c
+    uuid/uuidsrc/compare.c
+    uuid/uuidsrc/copy.c
+    uuid/uuidsrc/isnull.c
+    uuid/uuidsrc/unparse.c
+    uuid/uuidsrc/pack.c
+    uuid/uuidsrc/unpack.c
+    PROPERTIES COMPILE_DEFINITIONS "HAVE_STDINT_H=1;HAVE_UNISTD_H=1;HAVE_STDLIB_H=1")
+# HAVE_NET_IF_H/HAVE_SYS_SOCKET_H intentionally left undefined: gen_uuid.c's
+# get_node_id() MAC-address lookup needs sockaddr_dl/SIOCGIFCONF plumbing not
+# confirmed here; leaving it off makes uuid_generate_time() fall back to a
+# random node id, which is real gen_uuid.c's own documented fallback path
+# when no hardware address is available (see get_node_id() <= 0 branch).
 
 set_source_files_properties(libm/pd_libm_sincos_stret.c PROPERTIES
     COMPILE_OPTIONS "-fno-builtin-sincos;-fno-builtin-sincosf")
@@ -393,6 +426,7 @@ target_include_directories(libc_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/pd-compat-include
     ${CMAKE_CURRENT_SOURCE_DIR}/../libmalloc/private
     ${CMAKE_CURRENT_SOURCE_DIR}/../libmalloc/compat-include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../CrashReporterClient/include  # os/pd_assumes.c
 )
 set_source_files_properties(stdlib/FreeBSD/exit.c stdlib/FreeBSD/atexit.c
     stdlib/FreeBSD/abort.c gen/FreeBSD/assert.c gen/FreeBSD/signal.c gen/FreeBSD/sleep.c

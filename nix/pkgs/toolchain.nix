@@ -55,20 +55,10 @@ let
       "''${args[@]}"
   '';
 
-  # osxcross also exposes a bare (non-triple-prefixed) "dsymutil" on PATH,
-  # which some CMakeLists (e.g. src/Kernel/xnu) look for via
-  # find_program(... NAMES dsymutil llvm-dsymutil). Match that.
   bareDsymutil = writeShellScriptBin "dsymutil" ''
     exec ${bintools}/bin/dsymutil "$@"
   '';
 
-  # Minimal xcrun: `xcrun [-sdk macosx] TOOL ARGS...` -> our wrapped TOOL, or
-  # a handful of direct queries (-show-sdk-*) that xnu's own makedefs
-  # (cmake/MakeInc.cmd.in) issue directly rather than dispatching to a tool.
-  # -find falls back past our own toolchain bin dir to plain PATH lookup,
-  # since some tools makedefs asks for (mig, migcom, unifdef, libtool) are
-  # the project's own build products / nixpkgs-native tools, not part of
-  # this cross toolchain.
   xcrunShim = writeShellScriptBin "xcrun" ''
     set -e
     BINDIR="$(cd "$(dirname "$0")" && pwd)"

@@ -159,6 +159,7 @@ target_sources(libsystem_kernel_static PRIVATE
     wrappers/legacy/connect.c
     wrappers/legacy/getattrlist.c
     wrappers/legacy/getaudit.c
+    wrappers/legacy/audit_token.c
     wrappers/legacy/getpeername.c
     wrappers/legacy/getsockname.c
     wrappers/legacy/kill.c

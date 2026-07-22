@@ -123,42 +123,6 @@ waitpid(pid_t pid, int *status, int options)
     return __pd_sys_waitpid(pid, status, options);
 }
 
-uint32_t
-notify_check(int token, int *check)
-{
-    (void)token;
-    if (check != NULL) {
-        *check = 0;
-    }
-    return 0;
-}
-
-uint32_t
-notify_register_check(const char *name, int *out_token)
-{
-    (void)name;
-    if (out_token != NULL) {
-        *out_token = 0;
-    }
-    return 0;
-}
-
-uint32_t
-notify_monitor_file(int token, const char *path, int flags)
-{
-    (void)token;
-    (void)path;
-    (void)flags;
-    return 0;
-}
-
-uint32_t
-notify_cancel(int token)
-{
-    (void)token;
-    return 0;
-}
-
 FILE *
 __pd_fdopen_extsn(int fd, const char *mode)
 {
@@ -236,6 +200,19 @@ dlsym(void *handle, const char *symbol)
     }
 
     return fn(handle, symbol, __builtin_return_address(0));
+}
+
+bool
+_dyld_is_memory_immutable(const void *addr, size_t length)
+{
+    typedef bool (*dyld_is_memory_immutable_fn)(const void *, size_t);
+    static dyld_is_memory_immutable_fn fn;
+
+    if (fn == NULL && !_dyld_func_lookup("__dyld_is_memory_immutable", (void **)&fn)) {
+        return false;
+    }
+
+    return fn(addr, length);
 }
 
 char *
@@ -1060,6 +1037,24 @@ _os_log_error_impl(void *dso, void *log, unsigned int type, const char *format, 
 }
 
 /*
+ * __os_log_default/__os_log_internal: the os_log(log, format, ...) macro
+ * (unlike os_log_debug/os_log_error, which gate on os_log_type_enabled at
+ * the call site) always compile-time-packs its format args and calls
+ * __os_log_internal() unconditionally - the enabled/disabled decision is
+ * made *inside* the real implementation. With no logd here, treating every
+ * log point as "disabled" (a no-op body) is the same safe-fallback shape
+ * as os_log_type_enabled() above, just for the call sites that don't
+ * check first.
+ */
+void *_os_log_default;
+
+void
+_os_log_internal(void *dso, void *log, uint8_t type, const char *format, uint8_t *buf, uint32_t size)
+{
+    (void)dso; (void)log; (void)type; (void)format; (void)buf; (void)size;
+}
+
+/*
  * *_l (locale-variant) wrappers: no real per-thread locale support here
  * (every locale_t is effectively "C"/"POSIX"), so these just ignore the
  * locale_t argument and call the ordinary, already-real implementation.
@@ -1118,33 +1113,11 @@ snprintf_l(char *str, size_t size, locale_t loc, const char *format, ...)
 }
 
 /*
- * uuid_generate_random/uuid_generate_time: real implementations, backed by
- * arc4random (already real elsewhere in this tree) rather than actually
- * implementing the RFC 4122 time-based variant for _time - a random UUID
- * is a safe, always-valid substitute (still unique, just not derived from
- * a clock/node-id the way the real v1 algorithm would).
+ * PureDarwin: real uuid_generate/uuid_generate_random/uuid_generate_time
+ * (plus uuid_clear/compare/copy/is_null/unparse/pack/unpack) now come from
+ * the vendored libc/uuid/uuidsrc sources (see libc/CMakeLists.txt) instead
+ * of this hand-rolled arc4random-only stub.
  */
-extern void arc4random_buf(void *buf, size_t nbytes);
-
-static void
-pd_uuid_generate_v4(unsigned char out[16])
-{
-    arc4random_buf(out, 16);
-    out[6] = (out[6] & 0x0F) | 0x40; /* version 4 */
-    out[8] = (out[8] & 0x3F) | 0x80; /* variant 10xx */
-}
-
-void
-uuid_generate_random(unsigned char out[16])
-{
-    pd_uuid_generate_v4(out);
-}
-
-void
-uuid_generate_time(unsigned char out[16])
-{
-    pd_uuid_generate_v4(out);
-}
 
 /*
  * getsectbynamefromheader_64: real mach-o section lookup by segment/section

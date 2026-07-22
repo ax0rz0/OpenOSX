@@ -125,8 +125,6 @@ EOF
     if [ -e tools/mig ]; then
       patchShebangs tools/mig
     fi
-    # patchShebangs does not rewrite this csh script, but /bin/csh is also
-    # absent in the Nix sandbox.
     if [ -e src/Kernel/xnu/SETUP/config/doconf ]; then
       sed -i '1c#!${tcsh}/bin/tcsh -f' src/Kernel/xnu/SETUP/config/doconf
     fi
@@ -236,22 +234,40 @@ EOF
     if [ -e build-nix/src/Libraries/libSystem/libsystem_kernel/syscalls.a ]; then
       cp build-nix/src/Libraries/libSystem/libsystem_kernel/syscalls.a $out/usr/lib/system/
     fi
-    # Real CF-shaped IOKitLib object code (IOServiceGetMatchingService,
-    # IORegistryEntryCreateCFProperty, etc - see src/Libraries/IOKit/
-    # IOKitLibCF.c) - object-only here since it's compiled without CF's
-    # real headers; nix/pkgs/iokit.nix does the final dylib link against
-    # real CoreFoundation.
+
     if [ -e build-nix/src/Libraries/IOKit/libIOKitCF.a ]; then
       cp build-nix/src/Libraries/IOKit/libIOKitCF.a $out/usr/lib/system/
     fi
     cp build-nix/src/Libraries/dyld/dyld $out/usr/lib/
-    # Ship the C headers so in-guest compilers (tcc) can build against the
-    # system: xnu's installed headers (sys/*, mach/*, ...) overlaid with
-    # libc's generated public header tree (stdio.h, stdlib.h, ...). Staged
-    # under pd-guest-headers/, NOT usr/include: ports compile with
-    # -I''${libSystem}/usr/include, and populating that path would change
-    # header resolution for every cross-built port. image.nix moves this
-    # into the guest's /usr/include at assembly time.
+
+    if [ -e build-nix/src/Libraries/XPC/launchd/launchd_real ]; then
+      mkdir -p $out/pd-sbin
+      cp build-nix/src/Libraries/XPC/launchd/launchd_real $out/pd-sbin/
+      #if [ -e build-nix/src/Libraries/XPC/launchd/launchd_diag_wrapper ]; then
+      #  cp build-nix/src/Libraries/XPC/launchd/launchd_diag_wrapper $out/pd-sbin/
+      #fi
+    fi
+
+    if [ -e build-nix/src/Libraries/XPC/notify/notifyd ]; then
+      mkdir -p $out/usr/sbin
+      cp build-nix/src/Libraries/XPC/notify/notifyd $out/usr/sbin/
+      mkdir -p $out/System/Library/LaunchDaemons
+      cp src/Libraries/XPC/notify/com.apple.notifyd.plist $out/System/Library/LaunchDaemons/
+    fi
+
+    mkdir -p $out/pd-xpc-dev/lib $out/pd-xpc-dev/include
+    for a in XPC/launchd/libXPC_launchd_static.a \
+             XPC/launchd/libXPC_launchd_mig_static.a \
+             XPC/libxpc/libXPC_libxpc_static.a \
+             XPC/libinfo/libXPC_libinfo_static.a \
+             XPC/libnv/libXPC_libnv_static.a \
+             CrashReporterClient/libCrashReporterClient.a; do
+      if [ -e "build-nix/src/Libraries/$a" ]; then
+        cp "build-nix/src/Libraries/$a" $out/pd-xpc-dev/lib/
+      fi
+    done
+    cp -a src/Libraries/XPC/libxpc/include/. $out/pd-xpc-dev/include/
+
     if [ -d build-nix/src/Libraries/libSystem/libc/headers/usr/include ]; then
       mkdir -p $out/pd-guest-headers
       if [ -d build-nix/src/Kernel/xnu/xnu_header_install/usr/include ]; then
@@ -260,11 +276,7 @@ EOF
       chmod -R u+w $out/pd-guest-headers
       cp -RL build-nix/src/Libraries/libSystem/libc/headers/usr/include/. $out/pd-guest-headers/
       chmod -R u+w $out/pd-guest-headers
-      # Availability/TargetConditionals: SDK-side headers everything under
-      # /usr/include ends up including; PD vendors them in AvailabilityVersions.
       cp -RL src/Libraries/AvailabilityVersions/include/. $out/pd-guest-headers/
-      # pthread public headers (pthread.h, sys/_pthread/*): sys/_types.h
-      # includes sys/_pthread/_pthread_types.h.
       cp -RL src/Libraries/libSystem/pthread/include/. $out/pd-guest-headers/
       rm -f $out/pd-guest-headers/sys_pthread_types.modulemap
       chmod -R u+w $out/pd-guest-headers

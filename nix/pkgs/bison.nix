@@ -28,9 +28,6 @@ stdenv.mkDerivation {
   nativeBuildInputs = [ gnumake perl m4 ];
 
   postPatch = ''
-    # gnulib's spawn.h template defines zero-valued sched flags when the
-    # system has posix_spawn(), but misses the replacement-posix_spawn path.
-    # PureDarwin currently has posix_spawnattr_t but no sched attr support.
     substituteInPlace lib/spawn.in.h \
       --replace-fail '#  undef POSIX_SPAWN_FORK_HANDLERS' '#  undef POSIX_SPAWN_FORK_HANDLERS
 #  ifndef POSIX_SPAWN_SETSCHEDPARAM

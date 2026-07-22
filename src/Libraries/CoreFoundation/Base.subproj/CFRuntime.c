@@ -1144,7 +1144,16 @@ _CFThreadRef _CF_pthread_main_thread_np(void) {
 
 
 
-#if TARGET_OS_LINUX || TARGET_OS_BSD
+// On Darwin with the ObjC runtime, __CFInitialize is invoked via the ObjC
+// image-load notification, so it needs no constructor attribute. PureDarwin
+// builds CF as DEPLOYMENT_RUNTIME_C on TARGET_OS_MAC: there is no ObjC runtime
+// to call it, so - exactly like the Linux/BSD non-ObjC builds - it must be a
+// plain __attribute__((constructor)). Without this __CFInitialize never runs,
+// __CFTSDInitialize never creates __CFTSDIndexKey (it stays 0), and the first
+// CF TSD lookup returns pthread_self() instead of NULL. (Matches the
+// TARGET_OS_MAC && !DEPLOYMENT_RUNTIME_OBJC condition already used below to
+// gate the __CFTSDInitialize() call itself.)
+#if TARGET_OS_LINUX || TARGET_OS_BSD || (TARGET_OS_MAC && !DEPLOYMENT_RUNTIME_OBJC)
 static void __CFInitialize(void) __attribute__ ((constructor));
 static
 #endif

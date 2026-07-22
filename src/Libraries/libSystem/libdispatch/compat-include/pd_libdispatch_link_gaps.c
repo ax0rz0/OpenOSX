@@ -19,8 +19,8 @@
  *   invoke pointer equals this address; it only needs to exist and be
  *   distinct from every real invoke function for the identity comparison
  *   in inline_internal.h to work correctly (always false, correctly).
- * - __os_assert_log/_strerror$UNIX2003 are small, genuinely-missing
- *   plain utility functions.
+ * - _strerror$UNIX2003 is a small, genuinely-missing plain utility
+ *   function.
  */
 
 #include <errno.h>
@@ -119,14 +119,6 @@ qos_class_t
 qos_class_main(void)
 {
 	return QOS_CLASS_UNSPECIFIED;
-}
-
-char *
-_os_assert_log(uint64_t code)
-{
-	static char buf[64];
-	snprintf(buf, sizeof(buf), "os_assert failure (code 0x%llx)", (unsigned long long)code);
-	return buf;
 }
 
 extern char *__pd_strerror_unix2003(int errnum) __asm("_strerror$UNIX2003");

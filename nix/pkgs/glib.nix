@@ -138,11 +138,6 @@ EOF
     ninja -C build install
     patchShebangs $out/bin
 
-    # Meson's default darwin dylib handling gives each dylib an @rpath
-    # install name and every consumer an @rpath LC_LOAD_DYLIB, which
-    # resolves to nonsense once installed flat onto the image root (see
-    # dbus.nix for the same fix). Give each dylib a real absolute install
-    # name and repoint every consumer at that same absolute path.
     INSTALL_NAME_TOOL="${nativeMesonTools}/bin/install_name_tool"
     dylibs=$(find "$out/lib" -maxdepth 1 -name "*.dylib" -not -type l)
     for dylib in $dylibs; do

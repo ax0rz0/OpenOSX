@@ -27,6 +27,7 @@
 #include <sys/types.h>
 
 struct rlimit;
+struct timespec;
 
 extern int __pd_real_chmod(const char *path, mode_t mode) __asm("_chmod");
 extern int __pd_real_fchmod(int fd, mode_t mode) __asm("_fchmod");
@@ -41,6 +42,7 @@ extern int __pd_real_sigsuspend(const void *set) __asm("_sigsuspend");
 extern int __pd_real_mprotect(void *addr, size_t len, int prot) __asm("_mprotect");
 extern ssize_t __pd_real_write(int fd, const void *buf, size_t nbyte) __asm("_write");
 extern unsigned int __pd_real_sleep(unsigned int seconds) __asm("_sleep");
+extern int __pd_real_nanosleep(const struct timespec *rqtp, struct timespec *rmtp) __asm("_nanosleep");
 
 int __pd_chmod_unix2003(const char *path, mode_t mode) __asm("_chmod$UNIX2003");
 int
@@ -145,6 +147,13 @@ unsigned int
 __pd_sleep_unix2003(unsigned int seconds)
 {
     return __pd_real_sleep(seconds);
+}
+
+int __pd_nanosleep_unix2003(const struct timespec *rqtp, struct timespec *rmtp) __asm("_nanosleep$UNIX2003");
+int
+__pd_nanosleep_unix2003(const struct timespec *rqtp, struct timespec *rmtp)
+{
+    return __pd_real_nanosleep(rqtp, rmtp);
 }
 
 extern int __pd_pthread_cancel_unix2003(pthread_t thread) __asm("_pthread_cancel$UNIX2003");

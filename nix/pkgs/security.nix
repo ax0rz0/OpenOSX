@@ -19,10 +19,6 @@ let
     '';
   };
 
-  # Real macOS install_name for a framework binary: /System/Library/
-  # Frameworks/Security.framework/Versions/A/Security. Anything linking
-  # -framework Security or dlopen()ing the framework path directly needs
-  # the binary to answer to exactly this load command.
   installName = "/System/Library/Frameworks/Security.framework/Versions/A/Security";
 in
 stdenv.mkDerivation {
@@ -31,11 +27,6 @@ stdenv.mkDerivation {
 
   dontUnpack = true;
 
-  # SecRandomCopyBytes is real (getentropy-backed); SecItem* is a
-  # deliberate no-op stub - see src/Libraries/Security/include/Security/
-  # SecItem.h for why that's the right failure mode. Just enough surface
-  # for -framework Security consumers to link and run without a real
-  # keychain daemon behind them.
   buildPhase = ''
     runHook preBuild
 
