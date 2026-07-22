@@ -50,8 +50,6 @@ target_include_directories(libc_headers_gen_private INTERFACE
 # This is the only public header directory
 install(DIRECTORY ${libc_headers_dir}/usr/include DESTINATION usr COMPONENT DeveloperTools)
 
-# openlibm (vendored PureDarwin/Libm fork) replaces the hand-rolled
-# pd_libm_*.c files below - see libm/openlibm/CMakeLists.txt.
 add_subdirectory(libm/openlibm)
 
 # pd-compat-include holds headers we hand-wrote (real Apple's makeheaders.pl
@@ -240,6 +238,7 @@ target_sources(libc_static PRIVATE
     string/NetBSD/memset_s.c     # _memset_s (C11 Annex K; curl's curlx_freezero)
     gen/backtrace.c               # _backtrace/_backtrace_symbols/_backtrace_symbols_fd (dbus's execinfo.h use)
     gen/FreeBSD/getpeereid.c     # _getpeereid (dbus's unix-socket peer credential auth)
+    gen/FreeBSD/alarm.c          # _alarm
     gen/FreeBSD/fmtcheck.c       # _fmtcheck (file(1) locale-safe strerror formatting)
     secure/strcat_chk.c          # ___strcat_chk
     # POSIX regex: Apple's TRE engine (regcomp/regexec) + BSD regerror.
@@ -282,6 +281,7 @@ target_sources(libc_static PRIVATE
     gen/FreeBSD/assert.c         # __assert_rtn
     secure/chk_fail.c            # ___chk_fail_overflow (needs mach-o/dyld_priv.h, now vendored)
     darwin/pd_os_crash.c         # __os_crash (minimal real report-then-let-caller-trap; see file comment)
+    darwin/pd_unix2003.c         # $UNIX2003 <-> plain forwarders; see file comment
     gen/FreeBSD/arc4random.c     # corecrypto-backed arc4random/arc4random_buf/arc4random_uniform
     gen/FreeBSD/daemon.c         # _daemon$1050
     gen/FreeBSD/signal.c         # _signal (libmalloc's pguard_malloc.c installs a SIGSEGV handler)
@@ -299,6 +299,7 @@ target_sources(libc_static PRIVATE
     stdlib/FreeBSD/strtol.c      # _strtol (libmalloc's env-var parsing, e.g. MallocNanoZone)
     stdlib/FreeBSD/strtoll.c     # _strtoll
     stdlib/FreeBSD/atoll.c       # _atoll/_atoll_l
+    stdlib/FreeBSD/atol.c        # _atol/_atol_l
     stdlib/FreeBSD/strtoul.c     # _strtoul/_strtoul_l
     stdlib/FreeBSD/strtoull.c    # _strtoull/_strtoull_l
     stdlib/FreeBSD/rand.c        # _rand/_srand
@@ -521,6 +522,7 @@ target_sources(libc_internal_static PRIVATE
     string/FreeBSD/strcoll.c      # _strcoll / _strcoll_l (collate compare)
     string/FreeBSD/wcscoll.c      # _wcscoll_l (wide collate compare)
     locale/FreeBSD/wctob.c        # _wctob / _wctob_l (scanf)
+    locale/FreeBSD/wcwidth.c      # _wcwidth / _wcwidth_l
     stdio/FreeBSD/rget.c          # ___srget (getc/__srget refill)
     stdio/FreeBSD/ungetc.c        # ___ungetc (scanf pushback)
     stdio/FreeBSD/getc.c          # _getc

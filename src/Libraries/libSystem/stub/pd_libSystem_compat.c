@@ -29,39 +29,6 @@ extern int _dyld_func_lookup(const char *name, void **address);
 extern FILE *__pd_fdopen_extsn(int fd, const char *mode) __asm("_fdopen$DARWIN_EXTSN");
 extern FILE *__pd_fopen_extsn(const char *path, const char *mode) __asm("_fopen$DARWIN_EXTSN");
 
-extern int __pd_chmod_unix2003(const char *path, mode_t mode) __asm("_chmod$UNIX2003");
-extern int __pd_fchmod_unix2003(int fd, mode_t mode) __asm("_fchmod$UNIX2003");
-extern int __pd_fcntl_syscall(int fd, int cmd, long arg) __asm("___fcntl");
-extern int __pd_getrlimit_unix2003(int resource, struct rlimit *rlp) __asm("_getrlimit$UNIX2003");
-extern int __pd_kill_unix2003(pid_t pid, int sig) __asm("_kill$UNIX2003");
-extern void *__pd_mmap_unix2003(void *addr, size_t len, int prot, int flags, int fd, off_t offset) __asm("_mmap$UNIX2003");
-extern int __pd_mprotect_default(void *addr, size_t len, int prot) __asm("_mprotect");
-extern int __pd_munmap_unix2003(void *addr, size_t len) __asm("_munmap$UNIX2003");
-extern int __pd_open_unix2003(const char *path, int flags, mode_t mode) __asm("_open$UNIX2003");
-extern int __pd_ptrace_syscall(int request, pid_t pid, caddr_t addr, int data) __asm("___ptrace");
-extern int __pd_setrlimit_unix2003(int resource, const struct rlimit *rlp) __asm("_setrlimit$UNIX2003");
-extern int __pd_sigsuspend_syscall(const sigset_t *set) __asm("___sigsuspend");
-extern int __pd_nanosleep(const struct timespec *requested, struct timespec *remaining) __asm("_nanosleep");
-extern ssize_t __pd_write_default_syscall(int fd, const void *buf, size_t nbyte) __asm("_write");
-
-extern int __pd_pthread_cancel_unix2003(pthread_t thread) __asm("_pthread_cancel$UNIX2003");
-extern int __pd_pthread_cond_init_unix2003(pthread_cond_t *cond, const pthread_condattr_t *attr) __asm("_pthread_cond_init$UNIX2003");
-extern int __pd_pthread_cond_timedwait_unix2003(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime) __asm("_pthread_cond_timedwait$UNIX2003");
-extern int __pd_pthread_cond_wait_unix2003(pthread_cond_t *cond, pthread_mutex_t *mutex) __asm("_pthread_cond_wait$UNIX2003");
-extern int __pd_pthread_join_unix2003(pthread_t thread, void **value_ptr) __asm("_pthread_join$UNIX2003");
-extern int __pd_pthread_mutexattr_destroy_unix2003(pthread_mutexattr_t *attr) __asm("_pthread_mutexattr_destroy$UNIX2003");
-extern int __pd_pthread_rwlock_destroy_unix2003(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_destroy$UNIX2003");
-extern int __pd_pthread_rwlock_init_unix2003(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr) __asm("_pthread_rwlock_init$UNIX2003");
-extern int __pd_pthread_rwlock_rdlock_unix2003(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_rdlock$UNIX2003");
-extern int __pd_pthread_rwlock_tryrdlock_unix2003(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_tryrdlock$UNIX2003");
-extern int __pd_pthread_rwlock_trywrlock_unix2003(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_trywrlock$UNIX2003");
-extern int __pd_pthread_rwlock_unlock_unix2003(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_unlock$UNIX2003");
-extern int __pd_pthread_rwlock_wrlock_unix2003(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_wrlock$UNIX2003");
-extern int __pd_pthread_setcancelstate_unix2003(int state, int *oldstate) __asm("_pthread_setcancelstate$UNIX2003");
-extern int __pd_pthread_setcanceltype_unix2003(int type, int *oldtype) __asm("_pthread_setcanceltype$UNIX2003");
-extern int __pd_pthread_sigmask_unix2003(int how, const sigset_t *set, sigset_t *oset) __asm("_pthread_sigmask$UNIX2003");
-extern void __pd_pthread_testcancel_unix2003(void) __asm("_pthread_testcancel$UNIX2003");
-
 int
 getresuid(uid_t *ruid, uid_t *euid, uid_t *suid)
 {
@@ -154,252 +121,6 @@ pid_t
 waitpid(pid_t pid, int *status, int options)
 {
     return __pd_sys_waitpid(pid, status, options);
-}
-
-int
-ptrace(int request, pid_t pid, caddr_t addr, int data)
-{
-    return __pd_ptrace_syscall(request, pid, addr, data);
-}
-
-int __pd_chmod_default(const char *path, mode_t mode) __asm("_chmod");
-int
-__pd_chmod_default(const char *path, mode_t mode)
-{
-    return __pd_chmod_unix2003(path, mode);
-}
-
-int __pd_fchmod_default(int fd, mode_t mode) __asm("_fchmod");
-int
-__pd_fchmod_default(int fd, mode_t mode)
-{
-    return __pd_fchmod_unix2003(fd, mode);
-}
-
-int __pd_fcntl_default(int fd, int cmd, ...) __asm("_fcntl");
-int
-__pd_fcntl_default(int fd, int cmd, ...)
-{
-    va_list ap;
-    long arg;
-
-    va_start(ap, cmd);
-    arg = va_arg(ap, long);
-    va_end(ap);
-    return __pd_fcntl_syscall(fd, cmd, arg);
-}
-
-int __pd_getrlimit_default(int resource, struct rlimit *rlp) __asm("_getrlimit");
-int
-__pd_getrlimit_default(int resource, struct rlimit *rlp)
-{
-    return __pd_getrlimit_unix2003(resource, rlp);
-}
-
-int __pd_kill_default(pid_t pid, int sig) __asm("_kill");
-int
-__pd_kill_default(pid_t pid, int sig)
-{
-    return __pd_kill_unix2003(pid, sig);
-}
-
-void *__pd_mmap_default(void *addr, size_t len, int prot, int flags, int fd, off_t offset) __asm("_mmap");
-void *
-__pd_mmap_default(void *addr, size_t len, int prot, int flags, int fd, off_t offset)
-{
-    return __pd_mmap_unix2003(addr, len, prot, flags, fd, offset);
-}
-
-int __pd_mprotect_unix2003(void *addr, size_t len, int prot) __asm("_mprotect$UNIX2003");
-int
-__pd_mprotect_unix2003(void *addr, size_t len, int prot)
-{
-    return __pd_mprotect_default(addr, len, prot);
-}
-
-int __pd_munmap_default(void *addr, size_t len) __asm("_munmap");
-int
-__pd_munmap_default(void *addr, size_t len)
-{
-    return __pd_munmap_unix2003(addr, len);
-}
-
-int __pd_open_default(const char *path, int flags, ...) __asm("_open");
-int
-__pd_open_default(const char *path, int flags, ...)
-{
-    va_list ap;
-    mode_t mode = 0;
-
-    if (flags & O_CREAT) {
-        va_start(ap, flags);
-        mode = (mode_t)va_arg(ap, int);
-        va_end(ap);
-    }
-    return __pd_open_unix2003(path, flags, mode);
-}
-
-int __pd_setrlimit_default(int resource, const struct rlimit *rlp) __asm("_setrlimit");
-int
-__pd_setrlimit_default(int resource, const struct rlimit *rlp)
-{
-    return __pd_setrlimit_unix2003(resource, rlp);
-}
-
-int __pd_sigsuspend_default(const sigset_t *set) __asm("_sigsuspend");
-int
-__pd_sigsuspend_default(const sigset_t *set)
-{
-    return __pd_sigsuspend_syscall(set);
-}
-
-unsigned int __pd_sleep_default(unsigned int seconds) __asm("_sleep");
-unsigned int
-__pd_sleep_default(unsigned int seconds)
-{
-    struct timespec requested = { (time_t)seconds, 0 };
-    struct timespec remaining = { 0, 0 };
-
-    while (__pd_nanosleep(&requested, &remaining) == -1) {
-        if (errno != EINTR) {
-            return requested.tv_sec;
-        }
-        requested = remaining;
-    }
-    return 0;
-}
-
-unsigned int __pd_sleep_unix2003(unsigned int seconds) __asm("_sleep$UNIX2003");
-unsigned int
-__pd_sleep_unix2003(unsigned int seconds)
-{
-    return __pd_sleep_default(seconds);
-}
-
-ssize_t __pd_write_unix2003(int fd, const void *buf, size_t nbyte) __asm("_write$UNIX2003");
-ssize_t
-__pd_write_unix2003(int fd, const void *buf, size_t nbyte)
-{
-    return __pd_write_default_syscall(fd, buf, nbyte);
-}
-
-int __pd_pthread_cancel_default(pthread_t thread) __asm("_pthread_cancel");
-int
-__pd_pthread_cancel_default(pthread_t thread)
-{
-    return __pd_pthread_cancel_unix2003(thread);
-}
-
-int __pd_pthread_cond_init_default(pthread_cond_t *cond, const pthread_condattr_t *attr) __asm("_pthread_cond_init");
-int
-__pd_pthread_cond_init_default(pthread_cond_t *cond, const pthread_condattr_t *attr)
-{
-    return __pd_pthread_cond_init_unix2003(cond, attr);
-}
-
-int __pd_pthread_cond_timedwait_default(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime) __asm("_pthread_cond_timedwait");
-int
-__pd_pthread_cond_timedwait_default(pthread_cond_t *cond, pthread_mutex_t *mutex, const struct timespec *abstime)
-{
-    return __pd_pthread_cond_timedwait_unix2003(cond, mutex, abstime);
-}
-
-int __pd_pthread_cond_wait_default(pthread_cond_t *cond, pthread_mutex_t *mutex) __asm("_pthread_cond_wait");
-int
-__pd_pthread_cond_wait_default(pthread_cond_t *cond, pthread_mutex_t *mutex)
-{
-    return __pd_pthread_cond_wait_unix2003(cond, mutex);
-}
-
-int __pd_pthread_join_default(pthread_t thread, void **value_ptr) __asm("_pthread_join");
-int
-__pd_pthread_join_default(pthread_t thread, void **value_ptr)
-{
-    return __pd_pthread_join_unix2003(thread, value_ptr);
-}
-
-int __pd_pthread_mutexattr_destroy_default(pthread_mutexattr_t *attr) __asm("_pthread_mutexattr_destroy");
-int
-__pd_pthread_mutexattr_destroy_default(pthread_mutexattr_t *attr)
-{
-    return __pd_pthread_mutexattr_destroy_unix2003(attr);
-}
-
-int __pd_pthread_rwlock_destroy_default(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_destroy");
-int
-__pd_pthread_rwlock_destroy_default(pthread_rwlock_t *rwlock)
-{
-    return __pd_pthread_rwlock_destroy_unix2003(rwlock);
-}
-
-int __pd_pthread_rwlock_init_default(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr) __asm("_pthread_rwlock_init");
-int
-__pd_pthread_rwlock_init_default(pthread_rwlock_t *rwlock, const pthread_rwlockattr_t *attr)
-{
-    return __pd_pthread_rwlock_init_unix2003(rwlock, attr);
-}
-
-int __pd_pthread_rwlock_rdlock_default(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_rdlock");
-int
-__pd_pthread_rwlock_rdlock_default(pthread_rwlock_t *rwlock)
-{
-    return __pd_pthread_rwlock_rdlock_unix2003(rwlock);
-}
-
-int __pd_pthread_rwlock_tryrdlock_default(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_tryrdlock");
-int
-__pd_pthread_rwlock_tryrdlock_default(pthread_rwlock_t *rwlock)
-{
-    return __pd_pthread_rwlock_tryrdlock_unix2003(rwlock);
-}
-
-int __pd_pthread_rwlock_trywrlock_default(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_trywrlock");
-int
-__pd_pthread_rwlock_trywrlock_default(pthread_rwlock_t *rwlock)
-{
-    return __pd_pthread_rwlock_trywrlock_unix2003(rwlock);
-}
-
-int __pd_pthread_rwlock_unlock_default(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_unlock");
-int
-__pd_pthread_rwlock_unlock_default(pthread_rwlock_t *rwlock)
-{
-    return __pd_pthread_rwlock_unlock_unix2003(rwlock);
-}
-
-int __pd_pthread_rwlock_wrlock_default(pthread_rwlock_t *rwlock) __asm("_pthread_rwlock_wrlock");
-int
-__pd_pthread_rwlock_wrlock_default(pthread_rwlock_t *rwlock)
-{
-    return __pd_pthread_rwlock_wrlock_unix2003(rwlock);
-}
-
-int __pd_pthread_setcancelstate_default(int state, int *oldstate) __asm("_pthread_setcancelstate");
-int
-__pd_pthread_setcancelstate_default(int state, int *oldstate)
-{
-    return __pd_pthread_setcancelstate_unix2003(state, oldstate);
-}
-
-int __pd_pthread_setcanceltype_default(int type, int *oldtype) __asm("_pthread_setcanceltype");
-int
-__pd_pthread_setcanceltype_default(int type, int *oldtype)
-{
-    return __pd_pthread_setcanceltype_unix2003(type, oldtype);
-}
-
-int __pd_pthread_sigmask_default(int how, const sigset_t *set, sigset_t *oset) __asm("_pthread_sigmask");
-int
-__pd_pthread_sigmask_default(int how, const sigset_t *set, sigset_t *oset)
-{
-    return __pd_pthread_sigmask_unix2003(how, set, oset);
-}
-
-void __pd_pthread_testcancel_default(void) __asm("_pthread_testcancel");
-void
-__pd_pthread_testcancel_default(void)
-{
-    __pd_pthread_testcancel_unix2003();
 }
 
 uint32_t
@@ -530,12 +251,6 @@ dlerror(void)
     return fn();
 }
 
-long
-atol(const char *str)
-{
-    return strtol(str, NULL, 10);
-}
-
 char *index(const char *s, int c)
 {
     return __builtin_strchr(s, c);
@@ -606,41 +321,6 @@ use_extended_names(int enable)
 #include <string.h>
 #include <wchar.h>
 #include <wctype.h>
-
-unsigned int
-alarm(unsigned int seconds)
-{
-    struct itimerval new_it;
-    struct itimerval old_it;
-
-    new_it.it_value.tv_sec = (time_t)seconds;
-    new_it.it_value.tv_usec = 0;
-    new_it.it_interval.tv_sec = 0;
-    new_it.it_interval.tv_usec = 0;
-
-    if (setitimer(ITIMER_REAL, &new_it, &old_it) < 0) {
-        return 0;
-    }
-
-    /* Round any residual fraction up, as POSIX alarm() reports whole seconds. */
-    return (unsigned int)old_it.it_value.tv_sec
-        + (old_it.it_value.tv_usec != 0 ? 1u : 0u);
-}
-
-
-int
-wcwidth(wchar_t wc)
-{
-    if (wc == 0) {
-        return 0;
-    }
-    if (wc < 0x20 || (wc >= 0x7f && wc < 0xa0)) {
-        return -1;              /* C0/C1 control characters */
-    }
-    /* No East-Asian-width tables here; treat everything printable as 1 cell.
-     * xterm's own OPT_WIDE_CHARS logic refines this when enabled. */
-    return 1;
-}
 
 /* Group-database iteration xterm touches on its setuid path (which PureDarwin
  * builds with --disable-setuid). Minimal, well-behaved stub. */
@@ -938,7 +618,6 @@ __pd_rewinddir_inode64(DIR *dirp)
 }
 
 
-
 static void
 pd_grcopy(struct group *dst, const struct group *src,
           char *buf, size_t buflen, struct group **result)
@@ -1048,7 +727,6 @@ statvfs(const char *path, struct statvfs *buf)
     buf->f_namemax = 255;
     return 0;
 }
-
 
 static const char *
 pd_strptime_num(const char *s, int mindigits, int maxdigits, int *out)
@@ -1379,17 +1057,6 @@ void
 _os_log_error_impl(void *dso, void *log, unsigned int type, const char *format, uint8_t *buf, uint32_t size)
 {
     (void)dso; (void)log; (void)type; (void)format; (void)buf; (void)size;
-}
-
-/*
- * flsl: find-last-set-bit, POSIX-ish BSD extension (bit position of the
- * highest set bit, 1-based, 0 for input 0). Real implementation via the
- * same clz-based technique glibc's own equivalents use.
- */
-int
-flsl(long mask)
-{
-    return mask == 0 ? 0 : (int)(sizeof(long) * 8 - (unsigned)__builtin_clzl((unsigned long)mask));
 }
 
 /*

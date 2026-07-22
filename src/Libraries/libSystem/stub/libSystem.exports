@@ -17,6 +17,7 @@ _fopen
 _fprintf
 _ioctl
 _kill
+_kill$UNIX2003
 _killpg
 _mkdir
 _pause
@@ -26,6 +27,7 @@ _setenv
 _setsid
 _sigaction
 _sleep
+_sleep$UNIX2003
 ___snprintf_chk
 ___stdinp
 ___stdoutp
@@ -62,7 +64,9 @@ _malloc_size
 _memset
 _mount
 _mmap
+_mmap$UNIX2003
 _open
+_open$UNIX2003
 _pthread_getspecific
 _pthread_key_create
 _pthread_mutex_lock
@@ -185,6 +189,7 @@ _tolower
 _toupper
 _vm_allocate
 _write
+_write$UNIX2003
 _writev
 ___memcpy_chk
 ___memset_chk
@@ -203,6 +208,7 @@ _bzero
 ___bzero
 _chdir
 _chmod
+_chmod$UNIX2003
 _clock
 _chown
 _chroot
@@ -491,6 +497,7 @@ _inet_ntop
 _getppid
 _getpwnam
 _getrlimit
+_getrlimit$UNIX2003
 _getpeername
 _gettimeofday
 _getresgid
@@ -552,6 +559,7 @@ _setresgid
 _setresuid
 _setreuid
 _setrlimit
+_setrlimit$UNIX2003
 _settimeofday
 _setuid
 _signal
@@ -603,6 +611,7 @@ _execvp
 _putenv
 _clock_settime
 _fchmod
+_fchmod$UNIX2003
 _fchown
 _fputc
 _fsync
@@ -745,6 +754,7 @@ _fscanf
 _localeconv
 _memset_pattern16
 _munmap
+_munmap$UNIX2003
 _msync
 _setpgid
 _strlcpy

@@ -1483,7 +1483,7 @@
           libSystemBuild = mkPureDarwinBuild {
             pname = "puredarwin-libsystem";
             src = libSystemSource;
-            buildTargets = [ "libSystem_B_stub" "dyld" "libsystem_kernel_static" "libdispatch_static" "IOKitCF" ];
+            buildTargets = [ "libSystem_B_stub" "dyld" "libsystem_kernel_static" "libdispatch_static" "IOKitCF" "XPC_libnv_static" "XPC_libxpc_static" ];
             enableUserspace = false;
             enableKernel = false;
             installUserland = false;
