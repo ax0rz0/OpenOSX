@@ -547,8 +547,10 @@ _setgid
 _setgroups
 _setjmp
 __setjmp
+_setregid
 _setresgid
 _setresuid
+_setreuid
 _setrlimit
 _settimeofday
 _setuid

@@ -234,6 +234,9 @@ target_sources(libc_static PRIVATE
     string/FreeBSD/strcasestr.c  # _strcasestr (BusyBox grep -F paths)
     string/FreeBSD/strspn.c      # _strspn
     string/FreeBSD/memmem.c      # _memmem (file(1) magic buffer scans)
+    string/FreeBSD/wmemcpy.c     # _wmemcpy
+    string/FreeBSD/wmemchr.c     # _wmemchr
+    string/FreeBSD/wcscat.c      # _wcscat
     string/NetBSD/memset_s.c     # _memset_s (C11 Annex K; curl's curlx_freezero)
     gen/backtrace.c               # _backtrace/_backtrace_symbols/_backtrace_symbols_fd (dbus's execinfo.h use)
     gen/FreeBSD/getpeereid.c     # _getpeereid (dbus's unix-socket peer credential auth)
@@ -253,7 +256,18 @@ target_sources(libc_static PRIVATE
     stdlib/FreeBSD/qsort.c
     stdlib/FreeBSD/qsort_r.c     # _qsort_r (also backs qsort_b for fts)
     stdlib/FreeBSD/heapsort_r.c  # ___heapsort_r (qsort_r deep-recursion fallback)
+    stdlib/FreeBSD/tsearch.c     # _tsearch
+    stdlib/FreeBSD/tfind.c       # _tfind
+    stdlib/FreeBSD/tdelete.c     # _tdelete
+    stdlib/FreeBSD/twalk.c       # _twalk
+    stdlib/FreeBSD/system.c      # __system (system/_system aliased via __weak_reference)
+    stdio/FreeBSD/remove.c       # _remove
+    stdio/FreeBSD/fwrite.c       # _fwrite
+    stdio/FreeBSD/dprintf.c      # _dprintf/_dprintf_l
+    stdio/FreeBSD/vdprintf.c     # _vdprintf/_vdprintf_l (dprintf's underlying engine)
     stdlib/FreeBSD/realpath.c
+    util/pty.c                   # _openpty/_forkpty
+    util/login_tty.c             # _login_tty (forkpty's child-side helper)
     emulated/statvfs.c           # _statvfs/_fstatvfs
     secure/memcpy_chk.c
     secure/memset_chk.c
@@ -405,6 +419,13 @@ set_source_files_properties(stdlib/FreeBSD/exit.c stdlib/FreeBSD/atexit.c
     db/mpool/FreeBSD/mpool.c
     stdlib/FreeBSD/random.c
     stdio/FreeBSD/tmpfile.c
+    stdio/FreeBSD/fwrite.c stdio/FreeBSD/remove.c
+    stdio/FreeBSD/dprintf.c stdio/FreeBSD/vdprintf.c
+    stdlib/FreeBSD/system.c
+    stdlib/FreeBSD/tsearch.c stdlib/FreeBSD/tfind.c
+    stdlib/FreeBSD/tdelete.c stdlib/FreeBSD/twalk.c
+    locale/FreeBSD/mbsinit.c locale/FreeBSD/wcstombs.c
+    util/pty.c util/login_tty.c
     PROPERTIES COMPILE_FLAGS "-include${CMAKE_CURRENT_SOURCE_DIR}/fbsdcompat/_fbsd_compat_.h -D__DBINTERFACE_PRIVATE=1")
 # wcscoll needs the collate internals (__collate_lookup_which etc.), gated
 # behind __LIBC__ in collate.h - same as fnmatch.c above.
@@ -511,6 +532,8 @@ target_sources(libc_internal_static PRIVATE
     locale/FreeBSD/lmessages.c    # __messages_load_locale
     stdtime/FreeBSD/timelocal.c   # __time_load_locale
     locale/FreeBSD/none.c         # __none_{mbrtowc,mbsinit,mbsnrtowcs,wcrtomb,wcsnrtombs} (C-locale "no conversion" charset backend)
+    locale/FreeBSD/mbsinit.c      # _mbsinit / _mbsinit_l
+    locale/FreeBSD/wcstombs.c     # _wcstombs / _wcstombs_l
     locale/FreeBSD/tolower.c      # _tolower/_toupper (non-locale-suffixed forms)
     locale/FreeBSD/toupper.c
     locale/FreeBSD/nomacros.c     # externs __istype/__maskrune/__isctype (ctype.h base inlines, non-_l)
@@ -527,6 +550,8 @@ target_sources(libc_internal_static PRIVATE
     locale/FreeBSD/mskanji.c      # __MSKanji_init
     stdio/FreeBSD/fopen.c         # _fopen (collate/setrunelocale's locale-file open)
     stdio/FreeBSD/fdopen.c        # _fdopen (fopen's underlying FILE* wrapper)
+    stdio/FreeBSD/getdelim.c      # _getdelim
+    stdio/FreeBSD/getline.c       # _getline
     stdio/FreeBSD/fgets.c         # _fgets
     stdio/FreeBSD/fread.c         # _fread (collate table loading)
     string/FreeBSD/wcsncmp.c      # _wcsncmp (collate's chainsearch)

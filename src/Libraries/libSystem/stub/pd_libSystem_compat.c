@@ -96,27 +96,32 @@ getresgid(gid_t *rgid, gid_t *egid, gid_t *sgid)
     return 0;
 }
 
+/* setresuid/setresgid aren't real Darwin API (no such syscall exists), but
+ * setreuid(2)/setregid(2) are real kernel traps - marked NO_SYSCALL_STUB in
+ * syscalls.master (real Apple hides them from the public headers) but still
+ * backed by the real kauth_cred_setresuid()/kauth_cred_setresgid() kernel
+ * logic. custom/__setreuid.s and __setregid.s add the raw trampolines */
+extern int setreuid(uid_t ruid, uid_t euid);
+extern int setregid(gid_t rgid, gid_t egid);
+
 int
 setresuid(uid_t ruid, uid_t euid, uid_t suid)
 {
     uid_t current_real = getuid();
     uid_t current_effective = geteuid();
 
-    if (suid != (uid_t)-1 && suid != current_effective) {
+    if (suid != (uid_t)-1 && suid != current_effective
+        && suid != (euid != (uid_t)-1 ? euid : current_effective)) {
         errno = ENOSYS;
         return -1;
     }
-    if (ruid != (uid_t)-1 && ruid != current_real) {
-        if (euid != (uid_t)-1 && euid != ruid) {
-            errno = ENOSYS;
-            return -1;
-        }
-        return setuid(ruid);
+    if (ruid == current_real) {
+        ruid = (uid_t)-1;
     }
-    if (euid != (uid_t)-1 && euid != current_effective) {
-        return seteuid(euid);
+    if (euid == current_effective) {
+        euid = (uid_t)-1;
     }
-    return 0;
+    return setreuid(ruid, euid);
 }
 
 int
@@ -125,21 +130,18 @@ setresgid(gid_t rgid, gid_t egid, gid_t sgid)
     gid_t current_real = getgid();
     gid_t current_effective = getegid();
 
-    if (sgid != (gid_t)-1 && sgid != current_effective) {
+    if (sgid != (gid_t)-1 && sgid != current_effective
+        && sgid != (egid != (gid_t)-1 ? egid : current_effective)) {
         errno = ENOSYS;
         return -1;
     }
-    if (rgid != (gid_t)-1 && rgid != current_real) {
-        if (egid != (gid_t)-1 && egid != rgid) {
-            errno = ENOSYS;
-            return -1;
-        }
-        return setgid(rgid);
+    if (rgid == current_real) {
+        rgid = (gid_t)-1;
     }
-    if (egid != (gid_t)-1 && egid != current_effective) {
-        return setegid(egid);
+    if (egid == current_effective) {
+        egid = (gid_t)-1;
     }
-    return 0;
+    return setregid(rgid, egid);
 }
 
 int
@@ -465,45 +467,15 @@ __pd_syslog_extsn(int priority, const char *format, ...)
     va_end(ap);
 }
 
-size_t
-fwrite(const void *ptr, size_t size, size_t count, FILE *stream)
-{
-    const unsigned char *bytes = ptr;
-    size_t total = size * count;
-    size_t written;
 
-    if (size != 0 && count > ((size_t)-1 / size)) {
-        errno = EINVAL;
-        return 0;
-    }
-
-    for (written = 0; written < total; written++) {
-        if (fputc(bytes[written], stream) == EOF) {
-            break;
-        }
-    }
-
-    return size == 0 ? count : written / size;
-}
-
-int
-remove(const char *path)
-{
-    if (unlink(path) == 0) {
-        return 0;
-    }
-
-    if (errno == EISDIR || errno == EPERM) {
-        return rmdir(path);
-    }
-
-    return -1;
-}
-
+/* This fork's sys/cdefs.h stubs __weak_reference to a no-op (needed for
+ * static archive linking), so s_scalbn.c's `__strong_reference(scalbn,
+ * ldexp)` alias never gets pulled in unless something references it by name
+ * first. Forward explicitly to the real scalbn instead of aliasing. */
 double
-ldexp(double value, int exponent)
+ldexp(double x, int n)
 {
-    return __builtin_ldexp(value, exponent);
+    return scalbn(x, n);
 }
 
 int
@@ -818,44 +790,18 @@ ptsname(int fildes)
 }
 
 int
-openpty(int *amaster, int *aslave, char *name,
-        struct termios *termp, struct winsize *winp)
+ptsname_r(int fildes, char *buffer, size_t buflen)
 {
-    int master;
-    int slave;
-    char *slave_name;
+    char name[128];
 
-    master = posix_openpt(O_RDWR | O_NOCTTY);
-    if (master < 0) {
+    if (ioctl(fildes, TIOCPTYGNAME, name) < 0) {
         return -1;
     }
-    if (grantpt(master) < 0 || unlockpt(master) < 0) {
-        close(master);
+    if (strlen(name) >= buflen) {
+        errno = ERANGE;
         return -1;
     }
-    slave_name = ptsname(master);
-    if (slave_name == NULL) {
-        close(master);
-        return -1;
-    }
-    slave = open(slave_name, O_RDWR | O_NOCTTY);
-    if (slave < 0) {
-        close(master);
-        return -1;
-    }
-
-    if (termp != NULL) {
-        (void)tcsetattr(slave, TCSAFLUSH, termp);
-    }
-    if (winp != NULL) {
-        (void)ioctl(slave, TIOCSWINSZ, winp);
-    }
-    if (name != NULL) {
-        strcpy(name, slave_name);
-    }
-
-    *amaster = master;
-    *aslave = slave;
+    strcpy(buffer, name);
     return 0;
 }
 
@@ -945,35 +891,6 @@ __pd_select_1050(int nfds, fd_set *readfds, fd_set *writefds,
 #include <search.h>
 #include <wchar.h>
 
-double
-frexp(double value, int *exp)
-{
-    union { double d; uint64_t u; } v = { .d = value };
-    uint64_t mant = v.u & 0x000fffffffffffffULL;
-    int biased_exp = (int)((v.u >> 52) & 0x7ff);
-    int sign = (v.u >> 63) & 1;
-
-    if (biased_exp == 0x7ff || value == 0.0) {
-        /* NaN, +-Inf, or +-0: return value unchanged, exponent 0. */
-        *exp = 0;
-        return value;
-    }
-    if (biased_exp == 0) {
-        /* Subnormal: normalize by hand before extracting the exponent. */
-        int shift = 0;
-        while ((mant & 0x0010000000000000ULL) == 0) {
-            mant <<= 1;
-            shift++;
-        }
-        mant &= 0x000fffffffffffffULL;
-        biased_exp = 1 - shift;
-    }
-    *exp = biased_exp - 1022;   /* bias 1023, plus one since mantissa gets a leading 0.5 */
-
-    v.u = ((uint64_t)sign << 63) | (1022ULL << 52) | mant;   /* result in [0.5, 1.0) */
-    return v.d;
-}
-
 /* The SDK's <signal.h> defines these as inlining macros; undef them so we
  * can provide real, linkable function symbols instead. */
 #undef sigemptyset
@@ -1005,143 +922,6 @@ sigaddset(sigset_t *set, int signo)
     return 0;
 }
 
-wchar_t *
-wmemcpy(wchar_t *dst, const wchar_t *src, size_t n)
-{
-    size_t i;
-    for (i = 0; i < n; i++)
-        dst[i] = src[i];
-    return dst;
-}
-
-wchar_t *
-wmemchr(const wchar_t *s, wchar_t c, size_t n)
-{
-    size_t i;
-    for (i = 0; i < n; i++)
-        if (s[i] == c)
-            return (wchar_t *)&s[i];
-    return NULL;
-}
-
-wchar_t *
-wcscat(wchar_t *dst, const wchar_t *src)
-{
-    wchar_t *d = dst;
-    while (*d)
-        d++;
-    while ((*d++ = *src++))
-        ;
-    return dst;
-}
-
-/* This system's locale is fixed to UTF-8 (see nl_langinfo above), so the
- * wide<->multibyte conversions below implement UTF-8 directly rather than
- * consulting a locale table. mbsinit/btowc treat every byte state as
- * stateless (UTF-8 has no shift state), which is always safe to report. */
-
-int
-mbsinit(const mbstate_t *ps)
-{
-    (void)ps;
-    return 1;
-}
-
-wint_t
-btowc(int c)
-{
-    if (c == EOF)
-        return WEOF;
-    if ((unsigned char)c < 0x80)
-        return (wint_t)(unsigned char)c;
-    return WEOF;   /* multi-byte lead byte: not representable as a single wchar_t here */
-}
-
-static size_t
-pd_wctoutf8(wchar_t wc, char *out)
-{
-    uint32_t c = (uint32_t)wc;
-
-    if (c < 0x80) {
-        if (out) out[0] = (char)c;
-        return 1;
-    } else if (c < 0x800) {
-        if (out) {
-            out[0] = (char)(0xC0 | (c >> 6));
-            out[1] = (char)(0x80 | (c & 0x3F));
-        }
-        return 2;
-    } else if (c < 0x10000) {
-        if (out) {
-            out[0] = (char)(0xE0 | (c >> 12));
-            out[1] = (char)(0x80 | ((c >> 6) & 0x3F));
-            out[2] = (char)(0x80 | (c & 0x3F));
-        }
-        return 3;
-    } else {
-        if (out) {
-            out[0] = (char)(0xF0 | (c >> 18));
-            out[1] = (char)(0x80 | ((c >> 12) & 0x3F));
-            out[2] = (char)(0x80 | ((c >> 6) & 0x3F));
-            out[3] = (char)(0x80 | (c & 0x3F));
-        }
-        return 4;
-    }
-}
-
-size_t
-wcrtomb(char *s, wchar_t wc, mbstate_t *ps)
-{
-    (void)ps;
-    if (s == NULL)
-        return 1;   /* querying shift-state reset length: UTF-8 has none */
-    return pd_wctoutf8(wc, s);
-}
-
-size_t
-wcstombs(char *dst, const wchar_t *src, size_t n)
-{
-    size_t used = 0;
-
-    while (*src) {
-        char buf[4];
-        size_t len = pd_wctoutf8(*src, buf);
-
-        if (dst) {
-            if (used + len > n)
-                break;
-            memcpy(dst + used, buf, len);
-        } else if (used + len > n) {
-            /* no destination: caller (wcsrtombs below) wants a length only */
-        }
-        used += len;
-        src++;
-    }
-    if (dst && used < n)
-        dst[used] = '\0';
-    return used;
-}
-
-size_t
-wcsrtombs(char *dst, const wchar_t **src, size_t n, mbstate_t *ps)
-{
-    (void)ps;
-    size_t total = wcstombs(dst, *src, n);
-    if (dst)
-        *src = NULL;   /* whole string consumed (no embedded NUL support needed here) */
-    return total;
-}
-
-wint_t
-wctob(wint_t c)
-{
-    if (c == WEOF)
-        return EOF;
-    if ((uint32_t)c < 0x80)
-        return (wint_t)(unsigned char)c;
-    return WEOF;
-}
-
 /*
  * rewinddir$INODE64: opendir$INODE64/readdir$INODE64 (from libc_static) read
  * directory entries directly off the fd with no additional userspace
@@ -1157,220 +937,7 @@ __pd_rewinddir_inode64(DIR *dirp)
     lseek(dirfd(dirp), 0, SEEK_SET);
 }
 
-/*
- * tsearch/tfind/tdelete/twalk: minimal unbalanced BST, sufficient for nano's
- * small in-memory lookup tables (it does not need tree-height guarantees).
- */
-/* `key` must be the first member: callers dereference tsearch()'s return
- * value as `*(void **)node` to read the key back (the POSIX/glibc tsearch
- * calling convention), so the node pointer and the key-pointer slot must
- * coincide. */
-struct pd_tnode {
-    void            *key;
-    struct pd_tnode *left;
-    struct pd_tnode *right;
-};
 
-void *
-tsearch(const void *key, void **rootp, int (*compar)(const void *, const void *))
-{
-    struct pd_tnode **cur = (struct pd_tnode **)rootp;
-
-    if (rootp == NULL)
-        return NULL;
-
-    while (*cur != NULL) {
-        int cmp = compar(key, (*cur)->key);
-        if (cmp == 0)
-            return *cur;
-        cur = (cmp < 0) ? &(*cur)->left : &(*cur)->right;
-    }
-
-    {
-        struct pd_tnode *n = (struct pd_tnode *)malloc(sizeof(*n));
-        if (n == NULL)
-            return NULL;
-        n->left = n->right = NULL;
-        n->key = (void *)key;
-        *cur = n;
-        return n;
-    }
-}
-
-void *
-tfind(const void *key, void *const *rootp, int (*compar)(const void *, const void *))
-{
-    struct pd_tnode *cur;
-
-    if (rootp == NULL)
-        return NULL;
-    cur = *(struct pd_tnode *const *)rootp;
-    while (cur != NULL) {
-        int cmp = compar(key, cur->key);
-        if (cmp == 0)
-            return cur;
-        cur = (cmp < 0) ? cur->left : cur->right;
-    }
-    return NULL;
-}
-
-/* Find the in-order successor's parent link to splice out `node`. */
-static struct pd_tnode **
-pd_tnode_min_link(struct pd_tnode **linkp)
-{
-    while ((*linkp)->left != NULL)
-        linkp = &(*linkp)->left;
-    return linkp;
-}
-
-void *
-tdelete(const void *key, void **rootp, int (*compar)(const void *, const void *))
-{
-    struct pd_tnode **cur = (struct pd_tnode **)rootp;
-    struct pd_tnode *parent_ret;
-
-    if (rootp == NULL)
-        return NULL;
-
-    while (*cur != NULL) {
-        int cmp = compar(key, (*cur)->key);
-        if (cmp == 0)
-            break;
-        cur = (cmp < 0) ? &(*cur)->left : &(*cur)->right;
-    }
-    if (*cur == NULL)
-        return NULL;
-
-    parent_ret = (*cur == *(struct pd_tnode **)rootp) ? *cur : NULL;
-    {
-        struct pd_tnode *node = *cur;
-
-        if (node->left == NULL) {
-            *cur = node->right;
-        } else if (node->right == NULL) {
-            *cur = node->left;
-        } else {
-            struct pd_tnode **succ_link = pd_tnode_min_link(&node->right);
-            struct pd_tnode *succ = *succ_link;
-
-            *succ_link = succ->right;
-            succ->left = node->left;
-            succ->right = node->right;
-            *cur = succ;
-        }
-        free(node);
-    }
-    return parent_ret ? *rootp : rootp;   /* glibc: non-NULL that isn't `node` itself */
-}
-
-static void
-pd_twalk_r(const struct pd_tnode *node, void (*action)(const void *, VISIT, int), int depth)
-{
-    if (node == NULL)
-        return;
-    if (node->left == NULL && node->right == NULL) {
-        action(node, leaf, depth);
-        return;
-    }
-    action(node, preorder, depth);
-    pd_twalk_r(node->left, action, depth + 1);
-    action(node, postorder, depth);
-    pd_twalk_r(node->right, action, depth + 1);
-    action(node, endorder, depth);
-}
-
-void
-twalk(const void *root, void (*action)(const void *, VISIT, int))
-{
-    pd_twalk_r((const struct pd_tnode *)root, action, 0);
-}
-
-int
-dprintf(int fd, const char *fmt, ...)
-{
-    char buf[1024];
-    va_list ap;
-    int n;
-
-    va_start(ap, fmt);
-    n = vsnprintf(buf, sizeof(buf), fmt, ap);
-    va_end(ap);
-    if (n < 0)
-        return n;
-    if ((size_t)n >= sizeof(buf))
-        n = sizeof(buf) - 1;   /* truncate: matches a fixed-size fallback, not glibc's realloc growth */
-    return (int)write(fd, buf, (size_t)n);
-}
-
-int
-system(const char *command)
-{
-    pid_t pid;
-    int status;
-
-    if (command == NULL)
-        return 1;   /* a shell is always "available" here */
-
-    pid = fork();
-    if (pid < 0)
-        return -1;
-    if (pid == 0) {
-        execl("/bin/sh", "sh", "-c", command, (char *)NULL);
-        _exit(127);
-    }
-    if (waitpid(pid, &status, 0) < 0)
-        return -1;
-    return status;
-}
-
-ssize_t
-getdelim(char **lineptr, size_t *n, int delim, FILE *stream)
-{
-    size_t cap, len = 0;
-    char *buf;
-    int c;
-
-    if (lineptr == NULL || n == NULL || stream == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-    cap = (*lineptr != NULL && *n > 0) ? *n : 128;
-    buf = (*lineptr != NULL) ? *lineptr : (char *)malloc(cap);
-    if (buf == NULL)
-        return -1;
-
-    while ((c = fgetc(stream)) != EOF) {
-        if (len + 1 >= cap) {
-            size_t ncap = cap * 2;
-            char *nbuf = (char *)realloc(buf, ncap);
-            if (nbuf == NULL) {
-                *lineptr = buf;
-                *n = cap;
-                return -1;
-            }
-            buf = nbuf;
-            cap = ncap;
-        }
-        buf[len++] = (char)c;
-        if (c == delim)
-            break;
-    }
-    if (len == 0 && c == EOF) {
-        *lineptr = buf;
-        *n = cap;
-        return -1;
-    }
-    buf[len] = '\0';
-    *lineptr = buf;
-    *n = cap;
-    return (ssize_t)len;
-}
-
-ssize_t
-getline(char **lineptr, size_t *n, FILE *stream)
-{
-    return getdelim(lineptr, n, '\n', stream);
-}
 
 static void
 pd_grcopy(struct group *dst, const struct group *src,
@@ -1995,35 +1562,6 @@ qos_class_self(void)
 }
 
 /*
- * modf/scalbn: real libm functions, not yet in the from-scratch libm here.
- * Minimal, correct implementations (not fast, but not stubs either).
- */
-double
-modf(double value, double *iptr)
-{
-    /* Truncate toward zero via a double -> int64_t -> double round trip
-     * (avoids __builtin_floor(), which degrades to a real libm floor()
-     * call we don't have under -nostdlib) - correct for any value that
-     * fits in an int64_t, which covers every practical caller. */
-    double ival = (double)(int64_t)value;
-    if (iptr) *iptr = ival;
-    return value - ival;
-}
-
-double
-scalbn(double x, int n)
-{
-    /* x * 2^n via direct manipulation of the IEEE 754 exponent field -
-     * __builtin_exp2() degrades to a real libm exp2() call we don't have
-     * under -nostdlib, so avoid depending on any float library routine. */
-    while (n > 1023) { x *= 0x1p1023; n -= 1023; }
-    while (n < -1022) { x *= 0x1p-1022; n += 1022; }
-    union { double d; uint64_t u; } scale;
-    scale.u = (uint64_t)(n + 1023) << 52;
-    return x * scale.d;
-}
-
-/*
  * os_log_create: CF calls this directly (not through the os_log_create ->
  * _os_log_create macro redirect real Apple's os/log.h defines - CF must be
  * built against a copy of that header without the redirect, or without
@@ -2161,49 +1699,6 @@ dlopen_preflight(const char *path)
 }
 
 /*
- * fmtcheck(3): validate that `fmt` has the same conversion specifiers as
- * `fmt_default`; return fmt if compatible, fmt_default otherwise. Used by
- * file(1) for magic-supplied format strings. This is a conservative
- * implementation: it compares the ordered list of conversion characters
- * (skipping flags/width/precision, honoring %% and length modifiers only to
- * find the conversion char) and rejects on any mismatch.
- */
-static const char *
-__pd_fmt_next_conv(const char *p, char *out)
-{
-    while ((p = strchr(p, '%')) != NULL) {
-        p++;
-        if (*p == '%') { p++; continue; }
-        while (*p != '\0' && strchr("#0- +'123456789.*hljtzq", *p) != NULL)
-            p++;
-        if (*p == '\0')
-            return NULL;
-        *out = *p;
-        return p + 1;
-    }
-    return NULL;
-}
-
-const char *
-fmtcheck(const char *fmt, const char *fmt_default)
-{
-    const char *a = fmt, *b = fmt_default;
-    char ca, cb;
-
-    if (fmt == NULL)
-        return fmt_default;
-
-    for (;;) {
-        a = __pd_fmt_next_conv(a, &ca);
-        b = __pd_fmt_next_conv(b, &cb);
-        if (a == NULL && b == NULL)
-            return fmt;
-        if (a == NULL || b == NULL || ca != cb)
-            return fmt_default;
-    }
-}
-
-/*
  * swap_fat_header/swap_fat_arch/swap_fat_arch_64 (libmacho): fat headers are
  * stored big-endian; these unconditionally byte-swap every field (the real
  * ones take a target byte order argument, but the only sensible use on a
@@ -2294,6 +1789,17 @@ __pd_qsort_b_thunk(void *block, const void *a, const void *b)
 {
     struct __pd_block_layout *bl = block;
     return bl->invoke(bl, a, b);
+}
+
+/* gen/FreeBSD/fmtcheck.c defines the real algorithm as __fmtcheck and
+ * aliases it to fmtcheck via __weak_reference - a no-op in this fork's
+ * sys/cdefs.h (see the ldexp/scalbn comment above for why). Forward
+ * explicitly instead of relying on the alias. */
+extern const char *__fmtcheck(const char *, const char *);
+const char *
+fmtcheck(const char *fmt, const char *fmt_default)
+{
+    return __fmtcheck(fmt, fmt_default);
 }
 
 void __pd_qsort_b(void *base, size_t nel, size_t width, void *block)
