@@ -282,8 +282,8 @@ main(int argc, char *const *argv)
 	monitor_networking_state();
 	jobmgr_init(sflag);
 	if (pid1_magic) {
-		/* PureDarwin: PD has no LaunchDaemons plists yet - see
-		 * pd_launchd_boot.c for why this is here. */
+		/* PureDarwin: mount /dev early, then import on-disk LaunchDaemons
+		 * into the real launchd job graph. */
 		extern void pd_launchd_boot(void);
 		pd_launchd_boot();
 	}

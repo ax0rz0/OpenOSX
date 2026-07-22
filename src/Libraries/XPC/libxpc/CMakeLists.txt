@@ -5,7 +5,7 @@ add_darwin_static_library(XPC_libxpc_static)
 # exported-symbol table even with a matching -exported_symbols_list entry.
 # Force-loading the real object directly wherever libxpc itself finally
 # gets linked (via this INTERFACE link option, so it follows libxpc to any
-# future executable, not just launchd_real) sidesteps that.
+# future executable, not just launchd) sidesteps that.
 add_dependencies(XPC_libxpc_static CrashReporterClient)
 target_link_options(XPC_libxpc_static INTERFACE -Wl,-force_load,$<TARGET_FILE:CrashReporterClient>)
 

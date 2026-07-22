@@ -181,7 +181,7 @@
           userlandBuild = mkPureDarwinBuild {
             pname = "puredarwin-userland";
             src = userlandSource;
-            buildTargets = [ "launchd" "sw_vers" "ps" "mkfile" "sync" "sysctl" "vm_stat" "hostinfo" "dmesg" "purge" "cpuctl" "mean" "reboot" "halt" "poweroff" "shutdown" "netsetup" "ping" "pcmplay" "startx" "mousemon" "mount" "umount" "ext4tool" ]
+            buildTargets = [ "sw_vers" "ps" "mkfile" "sync" "sysctl" "vm_stat" "hostinfo" "dmesg" "purge" "cpuctl" "mean" "reboot" "halt" "poweroff" "shutdown" "netsetup" "ping" "pcmplay" "startx" "mousemon" "mount" "umount" "ext4tool" ]
               # shell_cmds (+ tsort/uuencode/uudecode)
               ++ [ "basename" "chown" "dirname" "echo" "false" "getopt" "hostname" "jot" "kill" "logname" "mktemp" "nice" "nohup" "passwd" "printenv" "pwd" "renice" "seq" "shlock" "sleep" "tee" "test_cmd" "true" "tsort" "uname" "yes" "uuencode" "uudecode" ]
               # text_cmds
@@ -1587,7 +1587,7 @@
           fullBuild = mkPureDarwinBuild {
             pname = "puredarwin";
             src = ./.;
-            buildTargets = [ "launchd" "xnu" "kexts" "libsystem_kernel" "pcmplay" ];
+            buildTargets = [ "xnu" "kexts" "libsystem_kernel" "pcmplay" ];
             installUserland = false;
             installKernel = false;
             installBaseSystem = true;
@@ -1616,14 +1616,9 @@
           '' + lib.optionalString (!isDarwin && launchctlBuild != null) ''
             cp -a ${launchctlBuild}/. "$out/"
             chmod -R u+w "$out"
-            if [ -e "$out/pd-sbin/launchd_real" ]; then
+            if [ -e "$out/pd-sbin/launchd" ]; then
               mkdir -p "$out/sbin"
-              cp "$out/pd-sbin/launchd_real" "$out/sbin/launchd_real"
-              if [ -e "$out/pd-sbin/launchd_diag_wrapper" ]; then
-                cp "$out/pd-sbin/launchd_diag_wrapper" "$out/sbin/launchd"
-              else
-                cp "$out/pd-sbin/launchd_real" "$out/sbin/launchd"
-              fi
+              cp "$out/pd-sbin/launchd" "$out/sbin/launchd"
               rm -rf "$out/pd-sbin"
             fi
           ''

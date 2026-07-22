@@ -46,7 +46,7 @@ stdenv.mkDerivation {
     ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar crs placeholder-libs/libdispatch.a placeholder-libs/placeholder.o
 
     # -Wl,-fixup_chains: PD's dyld lazy-binding/stub-resolution path is
-    # fragile (same reason launchd_real/SystemStarter/launchctl/notifyd
+    # fragile (same reason launchd/SystemStarter/launchctl/notifyd
     # already eager-bind themselves) - without it, CoreFoundation's own
     # internal calls between its exported symbols go through dyld_stub_binder
     # and can fault (executing from a freshly-written RW page instead of a

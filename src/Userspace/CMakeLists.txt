@@ -1,4 +1,3 @@
-add_subdirectory(launchd)
 add_subdirectory(sw_vers)
 add_subdirectory(ps)
 add_subdirectory(system_cmds)

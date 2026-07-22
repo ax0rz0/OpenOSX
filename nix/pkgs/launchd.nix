@@ -51,7 +51,7 @@ stdenv.mkDerivation {
       -Wl,-fixup_chains \
       -lCoreFoundation -lIOKitCF -lSystem \
       ${src}/src/Libraries/XPC/launchd/pd_launchd_main.c \
-      -o launchd_real
+      -o launchd
 
     ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-clang \
       -isysroot "$DARWIN_SDK_ROOT" \
@@ -61,8 +61,8 @@ stdenv.mkDerivation {
       -Wl,-platform_version,macos,11.0,11.5 \
       -Wl,-fixup_chains \
       -lSystem \
-      ${src}/src/Libraries/XPC/launchd/pd_launchd_diag_wrapper.c \
-      -o launchd_diag_wrapper
+      ${src}/src/Libraries/XPC/launchd/pd_console_login.c \
+      -o pd-console-login
 
     runHook postBuild
   '';
@@ -70,15 +70,19 @@ stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
     mkdir -p $out/pd-sbin
-    cp launchd_real $out/pd-sbin/
-    #cp launchd_diag_wrapper $out/pd-sbin/
+    cp launchd $out/pd-sbin/
+    mkdir -p $out/usr/libexec
+    cp pd-console-login $out/usr/libexec/
+    mkdir -p $out/System/Library/LaunchDaemons
+    cp ${src}/src/Libraries/XPC/launchd/org.puredarwin.console-login.plist \
+      $out/System/Library/LaunchDaemons/
     runHook postInstall
   '';
 
   dontFixup = true;
 
   meta = with lib; {
-    description = "Real PureDarwin/XPC launchd (bootstrap-namespace PID 1), linked against real CoreFoundation for LaunchDaemons plist loading";
+    description = "PureDarwin/XPC launchd (bootstrap-namespace PID 1)";
     platforms = platforms.linux;
   };
 }
