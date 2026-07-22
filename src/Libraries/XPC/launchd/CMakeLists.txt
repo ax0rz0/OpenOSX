@@ -36,6 +36,13 @@ mig(internal.defs
     SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/internalServer.h
     SERVER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/internalServer.c
     NOVOUCHERS)
+mig(domain.defs
+    INCLUDES_FROM_TARGET XPC_libxpc_static
+    USER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/domain.h
+    USER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/domain_user.c
+    SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/domainServer.h
+    SERVER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/domainServer.c
+    NOVOUCHERS)
 
 add_library(XPC_launchd_mig_static STATIC
     ${CMAKE_CURRENT_BINARY_DIR}/job_user.c
@@ -46,6 +53,8 @@ add_library(XPC_launchd_mig_static STATIC
     ${CMAKE_CURRENT_BINARY_DIR}/job_replyServer.c
     ${CMAKE_CURRENT_BINARY_DIR}/internal_user.c
     ${CMAKE_CURRENT_BINARY_DIR}/internalServer.c
+    ${CMAKE_CURRENT_BINARY_DIR}/domain_user.c
+    ${CMAKE_CURRENT_BINARY_DIR}/domainServer.c
     ${CMAKE_CURRENT_BINARY_DIR}/notifyServer.c
     ${CMAKE_CURRENT_BINARY_DIR}/mach_excServer.c
 )

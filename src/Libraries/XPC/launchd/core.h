@@ -29,6 +29,11 @@
 typedef struct job_s *job_t;
 typedef struct jobmgr_s *jobmgr_t;
 
+#ifndef LAUNCHD_EVENT_NAME_T_DEFINED
+#define LAUNCHD_EVENT_NAME_T_DEFINED
+typedef char event_name_t[64];
+#endif
+
 extern jobmgr_t root_jobmgr;
 extern mach_port_t launchd_audit_port;
 extern au_asid_t launchd_audit_session;

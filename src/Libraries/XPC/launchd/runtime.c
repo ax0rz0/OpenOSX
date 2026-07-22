@@ -74,6 +74,7 @@
 #include "internal.h"
 #include "notifyServer.h"
 #include "mach_excServer.h"
+#include "domainServer.h"
 
 /* We shouldn't be including these */
 #include "launch.h"
@@ -173,10 +174,8 @@ union internal_max_sz {
 };
 
 union xpc_domain_max_sz {
-#ifdef notyet // _sjc_ cannot find __RequestUnion__xpc_domain_xpc_domain_subsystem
-	union __RequestUnion__xpc_domain_xpc_domain_subsystem req;
-	union __ReplyUnion__xpc_domain_xpc_domain_subsystem rep;
-#endif
+	union __RequestUnion__xpc_domain_subsystem req;
+	union __ReplyUnion__xpc_domain_subsystem rep;
 };
 
 union mach_exc_max_sz {
@@ -1025,8 +1024,7 @@ launchd_mig_demux(mach_msg_header_t *request, mach_msg_header_t *reply)
 			result = notify_server(request, reply);
 		} else if (the_demux == job_server) {
 			launchd_syslog(LOG_DEBUG, "Trying domain subsystem...");
-            // _sjc_ because we don't have this: result = xpc_domain_server(request, reply);
-            printf("missing xpc_domain_server()\n");
+			result = xpc_domain_server(request, reply);
 		} else {
 			launchd_syslog(LOG_ERR, "Cannot handle MIG request with ID: 0x%x", request->msgh_id);
 		}

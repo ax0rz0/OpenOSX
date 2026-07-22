@@ -27,7 +27,10 @@ typedef unsigned int xpc_service_type_t;
 
 typedef int xpc_jetsam_band_t;
 
+#ifndef LAUNCHD_EVENT_NAME_T_DEFINED
+#define LAUNCHD_EVENT_NAME_T_DEFINED
 typedef char event_name_t[64];
+#endif
 #define vm_allocate mach_vm_allocate
 #define vm_deallocate mach_vm_deallocate
 
