@@ -42,9 +42,10 @@ add_dependencies(libSystem_B_stub
     libc_static libc_internal_static libmalloc_static
     corecrypto_static CrashReporterClient libresolv_static
     libdispatch_static openlibm_static XPC_notify_client_static XPC_notifyd_mig_static
-    XPC_libxpc_static XPC_launchd_mig_static)
+    XPC_libxpc_static XPC_libnv_static XPC_launchd_mig_static)
 target_link_options(libSystem_B_stub PRIVATE
     -Wl,-force_load,$<TARGET_FILE:XPC_notify_client_static>
+    -Wl,-force_load,$<TARGET_FILE:XPC_libnv_static>
     -Wl,-force_load,$<TARGET_FILE:XPC_libxpc_static>
     $<TARGET_FILE:XPC_notifyd_mig_static>
     $<TARGET_FILE:XPC_launchd_mig_static>)

@@ -359,10 +359,15 @@ xpc_dictionary_set_value_nokeycheck(xpc_object_t xdict, const char *key, xpc_obj
 
 	TAILQ_FOREACH(pair, head, xo_link) {
 		if (!strcmp(pair->key, key)) {
+			if (pair->value != NULL)
+				xpc_release(pair->value);
 			if (value != NULL) {
+				xpc_retain(value);
 				pair->value = value;
 			} else {
 				TAILQ_REMOVE(head, pair, xo_link);
+				xo->xo_size--;
+				free(pair);
 			}
 
 			return;
@@ -442,6 +447,7 @@ xpc_dictionary_set_int64(xpc_object_t xdict, const char *key, int64_t value)
 	xo = xdict;
 	xotmp = xpc_int64_create(value);
 	xpc_dictionary_set_value(xdict, key, xotmp);
+	xpc_release(xotmp);
 }
 
 void
@@ -455,6 +461,32 @@ xpc_dictionary_set_uint64(xpc_object_t xdict, const char *key, uint64_t value)
 	xo = xdict;
 	xotmp = xpc_uint64_create(value);
 	xpc_dictionary_set_value(xdict, key, xotmp); 
+	xpc_release(xotmp);
+}
+
+void
+xpc_dictionary_set_double(xpc_object_t xdict, const char *key, double value)
+{
+	struct xpc_object *xotmp = xpc_double_create(value);
+	xpc_dictionary_set_value(xdict, key, xotmp);
+	xpc_release(xotmp);
+}
+
+void
+xpc_dictionary_set_date(xpc_object_t xdict, const char *key, int64_t value)
+{
+	struct xpc_object *xotmp = xpc_date_create(value);
+	xpc_dictionary_set_value(xdict, key, xotmp);
+	xpc_release(xotmp);
+}
+
+void
+xpc_dictionary_set_data(xpc_object_t xdict, const char *key, const void *bytes,
+    size_t length)
+{
+	struct xpc_object *xotmp = xpc_data_create(bytes, length);
+	xpc_dictionary_set_value(xdict, key, xotmp);
+	xpc_release(xotmp);
 }
 
 void
@@ -462,6 +494,7 @@ xpc_dictionary_set_string(xpc_object_t xdict, const char *key, const char *value
 {
 	struct xpc_object *xotmp = xpc_string_create(value);
 	xpc_dictionary_set_value(xdict, key, xotmp);
+	xpc_release(xotmp);
 }
 
 void
@@ -469,6 +502,15 @@ xpc_dictionary_set_uuid(xpc_object_t xdict, const char *key, const uuid_t uuid)
 {
 	struct xpc_object *xotmp = xpc_uuid_create(uuid);
 	xpc_dictionary_set_value(xdict, key, xotmp);
+	xpc_release(xotmp);
+}
+
+void
+xpc_dictionary_set_fd(xpc_object_t xdict, const char *key, int fd)
+{
+	struct xpc_object *xotmp = xpc_fd_create(fd);
+	xpc_dictionary_set_value(xdict, key, xotmp);
+	xpc_release(xotmp);
 }
 
 bool
@@ -507,6 +549,30 @@ xpc_dictionary_get_uint64(xpc_object_t xdict, const char *key)
 	return (xpc_uint64_get_value(value));
 }
 
+double
+xpc_dictionary_get_double(xpc_object_t xdict, const char *key)
+{
+	xpc_object_t value = xpc_dictionary_get_value(xdict, key);
+	if (value == NULL) return 0;
+
+	struct xpc_object *xo = value;
+	if (xo->xo_xpc_type != XPC_TYPE_DOUBLE) return 0;
+
+	return (xpc_double_get_value(value));
+}
+
+int64_t
+xpc_dictionary_get_date(xpc_object_t xdict, const char *key)
+{
+	xpc_object_t value = xpc_dictionary_get_value(xdict, key);
+	if (value == NULL) return 0;
+
+	struct xpc_object *xo = value;
+	if (xo->xo_xpc_type != XPC_TYPE_DATE) return 0;
+
+	return (xpc_date_get_value(value));
+}
+
 const char *
 xpc_dictionary_get_string(xpc_object_t xdict, const char *key)
 {
@@ -530,6 +596,58 @@ xpc_dictionary_get_data(xpc_object_t xdict, const char *key, size_t *length)
 
 	if (length != NULL) *length = xpc_data_get_length(xdata);
 	return xpc_data_get_bytes_ptr(xdata);
+}
+
+const uint8_t *
+xpc_dictionary_get_uuid(xpc_object_t xdict, const char *key)
+{
+	xpc_object_t value = xpc_dictionary_get_value(xdict, key);
+	if (value == NULL) return NULL;
+
+	struct xpc_object *xo = value;
+	if (xo->xo_xpc_type != XPC_TYPE_UUID) return NULL;
+
+	return (xpc_uuid_get_bytes(value));
+}
+
+int
+xpc_dictionary_dup_fd(xpc_object_t xdict, const char *key)
+{
+	xpc_object_t value = xpc_dictionary_get_value(xdict, key);
+	if (value == NULL) return -1;
+
+	struct xpc_object *xo = value;
+	if (xo->xo_xpc_type != XPC_TYPE_FD) return -1;
+
+	return (xpc_fd_dup(value));
+}
+
+void
+xpc_dictionary_set_connection(xpc_object_t xdict, const char *key,
+    xpc_connection_t connection)
+{
+	xpc_endpoint_t endpoint;
+
+	endpoint = xpc_endpoint_create(connection);
+	xpc_dictionary_set_value(xdict, key, endpoint);
+	xpc_release(endpoint);
+}
+
+xpc_connection_t
+xpc_dictionary_create_connection(xpc_object_t xdict, const char *key)
+{
+	xpc_object_t value;
+	struct xpc_object *xo;
+
+	value = xpc_dictionary_get_value(xdict, key);
+	if (value == NULL)
+		return (NULL);
+
+	xo = value;
+	if (xo->xo_xpc_type != XPC_TYPE_ENDPOINT)
+		return (NULL);
+
+	return (xpc_connection_create_from_endpoint(value));
 }
 
 bool

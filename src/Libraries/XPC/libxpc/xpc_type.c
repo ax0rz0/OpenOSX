@@ -332,7 +332,20 @@ xpc_data_create(const void *bytes, size_t length)
 xpc_object_t
 xpc_data_create_with_dispatch_data(dispatch_data_t ddata)
 {
-	xpc_api_misuse("%s: function unimplemented", __PRETTY_FUNCTION__);
+	const void *buffer;
+	size_t size;
+	dispatch_data_t mapped;
+	xpc_object_t xdata;
+
+	buffer = NULL;
+	size = 0;
+	mapped = dispatch_data_create_map(ddata, &buffer, &size);
+	if (mapped == NULL)
+		return (NULL);
+
+	xdata = xpc_data_create(buffer, size);
+	dispatch_release(mapped);
+	return (xdata);
 }
 
 size_t
@@ -365,12 +378,14 @@ xpc_data_get_bytes(xpc_object_t xdata, void *buffer, size_t off, size_t length)
 	xpc_assert_nonnull(xo);
 	xpc_assert_type(xo, XPC_TYPE_DATA);
 
-	size_t length_to_copy = length;
-	if (length_to_copy > xo->xo_size) length_to_copy = xo->xo_size;
+	if (off >= xo->xo_size)
+		return 0;
 
-	uint8_t *byte_buffer = (uint8_t *)buffer;
-	byte_buffer += off;
-	memcpy(byte_buffer, (void *)xo->xo_u.ptr, length_to_copy);
+	size_t length_to_copy = length;
+	if (length_to_copy > xo->xo_size - off)
+		length_to_copy = xo->xo_size - off;
+
+	memcpy(buffer, (void *)(xo->xo_u.ptr + off), length_to_copy);
 
 	return length_to_copy;
 }
@@ -386,6 +401,7 @@ xpc_data_set_bytes(xpc_object_t xdata, void *buffer, size_t length)
 	free((void *)xo->xo_u.ptr);
 	xo->xo_u.ptr = (uintptr_t)malloc(length);
 	memcpy((void *)xo->xo_u.ptr, buffer, length);
+	xo->xo_size = length;
 }
 
 xpc_object_t
@@ -521,7 +537,7 @@ xpc_equal(xpc_object_t x1, xpc_object_t x2)
 	} else if (xo1->xo_xpc_type == XPC_TYPE_ENDPOINT) {
 		return xo1->xo_u.port == xo2->xo_u.port;
 	} else if (xo1->xo_xpc_type == XPC_TYPE_STRING) {
-		return strcmp(xo1->xo_u.str, xo1->xo_u.str) == 0;
+		return strcmp(xo1->xo_u.str, xo2->xo_u.str) == 0;
 	} else if (xo1->xo_xpc_type == XPC_TYPE_DATA) {
 		if (xo1->xo_size != xo2->xo_size) return false;
 		return memcmp((void *)xo1->xo_u.ptr, (void *)xo2->xo_u.ptr, xo1->xo_size) == 0;
@@ -601,8 +617,8 @@ xpc_hash(xpc_object_t obj)
 		return (hash);
 	}
 
-    printf("end of unimplmented xpc_hash()\n");
-    return 1; // _sjc_ nothing here, returned this now
+	return (xpc_data_hash((const uint8_t *)_xpc_get_type_name(obj),
+	    strlen(_xpc_get_type_name(obj))));
 }
 
 mach_port_t
@@ -611,7 +627,11 @@ xpc_object_get_machport(xpc_object_t object)
 	struct xpc_object *xo = object;
 
 	xpc_assert_nonnull(xo);
-	xpc_assert_type(xo, XPC_TYPE_CONNECTION);
+	xpc_assert(xo->xo_xpc_type == XPC_TYPE_CONNECTION || xo->xo_xpc_type == XPC_TYPE_ENDPOINT,
+	    "object is not a connection or endpoint");
+
+	if (xo->xo_xpc_type == XPC_TYPE_CONNECTION)
+		return ((struct xpc_connection *)object)->xc_remote_port;
 
 	return xo->xo_u.port;
 }

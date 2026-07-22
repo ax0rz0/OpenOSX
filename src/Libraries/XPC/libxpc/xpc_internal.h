@@ -103,10 +103,12 @@ struct xpc_pending_call {
 
 struct xpc_connection {
 	struct xpc_object_header header;
+	xpc_type_t		xc_xpc_type;
 	const char *		xc_name;
 	mach_port_t		xc_remote_port;
 	mach_port_t		xc_local_port;
 	xpc_handler_t		xc_handler;
+	xpc_finalizer_t		xc_finalizer;
 	dispatch_source_t	xc_recv_source;
 	dispatch_queue_t	xc_send_queue;
 	dispatch_queue_t	xc_recv_queue;
@@ -114,6 +116,8 @@ struct xpc_connection {
 	int			xc_suspend_count;
 	int			xc_transaction_count;
 	int 			xc_flags;
+	bool			xc_started;
+	bool			xc_cancelled;
 	_Atomic(uint64_t)	xc_last_id;
 	void *			xc_context;
 	struct xpc_connection * xc_parent;
@@ -149,6 +153,7 @@ __private_extern__ struct xpc_object *_xpc_prim_create(xpc_type_t type, xpc_u va
 __private_extern__ struct xpc_object *_xpc_prim_create_flags(xpc_type_t type,
     xpc_u value, size_t size, uint16_t flags);
 __private_extern__ void xpc_object_destroy(struct xpc_object *xo);
+__private_extern__ void xpc_connection_destroy(struct xpc_connection *conn);
 __private_extern__ const char *_xpc_get_type_name(xpc_object_t obj);
 __private_extern__ nvlist_t *xpc2nv(struct xpc_object *xo, int64_t (^port_serializer)(mach_port_t port));
 __private_extern__ struct xpc_object *nv2xpc(const nvlist_t *nv, mach_port_t (^port_deserializer)(int64_t port_id));

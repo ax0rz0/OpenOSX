@@ -70,7 +70,7 @@ xpc_array_set_value(xpc_object_t xarray, size_t index, xpc_object_t value)
 			    xotmp, xo_link);
 			TAILQ_REMOVE(arr, xotmp, xo_link);
 			xpc_retain(value);
-			free(xotmp);
+			xpc_release(xotmp);
 			break;
 		}
 	}
@@ -89,6 +89,7 @@ xpc_array_append_value(xpc_object_t xarray, xpc_object_t value)
 
 	TAILQ_INSERT_TAIL(arr, (struct xpc_object *)value, xo_link);
 	xpc_retain(value);
+	xo->xo_size++;
 }
 
 
@@ -136,7 +137,8 @@ xpc_array_set_bool(xpc_object_t xarray, size_t index, bool value)
 	xpc_assert_type(xo, XPC_TYPE_ARRAY);
 
 	xotmp = xpc_bool_create(value);
-	return (xpc_array_set_value(xarray, index, xotmp));
+	xpc_array_set_value(xarray, index, xotmp);
+	xpc_release(xotmp);
 }
 
 
@@ -149,7 +151,8 @@ xpc_array_set_int64(xpc_object_t xarray, size_t index, int64_t value)
 
 	xo = xarray;
 	xotmp = xpc_int64_create(value);
-	return (xpc_array_set_value(xarray, index, xotmp));
+	xpc_array_set_value(xarray, index, xotmp);
+	xpc_release(xotmp);
 }
 
 void
@@ -161,7 +164,8 @@ xpc_array_set_uint64(xpc_object_t xarray, size_t index, uint64_t value)
 
 	xo = xarray;
 	xotmp = xpc_uint64_create(value);
-	return (xpc_array_set_value(xarray, index, xotmp));
+	xpc_array_set_value(xarray, index, xotmp);
+	xpc_release(xotmp);
 }
 
 void
@@ -173,7 +177,8 @@ xpc_array_set_double(xpc_object_t xarray, size_t index, double value)
 
 	xo = xarray;
 	xotmp = xpc_double_create(value);
-	return (xpc_array_set_value(xarray, index, xotmp));
+	xpc_array_set_value(xarray, index, xotmp);
+	xpc_release(xotmp);
 }
 
 void
@@ -185,7 +190,8 @@ xpc_array_set_date(xpc_object_t xarray, size_t index, int64_t value)
 
 	xo = xarray;
 	xotmp = xpc_date_create(value);
-	return (xpc_array_set_value(xarray, index, xotmp));
+	xpc_array_set_value(xarray, index, xotmp);
+	xpc_release(xotmp);
 }
 
 void
@@ -198,7 +204,8 @@ xpc_array_set_data(xpc_object_t xarray, size_t index, const void *data,
 
 	xo = xarray;
 	xotmp = xpc_data_create(data, length);
-	return (xpc_array_set_value(xarray, index, xotmp));
+	xpc_array_set_value(xarray, index, xotmp);
+	xpc_release(xotmp);
 }
 
 void
@@ -210,7 +217,8 @@ xpc_array_set_string(xpc_object_t xarray, size_t index, const char *string)
 
 	xo = xarray;
 	xotmp = xpc_string_create(string);
-	return (xpc_array_set_value(xarray, index, xotmp));
+	xpc_array_set_value(xarray, index, xotmp);
+	xpc_release(xotmp);
 }
 
 void
@@ -222,7 +230,8 @@ xpc_array_set_uuid(xpc_object_t xarray, size_t index, const uuid_t value)
 
 	xo = xarray;
 	xotmp = xpc_uuid_create(value);
-	return (xpc_array_set_value(xarray, index, xotmp));
+	xpc_array_set_value(xarray, index, xotmp);
+	xpc_release(xotmp);
 }
 
 void
@@ -234,14 +243,19 @@ xpc_array_set_fd(xpc_object_t xarray, size_t index, int value)
 
 	xo = xarray;
 	xotmp = xpc_fd_create(value);
-	return (xpc_array_set_value(xarray, index, xotmp));
+	xpc_array_set_value(xarray, index, xotmp);
+	xpc_release(xotmp);
 }
 
 void
 xpc_array_set_connection(xpc_object_t xarray, size_t index,
     xpc_connection_t value)
 {
-	xpc_api_misuse("%s: function unimplemented", __PRETTY_FUNCTION__);
+	xpc_endpoint_t endpoint;
+
+	endpoint = xpc_endpoint_create(value);
+	xpc_array_set_value(xarray, index, endpoint);
+	xpc_release(endpoint);
 }
 
 bool
@@ -315,7 +329,24 @@ xpc_array_dup_fd(xpc_object_t array, size_t index)
 xpc_connection_t
 xpc_array_get_connection(xpc_object_t array, size_t index)
 {
-	xpc_api_misuse("%s: function unimplemented", __PRETTY_FUNCTION__);
+	xpc_object_t value;
+	struct xpc_object *xo;
+
+	value = xpc_array_get_value(array, index);
+	if (value == NULL)
+		return (NULL);
+
+	xo = value;
+	if (xo->xo_xpc_type != XPC_TYPE_ENDPOINT)
+		return (NULL);
+
+	return (xpc_connection_create_from_endpoint(value));
+}
+
+xpc_connection_t
+xpc_array_create_connection(xpc_object_t array, size_t index)
+{
+	return (xpc_array_get_connection(array, index));
 }
 
 bool
