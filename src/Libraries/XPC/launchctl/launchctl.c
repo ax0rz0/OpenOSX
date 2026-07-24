@@ -2909,9 +2909,10 @@ load_and_unload_cmd(int argc, char *const argv[])
 	}
 
 	if (lus.load) {
+		{ const char m[] = "PD-DIAG load_cmd: before distill_jobs\n"; write(2, m, sizeof(m) - 1); }
 		distill_jobs(lus.pass1);
-		//{ char m[160]; int n = snprintf(m, sizeof(m), "PD-DIAG load_cmd: after distill_jobs count=%u sysbootstrap=%d xpcdomain=%d\n", (unsigned)launch_data_array_get_count(lus.pass1), (int)_launchctl_system_bootstrap, (int)launchctl_use_xpc_domain_bootstrap());
-		//  write(2, m, n > 0 ? (size_t)n : 0); }
+		{ char m[160]; int n = snprintf(m, sizeof(m), "PD-DIAG load_cmd: after distill_jobs count=%u sysbootstrap=%d xpcdomain=%d\n", (unsigned)launch_data_array_get_count(lus.pass1), (int)_launchctl_system_bootstrap, (int)launchctl_use_xpc_domain_bootstrap());
+		  write(2, m, n > 0 ? (size_t)n : 0); }
 		if (_launchctl_verbose_boot) {
 			launchctl_log(LOG_NOTICE, "PureDarwin bootstrap found %zu jobs",
 					launch_data_array_get_count(lus.pass1));
@@ -2956,12 +2957,14 @@ load_and_unload_cmd(int argc, char *const argv[])
 	}
 
 out:
+	{ char m[96]; int n = snprintf(m, sizeof(m), "PD-DIAG load_cmd: out reached, overrides_changed=%d\n", (int)_launchctl_overrides_db_changed); write(2, m, n > 0 ? (size_t)n : 0); }
 	if (_launchctl_overrides_db_changed) {
 		WriteMyPropertyListToFile(_launchctl_overrides_db, _launchctl_job_overrides_db_path);
 	}
 
 	flock(dbfd, LOCK_UN);
 	close(dbfd);
+	{ const char m[] = "PD-DIAG load_cmd: returning 0\n"; write(2, m, sizeof(m) - 1); }
 	return 0;
 }
 
@@ -3083,8 +3086,8 @@ submit_job_pass(launch_data_t jobs)
 	size_t i;
 	int e;
 
-	//{ char m[128]; int n = snprintf(m, sizeof(m), "PD-DIAG submit_job_pass: enter count=%u\n", (unsigned)launch_data_array_get_count(jobs));
-	//  write(2, m, n > 0 ? (size_t)n : 0); }
+	{ char m[128]; int n = snprintf(m, sizeof(m), "PD-DIAG submit_job_pass: enter count=%u\n", (unsigned)launch_data_array_get_count(jobs));
+	  write(2, m, n > 0 ? (size_t)n : 0); }
 
 	if (launch_data_array_get_count(jobs) == 0)
 		return;
@@ -3103,10 +3106,10 @@ submit_job_pass(launch_data_t jobs)
 
 	launch_data_dict_insert(msg, jobs, LAUNCH_KEY_SUBMITJOB);
 
-	//{ const char m[] = "PD-DIAG submit_job_pass: before launch_msg SubmitJob\n"; write(2, m, sizeof(m) - 1); }
+	{ const char m[] = "PD-DIAG submit_job_pass: before launch_msg SubmitJob\n"; write(2, m, sizeof(m) - 1); }
 	resp = launch_msg(msg);
-	//{ char m[128]; int n = snprintf(m, sizeof(m), "PD-DIAG submit_job_pass: after launch_msg resp=%p resptype=%d errno=%d\n", (void *)resp, resp ? launch_data_get_type(resp) : -1, errno);
-	//  write(2, m, n > 0 ? (size_t)n : 0); }
+	{ char m[128]; int n = snprintf(m, sizeof(m), "PD-DIAG submit_job_pass: after launch_msg resp=%p resptype=%d errno=%d\n", (void *)resp, resp ? launch_data_get_type(resp) : -1, errno);
+	  write(2, m, n > 0 ? (size_t)n : 0); }
 
 	if (resp) {
 		switch (launch_data_get_type(resp)) {
@@ -3119,6 +3122,12 @@ submit_job_pass(launch_data_t jobs)
 				launch_data_t obatind = launch_data_array_get_index(resp, i);
 				launch_data_t jatind = launch_data_array_get_index(jobs, i);
 				const char *lab4job = launch_data_get_string(launch_data_dict_lookup(jatind, LAUNCH_JOBKEY_LABEL));
+				{ char m[192]; int n = snprintf(m, sizeof(m),
+				    "PD-DIAG submit resp[%zu] label=%s obtype=%d oberrno=%d\n",
+				    i, lab4job ? lab4job : "(nil)",
+				    obatind ? launch_data_get_type(obatind) : -1,
+				    (obatind && launch_data_get_type(obatind) == LAUNCH_DATA_ERRNO) ? launch_data_get_errno(obatind) : 0);
+				  write(2, m, n > 0 ? (size_t)n : 0); }
 				if (LAUNCH_DATA_ERRNO == launch_data_get_type(obatind)) {
 					e = launch_data_get_errno(obatind);
 					switch (e) {
@@ -3148,6 +3157,7 @@ submit_job_pass(launch_data_t jobs)
 	}
 
 	launch_data_free(msg);
+	{ const char m[] = "PD-DIAG submit_job_pass: done\n"; write(2, m, sizeof(m) - 1); }
 }
 
 int

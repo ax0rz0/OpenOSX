@@ -54,4 +54,3 @@ scalbnf (float x, int n)
         return x*twom25;
 }
 
-__strong_reference(scalbnf, ldexpf);

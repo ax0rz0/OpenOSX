@@ -19,6 +19,7 @@
 
 extern "C" int switch_to_video_console(void);
 extern "C" boolean_t PE_parse_boot_argn(const char *arg_string, void *arg_ptr, int max_arg);
+extern "C" void vc_progress_set(boolean_t enable, uint32_t vc_delay);
 
 #define super IOFramebuffer
 OSDefineMetaClassAndStructors(IOVirtIOGPU, IOFramebuffer);
@@ -384,6 +385,10 @@ IOVirtIOGPU::start(IOService *provider)
                 pe->setConsoleInfo(&consoleInfo, kPEAcquireScreen);
                 pe->setConsoleInfo(&consoleInfo, kPETextScreen);
                 DEBUG("active console switched to virtio-gpu video, old console=%d\n", oldConsole);
+
+                vc_progress_set(FALSE, 0);
+                vc_progress_set(TRUE, 0);
+                DEBUG("gopprogress: overlaid kernel progress meter on text console\n");
             }
         }
     }

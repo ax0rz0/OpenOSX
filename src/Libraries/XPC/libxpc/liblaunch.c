@@ -390,6 +390,15 @@ launch_data_alloc(launch_data_type_t t)
 	else if (t == LAUNCH_DATA_INTEGER) return xpc_int64_create(0);
 	else if (t == LAUNCH_DATA_REAL) return xpc_double_create(0);
 	else if (t == LAUNCH_DATA_ERRNO) return xpc_uint64_create(0);
+	/* Legacy launchd's `launchctl list` reply carries LAUNCH_DATA_MACHPORT /
+	 * LAUNCH_DATA_FD entries (job_export -> launch_data_new_machport /
+	 * launch_data_new_fd). Modern libxpc dropped these types, but stubbing the
+	 * alloc to xpc_api_misuse() aborts - and when that happens inside PID 1
+	 * (any `launchctl list` that hits a job with MachServices, e.g. notifyd)
+	 * the kernel panics on launchd's death. The list path only ever stores
+	 * MACH_PORT_NULL / a placeholder fd, so back both with a plain int64. */
+	else if (t == LAUNCH_DATA_MACHPORT) return xpc_int64_create(0);
+	else if (t == LAUNCH_DATA_FD) return xpc_int64_create(-1);
 	else xpc_api_misuse("You cannot create a launch_data_t of type %d anymore", t);
 }
 
@@ -544,13 +553,19 @@ launch_data_set_errno(launch_data_t d, int e)
 bool
 launch_data_set_fd(launch_data_t d, int fd)
 {
-	xpc_api_misuse("This API is no longer implemented.");
+	/* See launch_data_alloc: FD launch_data is backed by an int64 placeholder
+	 * for the legacy `launchctl list` reply path. */
+	xpc_int64_set_value(d, fd);
+	return true;
 }
 
 bool
 launch_data_set_machport(launch_data_t d, mach_port_t p)
 {
-	xpc_api_misuse("This API is no longer implemented.");
+	/* See launch_data_alloc: MACHPORT launch_data is backed by an int64
+	 * placeholder for the legacy `launchctl list` reply path. */
+	xpc_int64_set_value(d, p);
+	return true;
 }
 
 bool

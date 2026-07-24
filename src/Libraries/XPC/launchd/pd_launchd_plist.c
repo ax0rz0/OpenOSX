@@ -1,16 +1,3 @@
-/*
- * PureDarwin: real launchd (and launchctl) load job definitions from
- * .plist bundles under /System/Library/LaunchDaemons (and friends) via
- * CFPropertyList, then hand the result to job_import()/job_import_bulk()
- * (jobmgr_import2() in core.c). PD didn't have that front end wired up -
- * jobs were hand-built as launch_data_t in C (see pd_launchd_boot.c's
- * former pd_launchd_boot_import_notifyd()). This is that front end: read
- * each on-disk .plist with the same CFPropertyListCreateFromXMLData +
- * mmap() pattern SystemStarter/StartupItems.c already uses successfully,
- * convert the resulting CFPropertyList tree into launch_data_t, and
- * job_import() it - so LaunchDaemons plists are real files, not C
- * literals baked into launchd.
- */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
@@ -22,10 +9,6 @@
 #include <string.h>
 #include <unistd.h>
 
-/* Umbrella header, same as SystemStarter/StartupItems.c: individual CF
- * headers split declarations across files inconsistently between our
- * vendored source and the real Apple SDK (e.g. CFBooleanRef lives in
- * CFNumber.h in the real SDK, not its own CFBoolean.h). */
 #include <CoreFoundation/CoreFoundation.h>
 
 #include "launch.h"
@@ -108,11 +91,6 @@ pd_cf_to_launch_data(CFTypeRef value)
 	return NULL;
 }
 
-/*
- * Load and job_import() a single LaunchDaemon .plist. Returns true on
- * success (parsed + imported), matching the mmap/CFPropertyListCreateFromXMLData
- * pattern already proven by SystemStarter/StartupItems.c.
- */
 static bool
 pd_launchd_import_plist(const char *path)
 {
@@ -169,11 +147,6 @@ pd_launchd_import_plist(const char *path)
 	return ok;
 }
 
-/*
- * Scan a LaunchDaemons-style directory and job_import() every *.plist in
- * it. Mirrors real launchd's jobmgr_init()->load_launchd_jobs_at_path()
- * bulk-load of /System/Library/LaunchDaemons at boot.
- */
 void
 pd_launchd_load_daemons_dir(const char *dir)
 {

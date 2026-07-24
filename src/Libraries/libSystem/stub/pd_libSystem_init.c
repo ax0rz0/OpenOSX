@@ -62,6 +62,9 @@ extern int __pthread_init(const struct _libpthread_functions *pthread_funcs,
 static void __libdarwin_init(void) { }
 
 extern void libdispatch_init(void);
+/* Exported wrapper in libdyld.dylib (pd_libdyld_exports.c) for the hidden-
+ * visibility tlv_initializer() -- see that file for why the bridge is needed. */
+extern void pd_libdyld_tlv_initializer(void);
 
 #include "../libc/darwin/libc_private.h"
 extern void _malloc_fork_prepare(void);
@@ -230,6 +233,18 @@ static void pd_libSystem_initializer(int argc, const char *argv[], const char *e
 	register_fn reg = NULL;
 	if (_dyld_func_lookup("__dyld_register_thread_helpers", (void **)&reg) && reg != NULL)
 		reg(&sHelpers);
+
+	/* Thread-local-variable runtime. Real Apple runs this inside
+	 * _dyld_initializer() (dyldAPIsInLibSystem.cpp); PD open-codes the
+	 * thread-helper registration above instead of calling _dyld_initializer(),
+	 * so tlv_initializer() would otherwise never run. Without it, dyld never
+	 * gets the tlv_load_notification add-image callback, no image's
+	 * __thread_vars descriptors are ever initialized, and the FIRST access to
+	 * any __thread variable jumps through an uninitialized (null/_tlv_bootstrap)
+	 * thunk -> SIGSEGV. Must come after pthread + malloc are up (it does
+	 * pthread_key_create); registering here also fires the notification
+	 * immediately for every already-mapped dylib (e.g. libOSMesa's glapi TLS). */
+	pd_libdyld_tlv_initializer();
 
 	/* C99 7.5(3) / rdar://11588042: errno is zero at program startup and is
 	 * never set to zero by any library function - so clear whatever the init

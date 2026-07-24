@@ -949,6 +949,30 @@
               libX11 = xlibBuild;
               inherit (pkgs) libepoxy xorgproto meson ninja python3;
             };
+          mesaBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa.nix {
+              nativeMesonTools = nativeMesonToolsDir;
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libcxxDylib = libcxxDylibBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
+              zlib = xvfbZlibBuild;
+              expat = expatBuild;
+              libX11 = xlibBuild;
+              libXext = xvfbLibXextBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              inherit (pkgs) meson ninja pkg-config python3 bison flex xorgproto xtrans;
+            };
+          osmesaTriBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/osmesa-tri.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libcxxDylib = libcxxDylibBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
+              mesa = mesaBuild;
+            };
           hostOtoolBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/host-otool.nix { };
           nativeMesonToolsDir =
@@ -1504,6 +1528,20 @@
               libSystem = libSystemBuild;
               src = libcxxDylibSource;
             };
+          libcxxDylibBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libcxx-dylib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
+              src = libcxxDylibSource;
+            };
+          libcxxTestBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libcxx-test.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
+              libcxxDylib = libcxxDylibBuild;
+            };
           libobjcBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/libobjc.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -1593,6 +1631,63 @@
               runHook postInstall
             '';
           });
+          osmesaFbBuild =
+            if isDarwin then null else (mkPureDarwinBuild {
+              pname = "puredarwin-osmesa-fb";
+              src = fbdoomSource;
+              buildTargets = [ "osmesa-fb" ];
+              enableProjects = false;
+              enableKernel = false;
+              installUserland = false;
+              installKernel = false;
+              extraCmakeFlags = [
+                "-DPUREDARWIN_ENABLE_OSMESA_FB=ON"
+                "-DPUREDARWIN_OSMESA_PREFIX=${mesaBuild}/usr"
+              ];
+            }).overrideAttrs (old: {
+              installPhase = ''
+                runHook preInstall
+                mkdir -p $out/usr/bin
+                cp build-nix/src/Userspace/osmesa-fb/osmesa-fb $out/usr/bin/osmesa-fb
+                runHook postInstall
+              '';
+            });
+          glxgearsBuild =
+            if isDarwin then null else (mkPureDarwinBuild {
+              pname = "puredarwin-glxgears";
+              src = userlandSource;
+
+              buildTargets = [ "glxgears" ];
+
+              enableProjects = false;
+              enableKernel = false;
+              enableLibraries = false;
+              enableTools = false;
+              installUserland = false;
+              installKernel = false;
+
+              prebuiltLibSystem = libSystemBuild;
+
+              extraCmakeFlags = [
+                "-DPUREDARWIN_ENABLE_GLXGEARS=ON"
+                "-DPUREDARWIN_MESA_PREFIX=${mesaBuild}/usr"
+
+                "-DPUREDARWIN_X11_INCLUDE_DIR=${lib.getDev xlibBuild}/include"
+                "-DPUREDARWIN_XORGPROTO_INCLUDE_DIR=${lib.getDev pkgs.xorgproto}/include"
+
+                "-DPUREDARWIN_X11_LIBRARY=${xlibBuild}/lib/libX11.a"
+                "-DPUREDARWIN_XCB_LIBRARY=${xcbBuild}/lib/libxcb.a"
+                "-DPUREDARWIN_XAU_LIBRARY=${xvfbLibXauBuild}/lib/libXau.a"
+                "-DPUREDARWIN_XDMCP_LIBRARY=${xvfbLibXdmcpBuild}/lib/libXdmcp.a"
+              ];
+            }).overrideAttrs (old: {
+              installPhase = ''
+                runHook preInstall
+                mkdir -p "$out/usr/bin"
+                cp build-nix/src/Userspace/glxgears/glxgears "$out/usr/bin/glxgears"
+                runHook postInstall
+              '';
+            });
           kernelBuild = mkPureDarwinBuild {
             pname = "puredarwin-kernel";
             src = kernelSource;
@@ -1775,6 +1870,12 @@
             corefoundation = coreFoundationBuild;
             icucore = icuCoreBuild;
             libcxxabi-dylib = libcxxabiDylibBuild;
+            libcxx-dylib = libcxxDylibBuild;
+            libcxx-test = libcxxTestBuild;
+            mesa = mesaBuild;
+            osmesa-tri = osmesaTriBuild;
+            osmesa-fb = osmesaFbBuild;
+            glxgears = glxgearsBuild;
             libobjc = libobjcBuild;
             foundation = foundationBuild;
             iokit = iokitBuild;
@@ -1917,7 +2018,7 @@
               };
               imageStrippedBuild = pkgs.callPackage ./image.nix {
                 baseSystem = splitBaseSystemStripped;
-                extraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild libcxxabiDylibBuild libobjcBuild objcTestBuild ];
+                extraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild mesaBuild osmesaTriBuild osmesaFbBuild glxgearsBuild ];
                 kc = kcBuild;
                 xnuLoader = xnu-loader.packages.${system}.default;
                 apfsprogs = pkgs.apfsprogs;
@@ -2045,6 +2146,12 @@
               corefoundation = coreFoundationBuild;
               icucore = icuCoreBuild;
               libcxxabi-dylib = libcxxabiDylibBuild;
+              libcxx-dylib = libcxxDylibBuild;
+              libcxx-test = libcxxTestBuild;
+              mesa = mesaBuild;
+              osmesa-tri = osmesaTriBuild;
+              osmesa-fb = osmesaFbBuild;
+              glxgears = glxgearsBuild;
               libobjc = libobjcBuild;
               objc-test = objcTestBuild;
               foundation = foundationBuild;

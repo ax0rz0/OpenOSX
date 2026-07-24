@@ -28,7 +28,7 @@
   # xnu-loader reads this off the ESP at \EFI\BOOT\boot-args.txt
   # it falls back if it cannot find a boot-args.txt, so not strictly needed here
   # but generally nice to have so we can override things easily now
-, bootArgs ? "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1"
+, bootArgs ? "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 gen9_debug=1"
 }:
 
 assert lib.isDerivation baseSystem;
@@ -335,53 +335,9 @@ EOF
 EOF
 ''}
 
-    cat > $staging/usr/libexec/pd-mount-boot <<'EOF'
-#!/bin/sh
-# Auto-mount the EFI System Partition (disk0s1, FAT via msdosfs.kext) at
-# /boot. IOMediaBSDClient may not have published the device node yet when
-# this runs (it's created asynchronously off the config-scan retry loop in
-# IOMediaBSDClient::scheduleCreateNodesRetry), so poll for it first, same
-# as RootRemount's retry above.
-case "$1" in
-start)
-    if test -x /bin/mount; then
-        n=0
-        while test ! -c /dev/disk0s1 -a ! -b /dev/disk0s1 -a $n -lt 50; do
-            /bin/sleep 0.2
-            n=$((n+1))
-        done
-        if test -c /dev/disk0s1 -o -b /dev/disk0s1; then
-            #/bin/mount -t msdos -o rdonly /dev/disk0s1 /boot
-        fi
-    fi
-    ;;
-esac
-EOF
-    cat > $staging/System/Library/LaunchDaemons/org.puredarwin.boot-partition.plist <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>Label</key>
-	<string>org.puredarwin.boot-partition</string>
-	<key>ProgramArguments</key>
-	<array>
-		<string>/usr/libexec/pd-mount-boot</string>
-		<string>start</string>
-	</array>
-	<key>RunAtLoad</key>
-	<true/>
-	<key>StandardOutPath</key>
-	<string>/dev/console</string>
-	<key>StandardErrorPath</key>
-	<string>/dev/console</string>
-</dict>
-</plist>
-EOF
     chmod 755 \
       $staging/usr/libexec/pd-set-hostname \
-      $staging/usr/libexec/pd-dbus-launch \
-      $staging/usr/libexec/pd-mount-boot
+      $staging/usr/libexec/pd-dbus-launch
 ${lib.optionalString (rootFsType == "hfs") ''
     chmod 755 $staging/usr/libexec/pd-root-remount
 ''}

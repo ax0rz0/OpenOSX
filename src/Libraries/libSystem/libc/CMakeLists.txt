@@ -158,6 +158,19 @@ target_sources(libc_static PRIVATE
     string/FreeBSD/wcschr.c      # _wcschr
     string/FreeBSD/wcsdup.c      # _wcsdup
     string/FreeBSD/wmemmove.c    # _wmemmove (fold)
+    # wide-char + xlocale surface pulled in by the full libc++.dylib
+    # (locale.cpp / wide std::sto* / collate). See libcxx-dylib.nix.
+    string/FreeBSD/wmemset.c     # _wmemset
+    string/FreeBSD/strxfrm.c     # _strxfrm / _strxfrm_l
+    string/FreeBSD/wcsxfrm.c     # _wcsxfrm / _wcsxfrm_l
+    locale/FreeBSD/wcstoll.c     # _wcstoll
+    locale/FreeBSD/wcstoull.c    # _wcstoull
+    locale/FreeBSD/wcstoul.c     # _wcstoul
+    locale/FreeBSD/wcstod.c      # _wcstod
+    locale/FreeBSD/wcstof.c      # _wcstof
+    locale/FreeBSD/wcstold.c     # _wcstold
+    stdio/FreeBSD/vswprintf.c    # _vswprintf_l (swprintf's engine)
+    stdio/FreeBSD/swprintf.c     # _swprintf
     locale/FreeBSD/mbsrtowcs.c   # _mbsrtowcs
     locale/FreeBSD/nextwctype.c  # _nextwctype (tr [:class:] iteration)
     stdlib/FreeBSD/merge.c       # _mergesort (tr)
@@ -438,7 +451,7 @@ set_source_files_properties(stdlib/FreeBSD/exit.c stdlib/FreeBSD/atexit.c
     stdio/FreeBSD/fputws.c stdio/FreeBSD/getwchar.c stdio/FreeBSD/getwc.c
     stdio/FreeBSD/fgetwc.c stdio/FreeBSD/fgetws.c stdio/FreeBSD/fgetwln.c
     stdio/FreeBSD/ungetwc.c stdio/FreeBSD/fwide.c stdio/FreeBSD/wprintf.c
-    stdio/FreeBSD/vfwprintf.c
+    stdio/FreeBSD/vfwprintf.c stdio/FreeBSD/vswprintf.c stdio/FreeBSD/swprintf.c
     stdio/FreeBSD/freopen.c gen/FreeBSD/setmode.c
     db/db/FreeBSD/db.c db/hash/FreeBSD/hash.c db/hash/FreeBSD/hash_bigkey.c
     db/hash/FreeBSD/hash_buf.c db/hash/FreeBSD/hash_func.c
@@ -466,9 +479,12 @@ set_source_files_properties(stdlib/FreeBSD/exit.c stdlib/FreeBSD/atexit.c
     util/pty.c util/login_tty.c
     PROPERTIES COMPILE_FLAGS "-include${CMAKE_CURRENT_SOURCE_DIR}/fbsdcompat/_fbsd_compat_.h -D__DBINTERFACE_PRIVATE=1")
 # wcscoll needs the collate internals (__collate_lookup_which etc.), gated
-# behind __LIBC__ in collate.h - same as fnmatch.c above.
+# behind __LIBC__ in collate.h - same as fnmatch.c above. strxfrm/wcsxfrm need
+# __collate_xfrm/__collate_mbstowcs (also __LIBC__-gated, defined in collate.c).
 set_source_files_properties(
     string/FreeBSD/wcscoll.c
+    string/FreeBSD/strxfrm.c
+    string/FreeBSD/wcsxfrm.c
     PROPERTIES COMPILE_FLAGS "-D__LIBC__=1")
 set_source_files_properties(sys/OpenBSD/stack_protector.c
     PROPERTIES COMPILE_FLAGS "-include${CMAKE_CURRENT_SOURCE_DIR}/fbsdcompat/_fbsd_compat_.h -fno-stack-protector")

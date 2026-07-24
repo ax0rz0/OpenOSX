@@ -69,6 +69,7 @@
 #include <netinet6/nd6.h>
 #include <bsm/libbsm.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <signal.h>
 #include <errno.h>
 #include <libgen.h>
@@ -4793,21 +4794,64 @@ out_bad:
 	_exit(errno);
 }
 
+/* Boot-arg gate for the verbose PD-CORE tracing. It is OFF by default because
+ * these traces are BLOCKING writes to the slow serial /dev/console from PID 1;
+ * emitting them on every job-start phase creates console back-pressure that can
+ * intermittently wedge boot in the window where freshly-exec'd children are
+ * demand-paging their images (same class as the pd-realhw-hang-post-ext4
+ * console back-pressure hang). Add "pdtrace" to boot-args to turn it back on. */
+static int
+pd_core_trace_enabled(void)
+{
+	static int state = -1;
+	if (state == -1) {
+		char args[2048];
+		size_t len = sizeof(args) - 1;
+		state = 0;
+		if (sysctlbyname("kern.bootargs", args, &len, NULL, 0) == 0) {
+			args[len < sizeof(args) ? len : sizeof(args) - 1] = '\0';
+			if (strstr(args, "pdtrace") != NULL) {
+				state = 1;
+			}
+		}
+	}
+	return state;
+}
+
 void
 pd_core_phase(const char *fmt, ...)
 {
-	return;
-	if (!pid1_magic || !launchd_console) {
+	if (!pd_core_trace_enabled()) {
 		return;
 	}
 
-	fprintf(launchd_console, "PureDarwin launchd: ");
+	static int console_fd = -2; /* -2 = not tried yet, -1 = failed */
+	if (console_fd == -2) {
+		console_fd = open("/dev/console", O_WRONLY | O_NOCTTY);
+		if (console_fd >= 0) {
+			(void)fcntl(console_fd, F_SETFD, FD_CLOEXEC);
+		}
+	}
+	int out_fd = (console_fd >= 0) ? console_fd : 2;
+
+	char buf[512];
+	int off = snprintf(buf, sizeof(buf), "PD-CORE: ");
+	if (off < 0) {
+		return;
+	}
 	va_list ap;
 	va_start(ap, fmt);
-	vfprintf(launchd_console, fmt, ap);
+	int n = vsnprintf(buf + off, sizeof(buf) - off - 1, fmt, ap);
 	va_end(ap);
-	fprintf(launchd_console, "\n");
-	fflush(launchd_console);
+	if (n < 0) {
+		return;
+	}
+	off += n;
+	if (off > (int)sizeof(buf) - 1) {
+		off = (int)sizeof(buf) - 1;
+	}
+	buf[off++] = '\n';
+	write(out_fd, buf, (size_t)off);
 }
 
 void
