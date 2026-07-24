@@ -66,8 +66,9 @@ stdenv.mkDerivation {
 
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/usr/bin
+    mkdir -p $out/bin $out/usr/bin
     cp launchctl $out/usr/bin/
+    cp launchctl $out/bin/
     runHook postInstall
   '';
 

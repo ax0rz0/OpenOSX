@@ -315,7 +315,7 @@ IOGOPFramebuffer::start(IOService *provider)
     IOReturn ret = pe->setConsoleInfo(&consoleInfo, kPEGraphicsMode);
     if (ret != kIOReturnSuccess) {
         DEBUG("setConsoleInfo failed: %d\n", ret);
-        // Don't fail - we can still register the service even if console init fails
+        // Don't fail - we can still register the service.
     } else {
         DEBUG("Kernel graphics console initialized\n");
 

@@ -103,7 +103,7 @@ target_sources(libc_static PRIVATE
     string/pd_strtok_r.c         # _strtok_r forwarder (__weak_reference alias not emitted)
     stdlib/FreeBSD/setenv.c      # _setenv/_unsetenv (init sets HOME/PATH/etc)
     gen/FreeBSD/waitpid.c        # _waitpid (init reaps/respawns children)
-    gen/FreeBSD/wait.c           # __wait (BusyBox tar --seamless-compression child reaping)
+    gen/FreeBSD/wait.c           # __wait
     gen/FreeBSD/wait3.c          # _wait3 (zsh job/process accounting)
     gen/oldsyslog.c              # openlog/closelog/syslog (curl)
     gen/FreeBSD/wordexp.c        # wordexp/wordfree (fastfetch shell-style expansion)
@@ -196,12 +196,12 @@ target_sources(libc_static PRIVATE
     db/recno/FreeBSD/rec_utils.c
     db/mpool/FreeBSD/mpool.c
     gen/devname.c                # _devname / _devname_r
-    gen/pwcache.c                # _user_from_uid / _group_from_gid (ps)
-    gen/uname.c                  # _uname (BusyBox uname; sysctl-backed)
-    gen/FreeBSD/exec.c           # _execvp / _execv / _execlp (BusyBox spawn)
+    gen/pwcache.c                # _user_from_uid / _group_from_gid
+    gen/uname.c                  # _uname
+    gen/FreeBSD/exec.c           # _execvp / _execv / _execlp
     gen/FreeBSD/basename.c       # _basename
-    stdlib/FreeBSD/putenv.c      # _putenv (BusyBox env)
-    gen/FreeBSD/sysctl.c         # _sysctl (public wrapper over __sysctl)
+    stdlib/FreeBSD/putenv.c      # _putenv
+    gen/FreeBSD/sysctl.c         # _sysctl
     gen/FreeBSD/sysctlbyname.c   # _sysctlbyname
     gen/FreeBSD/sysctlnametomib.c # _sysctlnametomib
     gen/FreeBSD/clock.c          # _clock
@@ -226,19 +226,22 @@ target_sources(libc_static PRIVATE
     gen/pd_netdb_stub.c          # gethostbyname/h_errno/hstrerror (no libinfo/libresolv yet)
     gen/pd_getservbyname.c       # getservbyname (/etc/services reader; no libinfo)
     libm/pd_libm_sincos_stret.c  # __sincos*_stret / __sincospi*_stret (Apple-only wrappers, not in openlibm; -fno-builtin below)
-    gen/clock_gettime.c          # _clock_gettime / _clock_settime (BusyBox date -s)
-    gen/FreeBSD/sethostname.c    # _sethostname (BusyBox hostname; sysctl-backed)
+    gen/clock_gettime.c          # _clock_gettime / _clock_settime
+    gen/FreeBSD/sethostname.c    # _sethostname
     net/FreeBSD/inet_ntoa.c      # _inet_ntoa
     net/inet_ntop.c              # _inet_ntop (inet_ntoa's formatter)
     net/inet_pton.c              # _inet_pton (libresolv res_init/dns.c server-address parsing)
     string/FreeBSD/wmemcmp.c     # _wmemcmp (TRE regexec wide compares)
-    string/FreeBSD/strcasestr.c  # _strcasestr (BusyBox grep -F paths)
+    string/FreeBSD/strcasestr.c  # _strcasestr
     string/FreeBSD/strspn.c      # _strspn
     string/FreeBSD/memmem.c      # _memmem (file(1) magic buffer scans)
     string/FreeBSD/wmemcpy.c     # _wmemcpy
     string/FreeBSD/wmemchr.c     # _wmemchr
     string/FreeBSD/wcscat.c      # _wcscat
-    string/NetBSD/memset_s.c     # _memset_s (C11 Annex K; curl's curlx_freezero)
+    string/FreeBSD/wcsrchr.c     # _wcsrchr
+    string/FreeBSD/wcstok.c      # _wcstok
+    locale/FreeBSD/wcstol.c      # _wcstol
+    string/NetBSD/memset_s.c     # _memset_s
     gen/backtrace.c               # _backtrace/_backtrace_symbols/_backtrace_symbols_fd (dbus's execinfo.h use)
     gen/FreeBSD/getpeereid.c     # _getpeereid (dbus's unix-socket peer credential auth)
     gen/FreeBSD/alarm.c          # _alarm

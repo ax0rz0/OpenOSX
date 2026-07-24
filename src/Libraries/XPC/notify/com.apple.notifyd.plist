@@ -8,6 +8,8 @@
 	<array>
 		<string>/usr/sbin/notifyd</string>
 	</array>
+	<key>RunAtLoad</key>
+	<true/>
 	<key>MachServices</key>
 	<dict>
 		<key>com.apple.system.notification_center</key>

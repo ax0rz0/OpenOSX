@@ -262,6 +262,17 @@ xpc_uint64_get_value(xpc_object_t xuint)
 	return (xo->xo_uint);
 }
 
+void
+xpc_uint64_set_value(xpc_object_t xuint, uint64_t value)
+{
+	struct xpc_object *xo = xuint;
+
+	xpc_assert_nonnull(xo);
+	xpc_assert_type(xo, XPC_TYPE_UINT64);
+
+	xo->xo_uint = value;
+}
+
 xpc_object_t
 xpc_double_create(double value)
 {

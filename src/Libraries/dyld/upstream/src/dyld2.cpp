@@ -608,21 +608,6 @@ static void socket_syslogv(int priority, const char* format, va_list list)
 
 void vlog(const char* format, va_list list)
 {
-	// PD-DIAG: PID 1's fd 2 is not the console and the syslog socket is dead
-	// this early, so normal dyld logging (incl. forced verboseMapping) is
-	// invisible. Route it straight to /dev/console so the segment map is
-	// actually seen during boot. Revert with the verboseMapping hack.
-	{
-		int cfd = open(_PATH_CONSOLE, O_WRONLY|O_NOCTTY);
-		if ( cfd != -1 ) {
-			va_list list2;
-			va_copy(list2, list);
-			_simple_vdprintf(cfd, format, list2);
-			va_end(list2);
-			close(cfd);
-			return;
-		}
-	}
 #if TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR
 	// <rdar://problem/25965832> log to console when running iOS app from Xcode
 	if ( !sLogToFile && !sForceStderr && useSyslog() )

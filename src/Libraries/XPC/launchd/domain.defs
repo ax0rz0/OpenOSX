@@ -16,13 +16,16 @@ import "vproc.h";
 import "vproc_priv.h";
 import "vproc_internal.h";
 
+userprefix xpc_domain_mig_;
+serverprefix xpc_domain_;
+
 type event_name_t = c_string[64];
 
 routine
 import2(
 				j			: job_t;
 				reqport		: mach_port_t;
-				dport		: mach_port_t
+				dport		: mach_port_move_receive_t
 );
 
 routine

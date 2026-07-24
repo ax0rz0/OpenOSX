@@ -37,6 +37,7 @@
 #include <sys/uio.h>
 #include <sys/stat.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
@@ -51,6 +52,82 @@
 #include "nv.h"
 
 extern void xpc_api_misuse(const char *reason, ...) __dead2;
+extern const char *_xpc_get_type_name(xpc_object_t obj);
+struct xpc_object;
+extern nvlist_t *xpc2nv(struct xpc_object *xo, int64_t (^port_serializer)(mach_port_t port));
+extern struct xpc_object *nv2xpc(const nvlist_t *nv, mach_port_t (^port_deserializer)(int64_t port_id));
+
+typedef union {
+	uint64_t ui;
+	int64_t i;
+	const char *str;
+	bool b;
+	double d;
+	uintptr_t ptr;
+	int fd;
+	uuid_t uuid;
+	mach_port_t port;
+} pd_launch_xpc_u;
+
+struct pd_launch_xpc_object {
+	const void *isa;
+	int ref_cnt;
+	int xref_cnt;
+	xpc_type_t xo_xpc_type;
+	uint16_t xo_flags;
+	size_t xo_size;
+	pd_launch_xpc_u xo_u;
+};
+
+static void
+pd_liblaunch_phase(const char *fmt, ...)
+{
+	return; /* PD-DIAG boot traces silenced; remove to re-enable */
+	int fd;
+	va_list ap;
+	char buf[1024];
+
+	fd = open("/dev/console", O_WRONLY | O_NOCTTY);
+	if (fd < 0) {
+		return;
+	}
+	dprintf(fd, "PureDarwin liblaunch: ");
+	va_start(ap, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, ap);
+	va_end(ap);
+	write(fd, buf, strlen(buf));
+	dprintf(fd, "\n");
+	close(fd);
+}
+
+static const char *
+pd_launch_xpc_type_name(launch_data_t d)
+{
+	if (d == NULL) {
+		return "(null)";
+	}
+
+	return _xpc_get_type_name(d);
+}
+
+static bool
+pd_launch_xpc_type_is(launch_data_t d, xpc_type_t local_type, const char *type_name)
+{
+	xpc_type_t type;
+	const char *name;
+
+	if (d == NULL) {
+		return false;
+	}
+
+	type = xpc_get_type(d);
+	if (type == local_type) {
+		return true;
+	}
+
+	name = _xpc_get_type_name(d);
+	return name && strcmp(name, type_name) == 0;
+}
 
 #ifdef __LP64__
 /* workaround: 5723161 */
@@ -250,6 +327,10 @@ launch_client_init(void)
 
 				strncpy(sun.sun_path, spath, min_len);
 			}
+		} else if ((getenv("SUDO_COMMAND") || getenv("__USE_SYSTEM_LAUNCHD")) && geteuid() == 0) {
+			/* Early PID 1 bootstrappers may not be able to ask vproc for the
+			 * socket yet, but the system launchd listener is already fixed. */
+			strncpy(sun.sun_path, LAUNCHD_SOCK_PREFIX "/sock", sizeof(sun.sun_path));
 		}
 	}
 
@@ -262,6 +343,7 @@ launch_client_init(void)
 	(void)vproc_swap_integer(NULL, VPROC_GSK_EMBEDDEDROOTEQUIVALENT, NULL, &globals->s_am_embedded_god);
 #endif
 	if (-1 == connect(lfd, (struct sockaddr *)&sun, sizeof(sun))) {
+		pd_liblaunch_phase("connect %s failed errno=%d", sun.sun_path, errno);
 		if (cifd != -1 || globals->s_am_embedded_god) {
 			/* There is NO security enforced by this check. This is just a hint to our
 			 * library that we shouldn't error out due to failing to open this socket. If
@@ -297,7 +379,6 @@ out_bad:
 }
 
 extern xpc_object_t xpc_bool_create_distinct(bool value);
-
 launch_data_t
 launch_data_alloc(launch_data_type_t t)
 {
@@ -316,16 +397,23 @@ launch_data_type_t
 launch_data_get_type(launch_data_t d)
 {
 	xpc_type_t type = xpc_get_type(d);
-	if (type == XPC_TYPE_DICTIONARY) return LAUNCH_DATA_DICTIONARY;
-	else if (type == XPC_TYPE_ARRAY) return LAUNCH_DATA_ARRAY;
-	else if (type == XPC_TYPE_FD) return LAUNCH_DATA_FD;
-	else if (type == XPC_TYPE_INT64) return LAUNCH_DATA_INTEGER;
-	else if (type == XPC_TYPE_DOUBLE) return LAUNCH_DATA_REAL;
-	else if (type == XPC_TYPE_BOOL) return LAUNCH_DATA_BOOL;
-	else if (type == XPC_TYPE_DATA) return LAUNCH_DATA_OPAQUE;
-	else if (type == XPC_TYPE_ERROR) return LAUNCH_DATA_ERRNO;
-	else if (type == XPC_TYPE_ENDPOINT) return LAUNCH_DATA_MACHPORT;
+	const char *name = pd_launch_xpc_type_name(d);
 
+	if (type == XPC_TYPE_DICTIONARY || strcmp(name, "dictionary") == 0) return LAUNCH_DATA_DICTIONARY;
+	else if (type == XPC_TYPE_ARRAY || strcmp(name, "array") == 0) return LAUNCH_DATA_ARRAY;
+	else if (type == XPC_TYPE_FD || strcmp(name, "file descriptor") == 0) return LAUNCH_DATA_FD;
+	else if (type == XPC_TYPE_INT64 || strcmp(name, "int64") == 0) return LAUNCH_DATA_INTEGER;
+	else if (type == XPC_TYPE_UINT64 || strcmp(name, "uint64") == 0) return LAUNCH_DATA_ERRNO;
+	else if (type == XPC_TYPE_DOUBLE || strcmp(name, "double") == 0) return LAUNCH_DATA_REAL;
+	else if (type == XPC_TYPE_BOOL || strcmp(name, "bool") == 0) return LAUNCH_DATA_BOOL;
+	else if (type == XPC_TYPE_DATA || strcmp(name, "data") == 0) return LAUNCH_DATA_OPAQUE;
+	else if (type == XPC_TYPE_STRING || strcmp(name, "string") == 0) return LAUNCH_DATA_STRING;
+	else if (type == XPC_TYPE_UUID || strcmp(name, "UUID") == 0) return LAUNCH_DATA_OPAQUE;
+	else if (type == XPC_TYPE_ERROR || strcmp(name, "error") == 0) return LAUNCH_DATA_ERRNO;
+	else if (type == XPC_TYPE_ENDPOINT || strcmp(name, "endpoint") == 0) return LAUNCH_DATA_MACHPORT;
+
+	pd_liblaunch_phase("launch_data_get_type unknown object=%p type=%p name=%s", d, type,
+	    name);
 	xpc_api_misuse("Unknown xpc_type_t %p, this should not happen", type);
 }
 
@@ -338,12 +426,22 @@ launch_data_free(launch_data_t d)
 size_t
 launch_data_dict_get_count(launch_data_t dict)
 {
+	if (!pd_launch_xpc_type_is(dict, XPC_TYPE_DICTIONARY, "dictionary")) {
+		errno = EINVAL;
+		return 0;
+	}
 	return xpc_dictionary_get_count(dict);
 }
 
 bool
 launch_data_dict_insert(launch_data_t dict, launch_data_t what, const char *key)
 {
+	if (!pd_launch_xpc_type_is(dict, XPC_TYPE_DICTIONARY, "dictionary")) {
+		pd_liblaunch_phase("launch_data_dict_insert skipped non-dictionary object=%p type=%s key=%s",
+				dict, pd_launch_xpc_type_name(dict), key ? key : "(null)");
+		errno = EINVAL;
+		return false;
+	}
 	xpc_dictionary_set_value(dict, key, what);
 	return true;
 }
@@ -351,12 +449,20 @@ launch_data_dict_insert(launch_data_t dict, launch_data_t what, const char *key)
 launch_data_t
 launch_data_dict_lookup(launch_data_t dict, const char *key)
 {
+	if (!pd_launch_xpc_type_is(dict, XPC_TYPE_DICTIONARY, "dictionary")) {
+		errno = EINVAL;
+		return NULL;
+	}
 	return xpc_dictionary_get_value(dict, key);
 }
 
 bool
 launch_data_dict_remove(launch_data_t dict, const char *key)
 {
+	if (!pd_launch_xpc_type_is(dict, XPC_TYPE_DICTIONARY, "dictionary")) {
+		errno = EINVAL;
+		return false;
+	}
 	xpc_dictionary_set_value(dict, key, NULL);
 	return true;
 }
@@ -364,6 +470,10 @@ launch_data_dict_remove(launch_data_t dict, const char *key)
 void
 launch_data_dict_iterate(launch_data_t dict, void (*cb)(launch_data_t, const char *, void *), void *context)
 {
+	if (!pd_launch_xpc_type_is(dict, XPC_TYPE_DICTIONARY, "dictionary")) {
+		errno = EINVAL;
+		return;
+	}
 	xpc_dictionary_apply(dict, ^bool(const char *key, xpc_object_t value) {
 		cb(value, key, context);
 		return true;
@@ -373,6 +483,12 @@ launch_data_dict_iterate(launch_data_t dict, void (*cb)(launch_data_t, const cha
 bool
 launch_data_array_set_index(launch_data_t where, launch_data_t what, size_t ind)
 {
+	if (!pd_launch_xpc_type_is(where, XPC_TYPE_ARRAY, "array")) {
+		pd_liblaunch_phase("launch_data_array_set_index skipped non-array object=%p type=%s ind=%zu",
+				where, pd_launch_xpc_type_name(where), ind);
+		errno = EINVAL;
+		return false;
+	}
 	xpc_array_set_value(where, ind, what);
 	return true;
 }
@@ -380,6 +496,10 @@ launch_data_array_set_index(launch_data_t where, launch_data_t what, size_t ind)
 launch_data_t
 launch_data_array_get_index(launch_data_t where, size_t ind)
 {
+	if (!pd_launch_xpc_type_is(where, XPC_TYPE_ARRAY, "array")) {
+		errno = EINVAL;
+		return NULL;
+	}
 	return xpc_array_get_value(where, ind);
 }
 
@@ -411,9 +531,13 @@ launch_data_array_get_count(launch_data_t where)
 	return xpc_array_get_count(where);
 }
 
+extern void xpc_uint64_set_value(xpc_object_t xo, uint64_t value);
+extern void xpc_int64_set_value(xpc_object_t xo, uint64_t value);
+
 bool
 launch_data_set_errno(launch_data_t d, int e)
 {
+	xpc_uint64_set_value(d, e);
 	return true;
 }
 
@@ -428,8 +552,6 @@ launch_data_set_machport(launch_data_t d, mach_port_t p)
 {
 	xpc_api_misuse("This API is no longer implemented.");
 }
-
-extern void xpc_int64_set_value(xpc_object_t xo, uint64_t value);
 
 bool
 launch_data_set_integer(launch_data_t d, long long n)
@@ -462,7 +584,7 @@ bool
 launch_data_set_string(launch_data_t d, const char *s)
 {
 	xpc_string_set_value(d, s);
-	return false;
+	return true;
 }
 
 extern void xpc_data_set_bytes(xpc_object_t xo, void *buffer, size_t size);
@@ -477,6 +599,9 @@ launch_data_set_opaque(launch_data_t d, const void *o, size_t os)
 int
 launch_data_get_errno(launch_data_t d)
 {
+	if (pd_launch_xpc_type_is(d, XPC_TYPE_UINT64, "uint64"))
+		return ((struct pd_launch_xpc_object *)d)->xo_u.ui;
+
 	return xpc_uint64_get_value(d);
 }
 
@@ -497,36 +622,60 @@ launch_data_get_machport(launch_data_t d)
 long long
 launch_data_get_integer(launch_data_t d)
 {
+	if (pd_launch_xpc_type_is(d, XPC_TYPE_INT64, "int64"))
+		return ((struct pd_launch_xpc_object *)d)->xo_u.i;
+
 	return xpc_int64_get_value(d);
 }
 
 bool
 launch_data_get_bool(launch_data_t d)
 {
+	if (pd_launch_xpc_type_is(d, XPC_TYPE_BOOL, "bool"))
+		return ((struct pd_launch_xpc_object *)d)->xo_u.b;
+
 	return xpc_bool_get_value(d);
 }
 
 double
 launch_data_get_real(launch_data_t d)
 {
+	if (pd_launch_xpc_type_is(d, XPC_TYPE_DOUBLE, "double"))
+		return ((struct pd_launch_xpc_object *)d)->xo_u.d;
+
 	return xpc_double_get_value(d);
 }
 
 const char *
 launch_data_get_string(launch_data_t d)
 {
+	if (pd_launch_xpc_type_is(d, XPC_TYPE_STRING, "string"))
+		return ((struct pd_launch_xpc_object *)d)->xo_u.str;
+
 	return xpc_string_get_string_ptr(d);
 }
 
 void *
 launch_data_get_opaque(launch_data_t d)
 {
+	if (pd_launch_xpc_type_is(d, XPC_TYPE_UUID, "UUID"))
+		return (void *)&((struct pd_launch_xpc_object *)d)->xo_u.uuid;
+
+	if (pd_launch_xpc_type_is(d, XPC_TYPE_DATA, "data"))
+		return (void *)((struct pd_launch_xpc_object *)d)->xo_u.ptr;
+
 	return xpc_data_get_bytes_ptr(d);
 }
 
 size_t
 launch_data_get_opaque_size(launch_data_t d)
 {
+	if (pd_launch_xpc_type_is(d, XPC_TYPE_UUID, "UUID"))
+		return sizeof(uuid_t);
+
+	if (pd_launch_xpc_type_is(d, XPC_TYPE_DATA, "data"))
+		return ((struct pd_launch_xpc_object *)d)->xo_size;
+
 	return xpc_data_get_length(d);
 }
 
@@ -605,19 +754,24 @@ launchd_close(launch_t lh, typeof(close) closefunc)
 
 #define ROUND_TO_64BIT_WORD_SIZE(x)	((x + 7) & ~7)
 
-extern nvlist_t *xpc2nv(xpc_object_t xo, int64_t (^port_serializer)(mach_port_t port));
-extern xpc_object_t nv2xpc(const nvlist_t *nv, mach_port_t (^port_deserializer)(int64_t port_id));
-
 size_t
 launch_data_pack(launch_data_t d, void *where, size_t len, int *fd_where, size_t *fd_cnt)
 {
-	nvlist_t *nvl = xpc2nv(d, ^int64_t(mach_port_t port) {
+	if (!pd_launch_xpc_type_is(d, XPC_TYPE_DICTIONARY, "dictionary") &&
+			!pd_launch_xpc_type_is(d, XPC_TYPE_ARRAY, "array")) {
+		pd_liblaunch_phase("launch_data_pack refused non-container object=%p type=%s",
+				d, pd_launch_xpc_type_name(d));
+		errno = EINVAL;
+		return 0;
+	}
+
+	nvlist_t *nvl = xpc2nv((struct xpc_object *)d, ^int64_t(mach_port_t port) {
 		xpc_api_misuse("Cannot currently serialize mach ports in launch_data_pack()");
 	});
 
 	size_t size;
 	void *data = nvlist_pack(nvl, &size);
-	if (size >= len) {
+	if (data && where && size <= len) {
 		memcpy(where, data, size);
 	}
 
@@ -630,11 +784,25 @@ launch_data_pack(launch_data_t d, void *where, size_t len, int *fd_where, size_t
 launch_data_t
 launch_data_unpack(void *data, size_t data_size, int *fds, size_t fd_cnt, size_t *data_offset, size_t *fdoffset)
 {
-	nvlist_t *nvl = nvlist_unpack(data, data_size);
-	xpc_object_t xo = nv2xpc(nvl, ^mach_port_t(int64_t port_id) {
+	size_t offset = data_offset ? *data_offset : 0;
+	if (offset > data_size) {
+		return NULL;
+	}
+
+	nvlist_t *nvl = nvlist_unpack((char *)data + offset, data_size - offset);
+	if (nvl == NULL) {
+		return NULL;
+	}
+	xpc_object_t xo = (xpc_object_t)nv2xpc(nvl, ^mach_port_t(int64_t port_id) {
 		xpc_api_misuse("Should not be called");
 	});
 	nvlist_destroy(nvl);
+	if (data_offset) {
+		*data_offset = data_size;
+	}
+	if (fdoffset) {
+		*fdoffset = 0;
+	}
 	return xo;
 }
 
@@ -879,10 +1047,16 @@ launch_msg_internal(launch_data_t d)
 			size_t cnt = launch_data_array_get_count(v);
 			size_t i = 0;
 
+			pd_liblaunch_phase("SubmitJob array count=%zu before uuid", cnt);
 			uuid_generate(uuid);
 			for (i = 0; i < cnt; i++) {
 				launch_data_t ji = launch_data_array_get_index(v, i);
-				if (launch_data_get_type(ji) == LAUNCH_DATA_DICTIONARY) {
+				launch_data_type_t ji_type = ji ? launch_data_get_type(ji) : 0;
+				launch_data_t label = ji_type == LAUNCH_DATA_DICTIONARY ? launch_data_dict_lookup(ji, LAUNCH_JOBKEY_LABEL) : NULL;
+				pd_liblaunch_phase("SubmitJob job[%zu]=%s type=%d before uuid insert",
+						i, label ? launch_data_get_string(label) : "(no label)",
+						ji ? ji_type : -1);
+				if (ji_type == LAUNCH_DATA_DICTIONARY) {
 					launch_data_t existing_v = launch_data_dict_lookup(ji, LAUNCH_JOBKEY_SECURITYSESSIONUUID);
 					if (!existing_v) {
 						/* I really wish these were reference-counted. Sigh... */
@@ -910,20 +1084,25 @@ launch_msg_internal(launch_data_t d)
 
 	pthread_mutex_lock(&globals->lc_mtx);
 
+	pd_liblaunch_phase("before launchd_msg_send d=%p", d);
 	if (d && launchd_msg_send(globals->l, d) == -1) {
+		pd_liblaunch_phase("launchd_msg_send failed errno=%d", errno);
 		do {
 			if (errno != EAGAIN)
 				goto out;
 		} while (launchd_msg_send(globals->l, NULL) == -1);
 	}
+	pd_liblaunch_phase("after launchd_msg_send");
 
 	while (resp == NULL) {
+		pd_liblaunch_phase("before launchd_msg_recv");
 		if (d == NULL && launch_data_array_get_count(globals->async_resp) > 0) {
 			resp = launch_data_array_pop_first(globals->async_resp);
 			goto out;
 		}
 		if (launchd_msg_recv(globals->l, launch_msg_getmsgs, &resp) == -1) {
 			if (errno != EAGAIN) {
+				pd_liblaunch_phase("launchd_msg_recv failed errno=%d", errno);
 				goto out;
 			} else if (d == NULL) {
 				errno = 0;
@@ -938,6 +1117,7 @@ launch_msg_internal(launch_data_t d)
 			}
 		}
 	}
+	pd_liblaunch_phase("after launchd_msg_recv resp=%p", resp);
 
 out:
 #if !TARGET_OS_EMBEDDED
@@ -1220,4 +1400,3 @@ create_and_switch_to_per_session_launchd(const char *login __attribute__((unused
 }
 
 #pragma clang diagnostic pop
-

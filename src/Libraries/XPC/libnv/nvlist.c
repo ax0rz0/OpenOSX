@@ -46,6 +46,7 @@ __FBSDID("$FreeBSD$");
 
 #else
 #include <sys/socket.h>
+#include <fcntl.h>
 
 #include <errno.h>
 #include <stdarg.h>
@@ -78,6 +79,11 @@ __FBSDID("$FreeBSD$");
 #include <sys/reason.h>
 #define	PJDLOG_ABORT(msg, ...)		do {				\
 	char *reason_string; asprintf(&reason_string, "%s:%u: " msg, __FILE__, __LINE__, __VA_ARGS__); \
+	int fd = open("/dev/console", O_WRONLY | O_NOCTTY);		\
+	if (fd >= 0) {							\
+		dprintf(fd, "PureDarwin libnv: %s\n", reason_string);	\
+		close(fd);						\
+	}								\
 	abort_with_reason(OS_REASON_LIBXPC, 1, reason_string, OS_REASON_FLAG_GENERATE_CRASH_REPORT); \
 } while (0)
 #define	PJDLOG_ASSERT(expr)		if (!(expr)) PJDLOG_ABORT("Assertion failed: %s", #expr)
@@ -172,7 +178,6 @@ nvlist_create_dictionary(int flags)
 	TAILQ_INIT(&nvl->nvl_head);
 	nvl->nvl_magic = NVLIST_MAGIC;
 
-	printf("1 nvl = %p\n", nvl);
 	return (nvl);
 }
 
@@ -607,9 +612,9 @@ nvlist_xdescriptors(const nvlist_t *nvl, int *descs, int level)
 {
 	const nvpair_t *nvp;
 
+	(void)level;
 	NVLIST_ASSERT(nvl);
 	PJDLOG_ASSERT(nvl->nvl_error == 0);
-	PJDLOG_ASSERT(level < 3);
 
 	for (nvp = nvlist_first_nvpair(nvl); nvp != NULL;
 	    nvp = nvlist_next_nvpair(nvl, nvp)) {
@@ -658,9 +663,9 @@ nvlist_xndescriptors(const nvlist_t *nvl, int level)
 	const nvpair_t *nvp;
 	size_t ndescs;
 
+	(void)level;
 	NVLIST_ASSERT(nvl);
 	PJDLOG_ASSERT(nvl->nvl_error == 0);
-	PJDLOG_ASSERT(level < 3);
 
 	ndescs = 0;
 	for (nvp = nvlist_first_nvpair(nvl); nvp != NULL;

@@ -182,6 +182,7 @@ static void pd_libSystem_initializer(int argc, const char *argv[], const char *e
 	 * __pthread_init() (which expects _pthread_self_direct() to already
 	 * return non-NULL) needs it. */
 	_pthread_set_self(NULL);
+	(void)task_get_special_port(mach_task_self(), TASK_BOOTSTRAP_PORT, &bootstrap_port);
 
 	{
 		const struct _libpthread_functions pthread_funcs = {

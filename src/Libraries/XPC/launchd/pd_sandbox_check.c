@@ -6,6 +6,8 @@
  * which matches PD's actual current state.
  */
 #include <stdarg.h>
+#include <stddef.h>
+#include <stdint.h>
 #include "sandbox.h"
 
 int

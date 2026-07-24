@@ -18,7 +18,7 @@
 , espMB ? 64
 , rootMB ? 1536
 , apfsMB ? 128
-  # "ext4": ext4 root + APFS test partition (default, historical layout).
+  # "ext4": ext4 root + APFS test partition
   # "hfs":  EFI + HFS+ root ONLY - no ext4, no APFS. Root is mounted by the
   #         stock hfs.kext instead of our ext4.kext; xnu-loader already
   #         prefers an Apple_HFS partition when deriving boot-uuid.
@@ -28,7 +28,7 @@
   # xnu-loader reads this off the ESP at \EFI\BOOT\boot-args.txt
   # it falls back if it cannot find a boot-args.txt, so not strictly needed here
   # but generally nice to have so we can override things easily now
-, bootArgs ? "-v debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 vgpu_debug=1"
+, bootArgs ? "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1"
 }:
 
 assert lib.isDerivation baseSystem;
@@ -145,11 +145,10 @@ ${if rootFsType == "hfs" then ''
       mkdir -p "$staging/$dir"
     done
 
-    # Classic Darwin compatibility names: libc/libm/libpthread/libdl/libinfo
-    # are all libSystem symlinks on real Darwin. tcc links "-lc" by default
-    # (tcc_add_runtime); other in-guest builds ask for -lm/-lpthread. Done at
-    # image assembly (not in the libsystem output) so cross-build autoconf
-    # probes don't suddenly start detecting -lc and enabling new code paths.
+    # mke2fs -d (below, ext4 variant) silently drops genuinely-empty
+    # directories when populating the image
+    touch "$staging/var/run/dbus/.keep"
+
     for compat in libc libm libpthread libdl libinfo; do
       ln -sf libSystem.B.dylib "$staging/usr/lib/$compat.dylib"
     done
@@ -232,98 +231,73 @@ EOF
     cat > $staging/etc/ttys <<'EOF'
 /dev/console /bin/zsh -l
 EOF
-    # PureDarwin: real /System/Library/StartupItems bundles (script named
-    # same as its bundle dir + StartupParameters.plist), run by real
-    # SystemStarter - not PD's own ad hoc /etc/init/rc.boot for-loop. Real
-    # SystemStarter is now itself a real LaunchDaemon (com.apple.SystemStarter.plist,
-    # QueueDirectories-triggered - see pd_launchd_boot.c/pd_launchd_plist.c),
-    # so this is the real macOS boot-services shape end to end.
-    mkdir -p $staging/System/Library/StartupItems/Hostname
-    cat > $staging/System/Library/StartupItems/Hostname/Hostname <<'EOF'
+    mkdir -p $staging/System/Library/LaunchDaemons $staging/usr/libexec
+
+    cat > $staging/usr/libexec/pd-set-hostname <<'EOF'
 #!/bin/sh
 if test -x /bin/hostname; then
     /bin/hostname puredarwin
 fi
 EOF
-    cat > $staging/System/Library/StartupItems/Hostname/StartupParameters.plist <<'EOF'
+    cat > $staging/System/Library/LaunchDaemons/org.puredarwin.hostname.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>Description</key>
-	<string>Set host name</string>
-	<key>Provides</key>
+	<key>Label</key>
+	<string>org.puredarwin.hostname</string>
+	<key>ProgramArguments</key>
 	<array>
-		<string>Hostname</string>
+		<string>/usr/libexec/pd-set-hostname</string>
 	</array>
-	<key>Requires</key>
-	<array/>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/dev/console</string>
+	<key>StandardErrorPath</key>
+	<string>/dev/console</string>
 </dict>
 </plist>
 EOF
 
-    mkdir -p $staging/System/Library/StartupItems/Network
-    cat > $staging/System/Library/StartupItems/Network/Network <<'EOF'
+    cat > $staging/usr/libexec/pd-dbus-launch <<'EOF'
 #!/bin/sh
-if test -x /bin/netsetup; then
-    /bin/netsetup
+# launchctl's system bootstrap empties /var/run at boot (empty_dir(_PATH_VARRUN)),
+# so the /var/run/dbus dir created in the image is gone by the time we run and
+# dbus-daemon fails to bind /var/run/dbus/system_bus_socket. Recreate it here.
+# 1777 (sticky, world-writable) matches the image staging perms: dbus-daemon
+# --system drops to the messagebus user after binding and needs to write its
+# pidfile/socket here, and this project has no per-file chown yet. (toybox has
+# no chmod applet, so set the mode via mkdir -m.)
+/bin/mkdir -p -m 1777 /var/run/dbus
+if test -x /bin/dbus-daemon; then
+    exec /bin/dbus-daemon --config-file=/share/dbus-1/system.conf
 fi
+exit 0
 EOF
-    cat > $staging/System/Library/StartupItems/Network/StartupParameters.plist <<'EOF'
+    cat > $staging/System/Library/LaunchDaemons/org.puredarwin.dbus.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>Description</key>
-	<string>Configure network interfaces</string>
-	<key>Provides</key>
+	<key>Label</key>
+	<string>org.puredarwin.dbus</string>
+	<key>ProgramArguments</key>
 	<array>
-		<string>Network</string>
+		<string>/usr/libexec/pd-dbus-launch</string>
 	</array>
-	<key>Requires</key>
-	<array/>
-</dict>
-</plist>
-EOF
-
-    mkdir -p $staging/System/Library/StartupItems/DBus
-    cat > $staging/System/Library/StartupItems/DBus/DBus <<'EOF'
-#!/bin/sh
-case "$1" in
-start)
-    if test -x /bin/dbus-daemon; then
-        /bin/dbus-daemon --config-file=/share/dbus-1/system.conf
-    fi
-    ;;
-stop)
-    if test -f /var/run/dbus/pid; then
-        kill "$(cat /var/run/dbus/pid)" 2>/dev/null
-    fi
-    ;;
-esac
-EOF
-    cat > $staging/System/Library/StartupItems/DBus/StartupParameters.plist <<'EOF'
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>Description</key>
-	<string>D-Bus system message bus</string>
-	<key>Provides</key>
-	<array>
-		<string>DBus</string>
-	</array>
-	<key>Requires</key>
-	<array>
-		<string>Network</string>
-	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/dev/console</string>
+	<key>StandardErrorPath</key>
+	<string>/dev/console</string>
 </dict>
 </plist>
 EOF
 
 ${lib.optionalString (rootFsType == "hfs") ''
-    mkdir -p $staging/System/Library/StartupItems/RootRemount
-    cat > $staging/System/Library/StartupItems/RootRemount/RootRemount <<'EOF'
+    cat > $staging/usr/libexec/pd-root-remount <<'EOF'
 #!/bin/sh
 # The kernel mounts the root volume read-only and hfs.kext honors that
 # (ext4.kext force-clears MNT_RDONLY instead, which is why the ext4 image
@@ -339,26 +313,29 @@ if test -x /bin/mount; then
     /bin/mount -t hfs -o update,rw /dev/disk0s2 /
 fi
 EOF
-    cat > $staging/System/Library/StartupItems/RootRemount/StartupParameters.plist <<'EOF'
+    cat > $staging/System/Library/LaunchDaemons/org.puredarwin.root-remount.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>Description</key>
-	<string>Remount root read/write</string>
-	<key>Provides</key>
+	<key>Label</key>
+	<string>org.puredarwin.root-remount</string>
+	<key>ProgramArguments</key>
 	<array>
-		<string>Root Filesystem</string>
+		<string>/usr/libexec/pd-root-remount</string>
 	</array>
-	<key>Requires</key>
-	<array/>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/dev/console</string>
+	<key>StandardErrorPath</key>
+	<string>/dev/console</string>
 </dict>
 </plist>
 EOF
 ''}
 
-    mkdir -p $staging/System/Library/StartupItems/BootPartition
-    cat > $staging/System/Library/StartupItems/BootPartition/BootPartition <<'EOF'
+    cat > $staging/usr/libexec/pd-mount-boot <<'EOF'
 #!/bin/sh
 # Auto-mount the EFI System Partition (disk0s1, FAT via msdosfs.kext) at
 # /boot. IOMediaBSDClient may not have published the device node yet when
@@ -374,40 +351,39 @@ start)
             n=$((n+1))
         done
         if test -c /dev/disk0s1 -o -b /dev/disk0s1; then
-            /bin/mount -t msdos -o rdonly /dev/disk0s1 /boot
+            #/bin/mount -t msdos -o rdonly /dev/disk0s1 /boot
         fi
-    fi
-    ;;
-stop)
-    if test -x /bin/umount; then
-        /bin/umount /boot 2>/dev/null
     fi
     ;;
 esac
 EOF
-    cat > $staging/System/Library/StartupItems/BootPartition/StartupParameters.plist <<'EOF'
+    cat > $staging/System/Library/LaunchDaemons/org.puredarwin.boot-partition.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>Description</key>
-	<string>Mount EFI System Partition</string>
-	<key>Provides</key>
+	<key>Label</key>
+	<string>org.puredarwin.boot-partition</string>
+	<key>ProgramArguments</key>
 	<array>
-		<string>Boot Partition</string>
+		<string>/usr/libexec/pd-mount-boot</string>
+		<string>start</string>
 	</array>
-	<key>Requires</key>
-	<array/>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/dev/console</string>
+	<key>StandardErrorPath</key>
+	<string>/dev/console</string>
 </dict>
 </plist>
 EOF
     chmod 755 \
-      $staging/System/Library/StartupItems/Hostname/Hostname \
-      $staging/System/Library/StartupItems/Network/Network \
-      $staging/System/Library/StartupItems/DBus/DBus \
-      $staging/System/Library/StartupItems/BootPartition/BootPartition
+      $staging/usr/libexec/pd-set-hostname \
+      $staging/usr/libexec/pd-dbus-launch \
+      $staging/usr/libexec/pd-mount-boot
 ${lib.optionalString (rootFsType == "hfs") ''
-    chmod 755 $staging/System/Library/StartupItems/RootRemount/RootRemount
+    chmod 755 $staging/usr/libexec/pd-root-remount
 ''}
     cat > $staging/var/root/.profile <<'EOF'
 test -r /etc/profile && . /etc/profile

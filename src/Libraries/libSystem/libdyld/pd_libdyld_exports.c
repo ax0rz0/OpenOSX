@@ -16,25 +16,27 @@
 extern void start(void);
 void *pd_libdyld_getStartGlueToCallExit(void) { return (void *)&start; }
 
-extern int _dyld_func_lookup(const char *name, void **address);
-
-__attribute__((visibility("hidden")))
-void *pd_dyld_fast_stub_entry(void *loadercache, long lazyinfo)
-    __asm__("__Z21_dyld_fast_stub_entryPvl");
-
-void *pd_dyld_fast_stub_entry(void *loadercache, long lazyinfo)
+/*
+ * __isPlatformVersionAtLeast is emitted by clang for @available()/
+ * __builtin_available()/API_AVAILABLE checks; on real Darwin it lives in
+ * dyld (dyld3::APIs) and is resolved from the flat namespace at runtime.
+ * PureDarwin's vendored dyld3 sources don't implement it, so binaries that
+ * use @available (e.g. fastfetch) fail to launch with
+ * "Symbol not found: ___isPlatformVersionAtLeast". PureDarwin targets a
+ * single platform/version (macOS 11.0, fixed at link time via
+ * -platform_version), so every @available() check compiled against our SDK
+ * is trivially satisfied -> always return true. (This is the same stub that
+ * used to live in the orphaned, never-compiled pd_dladdr.c.)
+ */
+#include <stdint.h>
+#include <stdbool.h>
+bool
+__isPlatformVersionAtLeast(uint32_t platform, uint32_t major, uint32_t minor,
+		uint32_t subminor)
 {
-	typedef void *(*func_t)(void *, long);
-	static func_t fast_stub_entry;
-
-	if (fast_stub_entry == 0) {
-		void *address = 0;
-		if (_dyld_func_lookup("__dyld_fast_stub_entry", &address) != 0)
-			fast_stub_entry = (func_t)address;
-	}
-
-	if (fast_stub_entry == 0)
-		return 0;
-
-	return fast_stub_entry(loadercache, lazyinfo);
+	(void)platform;
+	(void)major;
+	(void)minor;
+	(void)subminor;
+	return true;
 }

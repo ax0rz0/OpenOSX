@@ -43,6 +43,7 @@
 #include <sys/syscall.h>
 #include <sys/event.h>
 #include <sys/fileport.h>  // was <System/sys/fileport.h>
+#include <fcntl.h>
 
 #include <sys/types.h>
 #include <machine/atomic.h>
@@ -490,6 +491,14 @@ _vproc_post_fork_ping(void)
 	mach_port_t session = MACH_PORT_NULL;
 	kern_return_t kr = vproc_mig_post_fork_ping(bootstrap_port, mach_task_self(), &session);
 	if (kr) {
+		mach_port_t task_bootstrap = MACH_PORT_NULL;
+		(void)task_get_bootstrap_port(mach_task_self(), &task_bootstrap);
+		int fd = open("/dev/console", O_WRONLY | O_NOCTTY);
+		if (fd >= 0) {
+			dprintf(fd, "_vproc_post_fork_ping: kr=0x%x bootstrap_port=0x%x task_bootstrap=0x%x\n",
+					kr, bootstrap_port, task_bootstrap);
+			close(fd);
+		}
 		return _vproc_post_fork_ping;
 	}
 

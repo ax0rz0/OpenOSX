@@ -12,7 +12,7 @@
 	    Samuel Zormeister (1/7/2026) - Fix TARGET_RT64_BIT to be TARGET_RT_64_BIT.
 
 		Samuel Zormeister (1/7/2026) - Enable CFXML<Parser, Node> on DEPLOYMENT_RUNTIME_C
- 
+
         Samuel Zormeister (2/7/2026) - Implement proper Objective-C object checking under DEPLOYMENT_RUNTIME_OBJC (CF_IS_OBJC)
 */
 
@@ -1000,7 +1000,7 @@ extern CFTypeID CFTreeGetTypeID(void);
 extern CFTypeID CFPlugInInstanceGetTypeID(void);
 extern CFTypeID CFStringTokenizerGetTypeID(void);
 extern CFTypeID CFStorageGetTypeID(void);
-#if TARGET_OS_LINUX || (TARGET_OS_MAC && !DEPLOYMENT_RUNTIME_OBJC)
+#if TARGET_OS_LINUX || TARGET_OS_MAC
 CF_PRIVATE void __CFTSDInitialize(void);
 #endif
 #if TARGET_OS_WIN32
@@ -1143,19 +1143,10 @@ _CFThreadRef _CF_pthread_main_thread_np(void) {
 #endif
 
 
-
-// On Darwin with the ObjC runtime, __CFInitialize is invoked via the ObjC
-// image-load notification, so it needs no constructor attribute. PureDarwin
-// builds CF as DEPLOYMENT_RUNTIME_C on TARGET_OS_MAC: there is no ObjC runtime
-// to call it, so - exactly like the Linux/BSD non-ObjC builds - it must be a
-// plain __attribute__((constructor)). Without this __CFInitialize never runs,
-// __CFTSDInitialize never creates __CFTSDIndexKey (it stays 0), and the first
-// CF TSD lookup returns pthread_self() instead of NULL. (Matches the
-// TARGET_OS_MAC && !DEPLOYMENT_RUNTIME_OBJC condition already used below to
-// gate the __CFTSDInitialize() call itself.)
-#if TARGET_OS_LINUX || TARGET_OS_BSD || (TARGET_OS_MAC && !DEPLOYMENT_RUNTIME_OBJC)
-static void __CFInitialize(void) __attribute__ ((constructor));
-static
+#if TARGET_OS_LINUX || TARGET_OS_BSD || TARGET_OS_MAC
+// External (not static) linkage: CFBase.c's CFAllocatorAllocate() now calls
+// this defensively too (see there) - it can't if this stays file-local.
+void __CFInitialize(void) __attribute__ ((constructor));
 #endif
 #if TARGET_OS_WIN32
 CF_EXPORT
@@ -1178,7 +1169,7 @@ void __CFInitialize(void) {
 #if TARGET_OS_WIN32
         // Must not call any CF functions
         __CFTSDWindowsInitialize();
-#elif TARGET_OS_LINUX || (TARGET_OS_MAC && !DEPLOYMENT_RUNTIME_OBJC)
+#elif TARGET_OS_LINUX || TARGET_OS_MAC
         __CFTSDInitialize();
 #endif
         __CFProphylacticAutofsAccess = true;
@@ -1205,6 +1196,23 @@ void __CFInitialize(void) {
         uintptr_t NSCFType = __CFSwiftGetBaseClass();
         for (CFIndex idx = 1; idx < __CFRuntimeClassTableSize; idx++) {
             __CFRuntimeObjCClassTable[idx] = NSCFType;
+        }
+#elif DEPLOYMENT_RUNTIME_OBJC
+        // Mirror the Swift branch above: every CF typeID needs *some* ObjC
+        // bridge class, or _CFRuntimeCreateInstance's
+        // object_setClass(memory, (Class)__CFISAForTypeID(typeID)) calls
+        // object_setClass with a NULL class the moment anything creates an
+        // instance of a typeID nobody explicitly bridged (which, without
+        // this, is every type except the ones with their own
+        // _CFRuntimeBridgeClasses() call elsewhere - e.g. CFAllocator,
+        // instantiated during this very __CFInitialize call, well before
+        // CFString.c's NSCFString registration constructor even runs).
+        // Default everything to the generic __NSCFType wrapper
+        // (Bridging.subproj/__NSCFType.m); specific types can still
+        // override this with their own more precise bridge class via a
+        // later _CFRuntimeBridgeClasses() call, same as NSCFString does.
+        for (CFIndex idx = 1; idx < __CFRuntimeClassTableSize; idx++) {
+            _CFRuntimeBridgeClasses(idx, "__NSCFType");
         }
 #endif
 

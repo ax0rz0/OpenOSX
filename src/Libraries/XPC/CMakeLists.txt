@@ -4,6 +4,7 @@ foreach(_puredarwin_xpc_dir
     libxpc
     launchd
     notify
+    logd
 )
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/${_puredarwin_xpc_dir}/CMakeLists.txt")
         add_subdirectory("${_puredarwin_xpc_dir}")

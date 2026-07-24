@@ -28,12 +28,16 @@
 #include <sys/types.h>
 #include <sys/errno.h>
 #include <sys/sbuf.h>
+#include <fcntl.h>
 #include <mach/mach.h>
 #include <mach/message.h>
 #include <xpc/launchd.h>
 #include <assert.h>
 #include <syslog.h>
 #include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include <uuid/uuid.h>
 #include <stdatomic.h>
 
@@ -75,6 +79,7 @@ xpc_dictionary_destroy(struct xpc_object *dict)
 	TAILQ_FOREACH_SAFE(p, head, xo_link, ptmp) {
 		TAILQ_REMOVE(head, p, xo_link);
 		xpc_release(p->value);
+		free((void *)p->key);
 		free(p);
 	}
 }
@@ -473,11 +478,10 @@ xpc_pipe_receive(mach_port_t local, mach_port_t *remote, xpc_object_t *result,
 
 int
 xpc_pipe_try_receive(mach_port_t portset, xpc_object_t *requestobj, mach_port_t *rcvport,
-	boolean_t (*demux)(mach_msg_header_t *, mach_msg_header_t *), mach_msg_size_t msgsize __unused,
+	boolean_t (*demux)(mach_msg_header_t *, mach_msg_header_t *), mach_msg_size_t msgsize,
 	int flags __unused)
 {
-	struct xpc_message message;
-	struct xpc_message rsp_message;
+	struct xpc_message *message;
 	mach_msg_header_t *request;
 	kern_return_t kr;
 	mach_msg_header_t *response;
@@ -485,10 +489,27 @@ xpc_pipe_try_receive(mach_port_t portset, xpc_object_t *requestobj, mach_port_t 
 	int data_size;
 	struct xpc_object *xo;
 	audit_token_t *auditp;
+	mach_msg_size_t receive_size = msgsize;
+	mach_msg_size_t response_size = msgsize;
 
-	request = &message.header;
-	response = &rsp_message.header;
-	request->msgh_size = sizeof(struct xpc_message);
+	if (receive_size < sizeof(struct xpc_message)) {
+		receive_size = sizeof(struct xpc_message);
+	}
+	if (response_size < sizeof(struct xpc_message)) {
+		response_size = sizeof(struct xpc_message);
+	}
+	receive_size += sizeof(mach_msg_audit_trailer_t);
+
+	message = calloc(1, receive_size);
+	response = calloc(1, response_size);
+	if (message == NULL || response == NULL) {
+		free(message);
+		free(response);
+		return ENOMEM;
+	}
+
+	request = &message->header;
+	request->msgh_size = receive_size;
 	request->msgh_local_port = portset;
 	kr = mach_msg(request, MACH_RCV_MSG |
 	    MACH_RCV_TRAILER_TYPE(MACH_MSG_TRAILER_FORMAT_0) |
@@ -496,47 +517,71 @@ xpc_pipe_try_receive(mach_port_t portset, xpc_object_t *requestobj, mach_port_t 
 	    0, request->msgh_size, request->msgh_local_port,
 	    MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
 
-	if (kr != 0)
+	if (kr != 0) {
+		int fd = open("/dev/console", O_WRONLY | O_NOCTTY);
+		if (fd >= 0) {
+			dprintf(fd, "xpc_pipe_try_receive: kr=0x%x bits=0x%x size=%u local=0x%x remote=0x%x id=%u\n",
+					kr, request->msgh_bits, request->msgh_size,
+					request->msgh_local_port, request->msgh_remote_port, request->msgh_id);
+			close(fd);
+		}
 		debugf("mach_msg_receive returned %d\n", kr);
+		free(message);
+		free(response);
+		return kr;
+	}
 	*rcvport = request->msgh_remote_port;
 	if (demux(request, response)) {
-		(void)mach_msg_send(response);
+		kr = mach_msg_send(response);
+		if (kr != 0 && request->msgh_id == 407) {
+			int fd = open("/dev/console", O_WRONLY | O_NOCTTY);
+			if (fd >= 0) {
+				dprintf(fd, "xpc_pipe_try_receive: reply kr=0x%x id=%u reply_id=%u remote=0x%x ret=0x%x\n",
+						kr, request->msgh_id, response->msgh_id,
+						response->msgh_remote_port, ((mig_reply_error_t *)response)->RetCode);
+				close(fd);
+			}
+		}
 		/*  can't do anything with the return code
 		* just tell the caller this has been handled
 		*/
+		free(message);
+		free(response);
 		return (TRUE);
 	}
 	debugf("demux returned false\n");
-	data_size = message.ool_data.size;
+	data_size = message->ool_data.size;
 	debugf("unpacking data_size=%d", data_size);
 
-	nvlist_t *nvlist = nvlist_unpack(&message.ool_data.address, data_size);
+	nvlist_t *nvlist = nvlist_unpack(&message->ool_data.address, data_size);
 	xo = nv2xpc(nvlist, ^(int64_t port_index) {
-		xpc_assert(port_index <= message.ool_ports.count / sizeof(mach_port_t), "Port index greater than number of ports in buffer");
-		mach_port_t *ports = message.ool_ports.address;
+		xpc_assert(port_index <= message->ool_ports.count / sizeof(mach_port_t), "Port index greater than number of ports in buffer");
+		mach_port_t *ports = message->ool_ports.address;
 		return ports[port_index];
 	});
 	nvlist_destroy(nvlist);
 
-	mig_deallocate((vm_address_t)message.ool_data.address, message.ool_data.size);
-	message.ool_data.address = NULL;
-	message.ool_data.size = 0;
+	mig_deallocate((vm_address_t)message->ool_data.address, message->ool_data.size);
+	message->ool_data.address = NULL;
+	message->ool_data.size = 0;
 
-	mig_deallocate((vm_address_t)message.ool_ports.address, message.ool_ports.count * sizeof(mach_port_t));
-	message.ool_ports.address = NULL;
-	message.ool_ports.count = 0;
+	mig_deallocate((vm_address_t)message->ool_ports.address, message->ool_ports.count * sizeof(mach_port_t));
+	message->ool_ports.address = NULL;
+	message->ool_ports.count = 0;
 
 	/* is padding for alignment enforced in the kernel?*/
-	tr = (mach_msg_trailer_t *)(((char *)&message) + request->msgh_size);
+	tr = (mach_msg_trailer_t *)(((char *)message) + request->msgh_size);
 	auditp = &((mach_msg_audit_trailer_t *)tr)->msgh_audit;
 
 	xo->xo_audit_token = malloc(sizeof(*auditp));
 	memcpy(xo->xo_audit_token, auditp, sizeof(*auditp));
 
 	xpc_dictionary_set_mach_send(xo, XPC_RPORT, request->msgh_remote_port);
-	xpc_dictionary_set_uint64(xo, XPC_SEQID, message.id);
+	xpc_dictionary_set_uint64(xo, XPC_SEQID, message->id);
 	xo->xo_flags |= _XPC_FROM_WIRE;
 	*requestobj = xo;
+	free(message);
+	free(response);
 	return (0);
 }
 

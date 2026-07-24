@@ -30,6 +30,8 @@
 #include <xpc/launchd.h>
 #include "xpc_internal.h"
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define NVLIST_XPC_TYPE         XPC_RESERVED_KEY_PREFIX "object type"
 #define NVLIST_PORT_INDEX		XPC_RESERVED_KEY_PREFIX "port index"
@@ -127,12 +129,20 @@ nv2xpc(const nvlist_t *nv, mach_port_t (^port_deserializer)(int64_t port_id))
 			break;
 
 		case NV_TYPE_BINARY:
+			{
+				size_t value_size;
+				const void *value;
+
+				value = nvlist_get_binary(nv, key, &value_size);
+				xotmp = xpc_data_create(value, value_size);
+			}
 			break;
 
 		case NV_TYPE_UUID:
 			memcpy(&val.uuid, nvlist_get_uuid(nv, key),
 			    sizeof(uuid_t));
 			xotmp = _xpc_prim_create(XPC_TYPE_UUID, val, 0);
+			break;
 
 		case NV_TYPE_NVLIST_ARRAY:
 			nvtmp = nvlist_get_nvlist_array(nv, key);
@@ -364,19 +374,31 @@ xpc_dictionary_set_value_nokeycheck(xpc_object_t xdict, const char *key, xpc_obj
 			if (value != NULL) {
 				xpc_retain(value);
 				pair->value = value;
-			} else {
-				TAILQ_REMOVE(head, pair, xo_link);
-				xo->xo_size--;
-				free(pair);
-			}
+				} else {
+					TAILQ_REMOVE(head, pair, xo_link);
+					xo->xo_size--;
+					free((void *)pair->key);
+					free(pair);
+				}
 
-			return;
+				return;
+			}
 		}
+
+	if (value == NULL) {
+		return;
 	}
 
 	xo->xo_size++;
 	pair = malloc(sizeof(struct xpc_dict_pair));
-	pair->key = key;
+	if (pair == NULL) {
+		return;
+	}
+	pair->key = strdup(key);
+	if (pair->key == NULL) {
+		free(pair);
+		return;
+	}
 	pair->value = value;
 	TAILQ_INSERT_TAIL(&xo->xo_dict, pair, xo_link);
 	xpc_retain(value);

@@ -61,6 +61,9 @@ xpc_array_set_value(xpc_object_t xarray, size_t index, xpc_object_t value)
 	if (index == XPC_ARRAY_APPEND)
 		return xpc_array_append_value(xarray, value);
 
+	if (index == (size_t)xo->xo_size)
+		return xpc_array_append_value(xarray, value);
+
 	if (index >= (size_t)xo->xo_size)
 		return;
 
@@ -106,7 +109,7 @@ xpc_array_get_value(xpc_object_t xarray, size_t index)
 	arr = &xo->xo_array;
 	i = 0;
 
-	if (index > xo->xo_size)
+	if (index >= xo->xo_size)
 		return (NULL);
 	
 	TAILQ_FOREACH(xotmp, arr, xo_link) {

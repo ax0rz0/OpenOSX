@@ -883,12 +883,20 @@ fprintf_l(FILE *stream, locale_t loc, const char *format, ...)
     return ret;
 }
 
-extern int readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result);
 extern int __pd_readdir_r_inode64(DIR *dirp, struct dirent *entry, struct dirent **result) __asm("_readdir_r$INODE64");
+int __pd_readdir_r_plain(DIR *dirp, struct dirent *entry, struct dirent **result) __asm("_readdir_r");
 int
-__pd_readdir_r_inode64(DIR *dirp, struct dirent *entry, struct dirent **result)
+__pd_readdir_r_plain(DIR *dirp, struct dirent *entry, struct dirent **result)
 {
-    return readdir_r(dirp, entry, result);
+    return __pd_readdir_r_inode64(dirp, entry, result);
+}
+
+extern DIR *__pd_opendir_inode64(const char *name) __asm("_opendir$INODE64");
+DIR *__pd_opendir_plain(const char *name) __asm("_opendir");
+DIR *
+__pd_opendir_plain(const char *name)
+{
+    return __pd_opendir_inode64(name);
 }
 
 /*
@@ -1118,31 +1126,6 @@ snprintf_l(char *str, size_t size, locale_t loc, const char *format, ...)
  * the vendored libc/uuid/uuidsrc sources (see libc/CMakeLists.txt) instead
  * of this hand-rolled arc4random-only stub.
  */
-
-/*
- * getsectbynamefromheader_64: real mach-o section lookup by segment/section
- * name, used by CF's own __CFGetSectDataPtr for locating its Unicode data
- * sections. Real implementation - just walks the load commands.
- */
-const struct section_64 *
-getsectbynamefromheader_64(const struct mach_header_64 *mhp, const char *segname, const char *sectname)
-{
-    const struct load_command *lc = (const struct load_command *)((const char *)mhp + sizeof(struct mach_header_64));
-    for (uint32_t i = 0; i < mhp->ncmds; i++) {
-        if (lc->cmd == 0x19 /* LC_SEGMENT_64 */) {
-            const struct segment_command_64 *sg = (const struct segment_command_64 *)lc;
-            if (strncmp(sg->segname, segname, 16) == 0) {
-                const struct section_64 *sect = (const struct section_64 *)((const char *)sg + sizeof(struct segment_command_64));
-                for (uint32_t j = 0; j < sg->nsects; j++) {
-                    if (strncmp(sect[j].sectname, sectname, 16) == 0)
-                        return &sect[j];
-                }
-            }
-        }
-        lc = (const struct load_command *)((const char *)lc + lc->cmdsize);
-    }
-    return NULL;
-}
 
 unsigned int
 mk_timer_create(void)
@@ -1448,4 +1431,49 @@ void
 __pd_qsort_b(void *base, size_t nel, size_t width, void *block)
 {
     qsort_r(base, nel, width, block, __pd_qsort_b_thunk);
+}
+
+int
+fls(int mask)
+{
+    return mask ? (int)(sizeof(mask) * 8 - (unsigned)__builtin_clz((unsigned)mask)) : 0;
+}
+
+void
+_Exit(int status)
+{
+    _exit(status);
+}
+
+char **
+backtrace_symbols(void *const *buffer, int size)
+{
+    if (size < 0)
+        return NULL;
+
+    /* One char* per frame followed by the string storage. Each line is
+     * "<idx>  <address>" - up to ~40 bytes; use a fixed generous slot. */
+    const size_t slot = 48;
+    char **result = (char **)malloc((size_t)size * (sizeof(char *) + slot));
+    if (result == NULL)
+        return NULL;
+
+    char *strings = (char *)(result + size);
+    for (int i = 0; i < size; i++) {
+        char *line = strings + (size_t)i * slot;
+        snprintf(line, slot, "%-3d  %p", i, buffer[i]);
+        result[i] = line;
+    }
+    return result;
+}
+
+void
+backtrace_symbols_fd(void *const *buffer, int size, int fd)
+{
+    char line[48];
+    for (int i = 0; i < size; i++) {
+        int n = snprintf(line, sizeof(line), "%-3d  %p\n", i, buffer[i]);
+        if (n > 0)
+            (void)write(fd, line, (size_t)n);
+    }
 }

@@ -64,6 +64,7 @@
 #include <signal.h>
 #include <dlfcn.h>
 #include <os/assumes.h>
+#include <stdarg.h>
 
 #include <bsm/libbsm.h>
 
@@ -120,6 +121,8 @@ static uint64_t tbi_safe_math_max;
 static uint64_t time_of_mach_msg_return;
 static double tbi_float_val;
 
+static void pd_runtime_phase(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
+
 static const int sigigns[] = { SIGHUP, SIGINT, SIGPIPE, SIGALRM, SIGTERM,
 	SIGURG, SIGTSTP, SIGTSTP, SIGCONT, SIGTTIN, SIGTTOU, SIGIO, SIGXCPU,
 	SIGXFSZ, SIGVTALRM, SIGPROF, SIGWINCH, SIGINFO, SIGUSR1, SIGUSR2
@@ -174,8 +177,8 @@ union internal_max_sz {
 };
 
 union xpc_domain_max_sz {
-	union __RequestUnion__xpc_domain_subsystem req;
-	union __ReplyUnion__xpc_domain_subsystem rep;
+	union __RequestUnion__xpc_domain_xpc_domain_subsystem req;
+	union __ReplyUnion__xpc_domain_xpc_domain_subsystem rep;
 };
 
 union mach_exc_max_sz {
@@ -654,7 +657,6 @@ runtime_fork(mach_port_t bsport)
 
 	(void)os_assumes_zero(launchd_mport_make_send(bsport));
 	(void)os_assumes_zero(launchd_set_bport(bsport));
-	(void)os_assumes_zero(launchd_mport_deallocate(bsport));
 
 	__OS_COMPILETIME_ASSERT__(SIG_ERR == (typeof(SIG_ERR))-1);
 	(void)posix_assumes_zero(sigprocmask(SIG_BLOCK, &sigign_set, &oset));
@@ -671,6 +673,7 @@ runtime_fork(mach_port_t bsport)
 		}
 		(void)posix_assumes_zero(sigprocmask(SIG_SETMASK, &oset, NULL));
 		(void)os_assumes_zero(launchd_set_bport(MACH_PORT_NULL));
+		(void)os_assumes_zero(launchd_mport_deallocate(bsport));
 	} else {
 		pid_t p = -getpid();
 		(void)posix_assumes_zero(sysctlbyname("vfs.generic.noremotehang", NULL, NULL, &p, sizeof(p)));
@@ -708,6 +711,7 @@ runtime_add_mport(mach_port_t name, mig_callback demux)
 {
 	size_t needed_table_sz = (MACH_PORT_INDEX(name) + 1) * sizeof(mig_callback);
 	mach_port_t target_set = demux ? ipc_port_set : demand_port_set;
+	kern_return_t kr;
 
 	if (unlikely(needed_table_sz > mig_cb_table_sz)) {
 		needed_table_sz *= 2; /* Let's try and avoid realloc'ing for a while */
@@ -728,7 +732,10 @@ runtime_add_mport(mach_port_t name, mig_callback demux)
 
 	mig_cb_table[MACH_PORT_INDEX(name)] = demux;
 
-	return errno = mach_port_move_member(mach_task_self(), name, target_set);
+	kr = mach_port_move_member(mach_task_self(), name, target_set);
+	pd_runtime_phase("runtime_add_mport port=0x%x idx=%u demux=%p set=0x%x kr=0x%x",
+			name, MACH_PORT_INDEX(name), demux, target_set, kr);
+	return errno = kr;
 }
 
 kern_return_t
@@ -1015,8 +1022,22 @@ launchd_mig_demux(mach_msg_header_t *request, mach_msg_header_t *reply)
 	mig_callback the_demux = mig_cb_table[MACH_PORT_INDEX(request->msgh_local_port)];
 	mach_msg_audit_trailer_t *tp = (mach_msg_audit_trailer_t *)((vm_offset_t)request + round_msg(request->msgh_size));
 	runtime_record_caller_creds(&tp->msgh_audit);
+	if (request->msgh_id == 407) {
+		mach_msg_body_t *body = (mach_msg_body_t *)(request + 1);
+		mach_msg_port_descriptor_t *desc = (mach_msg_port_descriptor_t *)(body + 1);
+		pd_runtime_phase("mig_demux id=%u local=0x%x idx=%u remote=0x%x demux=%p pid=%d",
+				request->msgh_id, request->msgh_local_port, MACH_PORT_INDEX(request->msgh_local_port),
+				request->msgh_remote_port, the_demux, ldc.pid);
+		pd_runtime_phase("mig_demux 407 bits=0x%x size=%u expected=%zu desc_count=%u task_name=0x%x task_disp=%u task_type=%u",
+				request->msgh_bits, request->msgh_size, sizeof(__Request__post_fork_ping_t),
+				body->msgh_descriptor_count, desc->name, desc->disposition, desc->type);
+	}
 
 	result = the_demux(request, reply);
+	if (request->msgh_id == 407) {
+		pd_runtime_phase("mig_demux id=%u primary result=%d reply_id=%u ret=0x%x",
+				request->msgh_id, result, reply->msgh_id, ((mig_reply_error_t *)reply)->RetCode);
+	}
 	if (!result) {
 		launchd_syslog(LOG_DEBUG, "Demux failed. Trying other subsystems...");
 		if (request->msgh_id == MACH_NOTIFY_NO_SENDERS) {
@@ -1031,8 +1052,29 @@ launchd_mig_demux(mach_msg_header_t *request, mach_msg_header_t *reply)
 	} else {
 		launchd_syslog(LOG_DEBUG, "MIG demux succeeded.");
 	}
+	if (request->msgh_id == 407) {
+		pd_runtime_phase("mig_demux id=%u final result=%d reply_id=%u ret=0x%x",
+				request->msgh_id, result, reply->msgh_id, ((mig_reply_error_t *)reply)->RetCode);
+	}
 
 	return result;
+}
+
+static void
+pd_runtime_phase(const char *fmt, ...)
+{
+	return;
+	if (!pid1_magic || !launchd_console) {
+		return;
+	}
+
+	fprintf(launchd_console, "PureDarwin launchd: ");
+	va_list ap;
+	va_start(ap, fmt);
+	vfprintf(launchd_console, fmt, ap);
+	va_end(ap);
+	fprintf(launchd_console, "\n");
+	fflush(launchd_console);
 }
 
 void

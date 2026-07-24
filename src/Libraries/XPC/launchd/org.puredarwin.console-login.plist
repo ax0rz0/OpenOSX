@@ -12,11 +12,5 @@
 	<true/>
 	<key>RunAtLoad</key>
 	<true/>
-	<key>StandardInPath</key>
-	<string>/dev/console</string>
-	<key>StandardOutPath</key>
-	<string>/dev/console</string>
-	<key>StandardErrorPath</key>
-	<string>/dev/console</string>
 </dict>
 </plist>

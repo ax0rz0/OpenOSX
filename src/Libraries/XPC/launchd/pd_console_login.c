@@ -9,7 +9,9 @@
 #include <sys/ioctl.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 int
@@ -18,15 +20,19 @@ main(void)
 	const char *tty = "/dev/console";
 
 	if (setsid() < 0 && errno != EPERM) {
+		dprintf(STDERR_FILENO, "pd-console-login: setsid failed: %s\n", strerror(errno));
 		_exit(126);
 	}
 
 	int fd = open(tty, O_RDWR);
 	if (fd < 0) {
+		dprintf(STDERR_FILENO, "pd-console-login: open(%s) failed: %s\n", tty, strerror(errno));
 		_exit(126);
 	}
 
-	(void)ioctl(fd, TIOCSCTTY, 1);
+	if (ioctl(fd, TIOCSCTTY, 1) < 0) {
+		dprintf(fd, "pd-console-login: TIOCSCTTY failed: %s\n", strerror(errno));
+	}
 	(void)dup2(fd, STDIN_FILENO);
 	(void)dup2(fd, STDOUT_FILENO);
 	(void)dup2(fd, STDERR_FILENO);
@@ -42,6 +48,8 @@ main(void)
 	setenv("TERM", "vt220", 0);
 
 	char *argv[] = { "/bin/zsh", "-l", NULL };
+	dprintf(STDERR_FILENO, "pd-console-login: exec %s\n", argv[0]);
 	execv(argv[0], argv);
+	dprintf(STDERR_FILENO, "pd-console-login: execv(%s) failed: %s\n", argv[0], strerror(errno));
 	_exit(127);
 }

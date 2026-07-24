@@ -10,6 +10,8 @@
 , icu
 , src
 , pdCompatInclude
+, libobjc
+, foundationSrc
 }:
 
 let
@@ -45,6 +47,15 @@ stdenv.mkDerivation {
     ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar crs placeholder-libs/libBlocksRuntime.a placeholder-libs/placeholder.o
     ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar crs placeholder-libs/libdispatch.a placeholder-libs/placeholder.o
 
+    # Foundation is not built as a library here (CF only needs its headers to
+    # compile Bridging.subproj/__NSCFType.m, which is the ObjC toll-free
+    # bridge glue living inside CF itself) - stage a "Foundation/" include
+    # directory from the vendored Foundation source tree so
+    # `#import <Foundation/NSObject.h>` resolves the way a real framework
+    # search path would.
+    mkdir -p foundation-headers/Foundation
+    find ${foundationSrc} -name '*.h' -exec cp {} foundation-headers/Foundation/ \;
+
     # -Wl,-fixup_chains: PD's dyld lazy-binding/stub-resolution path is
     # fragile (same reason launchd/SystemStarter/launchctl/notifyd
     # already eager-bind themselves) - without it, CoreFoundation's own
@@ -57,8 +68,9 @@ stdenv.mkDerivation {
       -DNIX_DARWIN_TOOLCHAIN_DIR=${darwinCrossToolchain}/bin \
       -DNIX_DARWIN_SDK_ROOT=$DARWIN_SDK_ROOT \
       -DBUILD_SHARED_LIBS=ON \
-      -DCMAKE_C_FLAGS="-isysroot $DARWIN_SDK_ROOT -I${libSystem}/usr/include -I${pdCompatInclude} -I${lib.getDev icu}/include -DU_DISABLE_RENAMING=1 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0" \
-      -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=${nativeLd}/bin/ld -nostdlib -L$PWD/placeholder-libs -L${libSystem}/usr/lib -lSystem -Wl,-install_name,/usr/lib/libCoreFoundation.dylib -Wl,-platform_version,macos,11.0,11.5 -Wl,-fixup_chains"
+      -DCMAKE_C_FLAGS="-isysroot $DARWIN_SDK_ROOT -I${libSystem}/usr/include -I${pdCompatInclude} -I${lib.getDev icu}/include -I${libobjc}/usr/include -I$PWD/foundation-headers -DU_DISABLE_RENAMING=1 -DDEPLOYMENT_RUNTIME_OBJC=1 -DINCLUDE_OBJC=1 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0" \
+      -DCMAKE_OBJC_FLAGS="-isysroot $DARWIN_SDK_ROOT -I${libSystem}/usr/include -I${pdCompatInclude} -I${lib.getDev icu}/include -I${libobjc}/usr/include -I$PWD/foundation-headers -fno-objc-arc -DU_DISABLE_RENAMING=1 -DDEPLOYMENT_RUNTIME_OBJC=1 -DINCLUDE_OBJC=1 -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0" \
+      -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=${nativeLd}/bin/ld -nostdlib -L$PWD/placeholder-libs -L${libSystem}/usr/lib -L${libobjc}/usr/lib -lSystem -lobjc -Wl,-install_name,/usr/lib/libCoreFoundation.dylib -Wl,-platform_version,macos,11.0,11.5 -Wl,-fixup_chains"
 
     runHook postConfigure
   '';

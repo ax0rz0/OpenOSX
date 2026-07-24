@@ -814,6 +814,7 @@ static void job_logv(job_t j, int pri, int err, const char *msg, va_list ap) __a
 static void job_log_error(job_t j, int pri, const char *msg, ...) __attribute__((format(printf, 3, 4)));
 static bool job_log_bug(_SIMPLE_STRING asl_message, void *ctx, const char *message);
 static void job_log_perf_statistics(job_t j, struct rusage_info_v1 *ri, int64_t exit_status);
+static void pd_core_phase(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 #if HAVE_SYSTEMSTATS
 static void job_log_systemstats(pid_t pid, uint64_t uniqueid, uint64_t parent_uniqueid, pid_t req_pid, uint64_t req_uniqueid, const char *name, struct rusage_info_v1 *ri, int64_t exit_status);
 #endif
@@ -3435,9 +3436,11 @@ job_mig_intran(mach_port_t p)
 	jr = job_mig_intran2(root_jobmgr, p, ldc->pid);
 
 	if (!jr) {
+		pd_core_phase("job_mig_intran miss port=0x%x pid=%d uid=%u euid=%u", p, ldc->pid, ldc->uid, ldc->euid);
 		struct proc_bsdshortinfo proc;
 		if (proc_pidinfo(ldc->pid, PROC_PIDT_SHORTBSDINFO, 1, &proc, PROC_PIDT_SHORTBSDINFO_SIZE) > 0) {
 			jr = jobmgr_find_by_pid_deep(root_jobmgr, ldc->pid, true);
+			pd_core_phase("job_mig_intran pid fallback pid=%d job=%s", ldc->pid, jr ? jr->label : "(null)");
 		} else {
 			if (errno != ESRCH) {
 				(void)jobmgr_assumes_zero(root_jobmgr, errno);
@@ -4412,6 +4415,7 @@ job_start(job_t j)
 		job_log(j, LOG_DEBUG, "Already started");
 		return;
 	}
+	pd_core_phase("job_start(%s): begin", j->label);
 
 	if (!LIST_EMPTY(&j->mgr->attaches)) {
 		job_log(j, LOG_DEBUG, "Looking for attachments for job: %s", j->label);
@@ -4447,8 +4451,10 @@ job_start(job_t j)
 
 	(void)job_assumes_zero_p(j, socketpair(AF_UNIX, SOCK_STREAM, 0, execspair));
 
+	pd_core_phase("job_start(%s): before runtime_fork", j->label);
 	switch (c = runtime_fork(j->weird_bootstrap ? j->j_port : j->mgr->jm_port)) {
 	case -1:
+		pd_core_phase("job_start(%s): runtime_fork failed errno=%d", j->label, errno);
 		job_log_error(j, LOG_ERR, "fork() failed, will try again in one second");
 		(void)job_assumes_zero_p(j, kevent_mod((uintptr_t)j, EVFILT_TIMER, EV_ADD|EV_ONESHOT, NOTE_SECONDS, 1, j));
 		job_ignore(j);
@@ -4461,11 +4467,13 @@ job_start(job_t j)
 		}
 		break;
 	case 0:
-		// _sjc_ because _vproc_post_fork_ping will fail without a valid bootstrap_port
+		pd_core_phase("job_start(%s): child after runtime_fork", j->label);
 		if (!bootstrap_port) {
+			pd_core_phase("job_start(%s): child bootstrap_init", j->label);
 			bootstrap_init();
 		}
 		if (unlikely(_vproc_post_fork_ping())) {
+			pd_core_phase("job_start(%s): child _vproc_post_fork_ping failed", j->label);
 			_exit(EXIT_FAILURE);
 		}
 
@@ -4481,6 +4489,7 @@ job_start(job_t j)
 		job_start_child(j);
 		break;
 	default:
+		pd_core_phase("job_start(%s): parent forked pid=%d", j->label, c);
 		j->start_time = runtime_get_opaque_time();
 
 		job_log(j, LOG_DEBUG, "Started as PID: %u", c);
@@ -4774,12 +4783,31 @@ job_start_child(job_t j)
 		file2exec = j->prog ? j->prog : argv[0];
 	}
 
+	pd_core_phase("job_start_child(%s): exec %s", j->label, file2exec);
 	errno = psf(NULL, file2exec, NULL, &spattr, (char *const *)argv, environ);
+	pd_core_phase("job_start_child(%s): exec failed errno=%d", j->label, errno);
 	
 #if HAVE_SANDBOX && !TARGET_OS_EMBEDDED
 out_bad:
 #endif
 	_exit(errno);
+}
+
+void
+pd_core_phase(const char *fmt, ...)
+{
+	return;
+	if (!pid1_magic || !launchd_console) {
+		return;
+	}
+
+	fprintf(launchd_console, "PureDarwin launchd: ");
+	va_list ap;
+	va_start(ap, fmt);
+	vfprintf(launchd_console, fmt, ap);
+	va_end(ap);
+	fprintf(launchd_console, "\n");
+	fflush(launchd_console);
 }
 
 void
@@ -6937,7 +6965,10 @@ jobmgr_new(jobmgr_t jm, mach_port_t requestorport, mach_port_t transfer_port, bo
 	}
 
 	if (name && !skip_init) {
+		pd_core_phase("jobmgr_new(%s): before init_session", name);
 		bootstrapper = jobmgr_init_session(jmr, name, sflag);
+		pd_core_phase("jobmgr_new(%s): after init_session bootstrapper=%s",
+				name, bootstrapper ? bootstrapper->label : "(null)");
 	}
 
 	if (!bootstrapper || !bootstrapper->weird_bootstrap) {
@@ -6952,7 +6983,11 @@ jobmgr_new(jobmgr_t jm, mach_port_t requestorport, mach_port_t transfer_port, bo
 		bootstrapper->asport = asport;
 
 		jobmgr_log(jmr, LOG_DEBUG, "Bootstrapping new job manager with audit session %u", asport);
+		pd_core_phase("jobmgr_new(%s): before dispatch %s", jmr->name, bootstrapper->label);
 		(void)jobmgr_assumes(jmr, job_dispatch(bootstrapper, true) != NULL);
+		pd_core_phase("jobmgr_new(%s): after dispatch %s pid=%d active=%s",
+				jmr->name, bootstrapper->label, bootstrapper->p,
+				job_active(bootstrapper) ? job_active(bootstrapper) : "(inactive)");
 	} else {
 		jmr->req_asport = asport;
 	}
@@ -8515,8 +8550,10 @@ kern_return_t
 job_mig_post_fork_ping(job_t j, task_t child_task, mach_port_t *asport)
 {
 	if (!j) {
+		pd_core_phase("job_mig_post_fork_ping missing job child_task=0x%x", child_task);
 		return BOOTSTRAP_NO_MEMORY;
 	}
+	pd_core_phase("job_mig_post_fork_ping job=%s pid=%d child_task=0x%x", j->label, j->p, child_task);
 
 	job_log(j, LOG_DEBUG, "Post fork ping.");
 
@@ -8966,6 +9003,17 @@ job_mig_check_in2(job_t j, name_t servicename, mach_port_t *serviceportp, uuid_t
 		if (unlikely((jo = machservice_job(ms)) != j)) {
 			static pid_t last_warned_pid;
 
+			if (jo && ldc && jo->p == ldc->pid) {
+				j = jo;
+				goto owner_checkin;
+			}
+
+			if (strcmp(servicename, "com.apple.logd") == 0) {
+				launchd_syslog(LOG_NOTICE | LOG_CONSOLE,
+						"PureDarwin launchd: check_in(%s) denied caller_job=%s owner_job=%s pid=%d",
+						servicename, j ? j->label : "(null)", jo ? jo->label : "(null)", ldc ? ldc->pid : -1);
+			}
+
 			if (last_warned_pid != ldc->pid) {
 				job_log(jo, LOG_WARNING, "The following job tried to hijack the service \"%s\" from this job: %s", servicename, j->label);
 				last_warned_pid = ldc->pid;
@@ -8973,7 +9021,13 @@ job_mig_check_in2(job_t j, name_t servicename, mach_port_t *serviceportp, uuid_t
 
 			return BOOTSTRAP_NOT_PRIVILEGED;
 		}
+owner_checkin:
 		if (unlikely(machservice_active(ms))) {
+			if (strcmp(servicename, "com.apple.logd") == 0) {
+				launchd_syslog(LOG_NOTICE | LOG_CONSOLE,
+						"PureDarwin launchd: check_in(%s) active caller_job=%s pid=%d",
+						servicename, j ? j->label : "(null)", ldc ? ldc->pid : -1);
+			}
 			job_log(j, LOG_WARNING, "Check-in of Mach service failed. Already active: %s", servicename);
 			return BOOTSTRAP_SERVICE_ACTIVE;
 		}
@@ -12023,4 +12077,3 @@ launchd_fork(void)
 }
 
 #pragma clang diagnostic pop
-

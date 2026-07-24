@@ -255,6 +255,13 @@ EOF
       cp src/Libraries/XPC/notify/com.apple.notifyd.plist $out/System/Library/LaunchDaemons/
     fi
 
+    if [ -e build-nix/src/Libraries/XPC/logd/logd ]; then
+      mkdir -p $out/usr/libexec
+      cp build-nix/src/Libraries/XPC/logd/logd $out/usr/libexec/
+      mkdir -p $out/System/Library/LaunchDaemons
+      cp src/Libraries/XPC/logd/com.apple.logd.plist $out/System/Library/LaunchDaemons/
+    fi
+
     mkdir -p $out/pd-xpc-dev/lib $out/pd-xpc-dev/include
     for a in XPC/launchd/libXPC_launchd_static.a \
              XPC/launchd/libXPC_launchd_mig_static.a \

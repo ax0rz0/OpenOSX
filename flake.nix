@@ -92,6 +92,7 @@
             "tools"
           ];
           libSystemSource = sourceWith "puredarwin-libsystem-source" [
+            "src/Kernel/xnu/EXTERNAL_HEADERS"
             "src/Kernel/xnu/osfmk"
             "src/Kernel/xnu/libkern/libkern"
             "src/Kernel/xnu/libkern/os"
@@ -110,10 +111,13 @@
             "src/Libraries"
             "src/Libraries/libSystem/libmalloc/compat-include"
             "tools/mig"
+            # libobjc needs the mach-o getsection helpers compiled into libSystem.
+            "tools/cctools/libmacho/getsecbyname.c"
           ];
           kextsSource = sourceWith "puredarwin-kexts-source" [
             "projects"
             "src/Kernel/CMakeLists.txt"
+            "src/Kernel/xnu/EXTERNAL_HEADERS"
             "src/Kernel/Extensions"
             "src/Kernel/libkmod"
             "src/Kernel/xnu"
@@ -131,6 +135,7 @@
             "tools/mig"
           ];
           fbdoomSource = sourceWith "puredarwin-fbdoom-source" [
+            "src/Kernel/xnu/EXTERNAL_HEADERS"
             "src/Kernel/xnu/osfmk"
             "src/Kernel/xnu/libkern/libkern"
             "src/Kernel/xnu/libkern/os"
@@ -150,6 +155,8 @@
             "src/Libraries/libSystem/libmalloc/compat-include"
             "src/Userspace"
             "tools/mig"
+            # libobjc needs the mach-o getsection helpers compiled into libSystem.
+            "tools/cctools/libmacho/getsecbyname.c"
           ];
           cctoolsSource = sourceWith "puredarwin-cctools-source" [
             "src/Kernel/xnu/osfmk"
@@ -173,6 +180,17 @@
           securitySource = sourceWith "puredarwin-security-source" [
             "src/Libraries/Security"
           ];
+          objcSource = sourceWith "puredarwin-objc-source" [
+            "src/Libraries/objc4"
+          ];
+          libcxxDylibSource = sourceWith "puredarwin-libcxx-dylib-source" [
+            "src/Libraries/libcxxabi"
+            "src/Libraries/libcxx"
+            "src/Libraries/libunwind"
+          ];
+          foundationSource = sourceWith "puredarwin-foundation-source" [
+            "src/Libraries/Foundation"
+          ];
 
           mkPureDarwinBuild = args: pkgs.callPackage ./build.nix ({
             inherit darwinCrossToolchain nativeLd nativeUnifdef nativeMigcom iig;
@@ -181,7 +199,7 @@
           userlandBuild = mkPureDarwinBuild {
             pname = "puredarwin-userland";
             src = userlandSource;
-            buildTargets = [ "sw_vers" "ps" "mkfile" "sync" "sysctl" "vm_stat" "hostinfo" "dmesg" "purge" "cpuctl" "mean" "reboot" "halt" "poweroff" "shutdown" "netsetup" "ping" "pcmplay" "startx" "mousemon" "mount" "umount" "ext4tool" ]
+            buildTargets = [ "sw_vers" "ps" "mkfile" "sync" "sysctl" "vm_stat" "hostinfo" "dmesg" "purge" "cpuctl" "mean" "reboot" "halt" "poweroff" "shutdown" "netsetup" "pd-networkd" "ping" "pcmplay" "startx" "mousemon" "mount" "umount" "ext4tool" ]
               # shell_cmds (+ tsort/uuencode/uudecode)
               ++ [ "basename" "chown" "dirname" "echo" "false" "getopt" "hostname" "jot" "kill" "logname" "mktemp" "nice" "nohup" "passwd" "printenv" "pwd" "renice" "seq" "shlock" "sleep" "tee" "test_cmd" "true" "tsort" "uname" "yes" "uuencode" "uudecode" ]
               # text_cmds
@@ -1333,6 +1351,17 @@
               libSystem = libSystemBuild;
               gnum4 = pkgs.gnum4;
             };
+          autoconfBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/autoconf.nix {
+              autoconf = pkgs.autoconf;
+            };
+          automakeBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/automake.nix {
+              automake = pkgs.automake;
+              # Host autoconf, not autoconfBuild: this only drives
+              # automake's own build/test-generation on the Linux builder
+              autoconf = pkgs.autoconf;
+            };
           bisonBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/bison.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -1466,6 +1495,35 @@
               inherit (pkgs) icu;
               src = "${coreFoundationSource}/src/Libraries/CoreFoundation";
               pdCompatInclude = "${coreFoundationSource}/src/Libraries/libSystem/libc/pd-compat-include";
+              libobjc = libobjcBuild;
+              foundationSrc = "${foundationSource}/src/Libraries/Foundation";
+            };
+          libcxxabiDylibBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libcxxabi-dylib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              src = libcxxDylibSource;
+            };
+          libobjcBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libobjc.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
+              src = objcSource;
+            };
+          objcTestBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/objc-test.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libobjc = libobjcBuild;
+            };
+          foundationBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/foundation.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libobjc = libobjcBuild;
+              corefoundation = coreFoundationBuild;
+              src = "${foundationSource}/src/Libraries/Foundation";
             };
           iokitBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/iokit.nix {
@@ -1507,7 +1565,7 @@
           libSystemBuild = mkPureDarwinBuild {
             pname = "puredarwin-libsystem";
             src = libSystemSource;
-            buildTargets = [ "libSystem_B_stub" "dyld" "libsystem_kernel_static" "libdispatch_static" "IOKitCF" "XPC_libnv_static" "XPC_libinfo_static" "XPC_libxpc_static" "XPC_launchd_static" "XPC_launchd_mig_static" "XPC_notify_client_static" "notifyd" ];
+            buildTargets = [ "libSystem_B_stub" "dyld" "libsystem_kernel_static" "libdispatch_static" "IOKitCF" "XPC_libnv_static" "XPC_libinfo_static" "XPC_libxpc_static" "XPC_launchd_static" "XPC_launchd_mig_static" "XPC_notify_client_static" "notifyd" "logd" ];
             enableUserspace = false;
             enableKernel = false;
             installUserland = false;
@@ -1606,11 +1664,8 @@
             cp -a ${tccBuild}/. "$out/"
             chmod -R u+w "$out"
             cp -a ${cctoolsBuild}/. "$out/"
-          '' + lib.optionalString (!isDarwin && systemStarterBuild != null) ''
-            chmod -R u+w "$out"
-            cp -a ${systemStarterBuild}/. "$out/"
-            chmod -R u+w "$out"
           '' + lib.optionalString (!isDarwin && launchdBuild != null) ''
+            chmod -R u+w "$out"
             cp -a ${launchdBuild}/. "$out/"
             chmod -R u+w "$out"
           '' + lib.optionalString (!isDarwin && launchctlBuild != null) ''
@@ -1635,6 +1690,26 @@
             cp -a ${xkeyboardConfigBuild}/. "$out/"
             chmod -R u+w "$out"
             cp -a ${xvfbFontsBuild}/. "$out/"
+          '');
+          splitBaseSystemStripped = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } (''
+            mkdir -p "$out"
+            cp -a ${kernelBuild}/. "$out/"
+            chmod -R u+w "$out"
+            cp -a ${kextsBuild}/. "$out/"
+            chmod -R u+w "$out"
+            cp -a ${libSystemBuild}/. "$out/"
+          '' + lib.optionalString (!isDarwin && launchdBuild != null) ''
+            chmod -R u+w "$out"
+            cp -a ${launchdBuild}/. "$out/"
+            chmod -R u+w "$out"
+          '' + lib.optionalString (!isDarwin && launchctlBuild != null) ''
+            cp -a ${launchctlBuild}/. "$out/"
+            chmod -R u+w "$out"
+            if [ -e "$out/pd-sbin/launchd" ]; then
+              mkdir -p "$out/sbin"
+              cp "$out/pd-sbin/launchd" "$out/sbin/launchd"
+              rm -rf "$out/pd-sbin"
+            fi
           '');
 
           imageExtraPackageSet = lib.optionalAttrs (!isDarwin) {
@@ -1680,6 +1755,8 @@
             gnumake = gnumakeBuild;
             pkgconf = pkgconfBuild;
             gnum4 = gnum4Build;
+            autoconf = autoconfBuild;
+            automake = automakeBuild;
             bison = bisonBuild;
             flex = flexBuild;
             python = pythonBuild;
@@ -1697,6 +1774,9 @@
             fastfetch = fastfetchBuild;
             corefoundation = coreFoundationBuild;
             icucore = icuCoreBuild;
+            libcxxabi-dylib = libcxxabiDylibBuild;
+            libobjc = libobjcBuild;
+            foundation = foundationBuild;
             iokit = iokitBuild;
             security = securityBuild;
             i3 = i3Build;
@@ -1786,6 +1866,8 @@
             gnumake = gnumakeBuild;
             pkgconf = pkgconfBuild;
             gnum4 = gnum4Build;
+            autoconf = autoconfBuild;
+            automake = automakeBuild;
             bison = bisonBuild;
             flex = flexBuild;
             python = pythonBuild;
@@ -1834,12 +1916,8 @@
                 imageFileName = "puredarwin-debug.img";
               };
               imageStrippedBuild = pkgs.callPackage ./image.nix {
-                baseSystem = splitBaseSystem;
-                # launchctl/SystemStarter link a CF-family dylib chain; ship the
-                # whole closure or dyld aborts them ("Library not loaded"):
-                # coreFoundationBuild=libCoreFoundation, icuCoreBuild=libicucore.A
-                # (CF dep), iokitBuild=libIOKitCF (their dep).
-                extraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild ];
+                baseSystem = splitBaseSystemStripped;
+                extraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild libcxxabiDylibBuild libobjcBuild objcTestBuild ];
                 kc = kcBuild;
                 xnuLoader = xnu-loader.packages.${system}.default;
                 apfsprogs = pkgs.apfsprogs;
@@ -1966,9 +2044,16 @@
               kc-debug = kcDebugBuild;
               corefoundation = coreFoundationBuild;
               icucore = icuCoreBuild;
+              libcxxabi-dylib = libcxxabiDylibBuild;
+              libobjc = libobjcBuild;
+              objc-test = objcTestBuild;
+              foundation = foundationBuild;
+              autoconf = autoconfBuild;
+              automake = automakeBuild;
               iokit = iokitBuild;
               security = securityBuild;
               systemstarter = systemStarterBuild;
+              launchd = launchdBuild;
               launchctl = launchctlBuild;
               image = imageBuild;
               image-hfs = imageHfsBuild;
