@@ -15,6 +15,12 @@ static bool gDebugChecked;
 extern "C" boolean_t PE_parse_boot_argn(const char *, void *, int);
 extern "C" int switch_to_video_console(void);
 
+// lil_panic recovery state (defined in lil_imports.cpp). lilBringup arms this
+// with __builtin_setjmp so a lil_assert failure unwinds here instead of
+// panicking the whole machine (falls back to IOGOPFramebuffer).
+extern "C" void *gLilPanicBuf[5];
+extern "C" int gLilPanicArmed;
+
 static bool debug_enabled()
 {
     if (!gDebugChecked) {
@@ -36,9 +42,6 @@ OSDefineMetaClassAndStructors(IOIntelGen9Framebuffer, IOFramebuffer);
 uint16_t
 IOIntelGen9Framebuffer::findPchDeviceId(void)
 {
-    // Best-effort: lil only needs the PCH *generation*, which it derives from
-    // this id. If we can't find it, 0 makes lil treat the platform as NO_PCH,
-    // which is still valid for the (PCH-less) mobile parts we target first.
     OSIterator *it = getMatchingServices(serviceMatching("IOPCIDevice"));
     uint16_t found = 0;
     if (it) {
@@ -59,10 +62,6 @@ IOIntelGen9Framebuffer::findPchDeviceId(void)
     return found;
 }
 
-// Allocate physically-contiguous backing for the scanout and map each of its
-// pages into the Global GTT at fGpuFbAddr (GpuAddr 0). The display engine reads
-// the surface through the GTT; the CPU reaches the same pages through the BAR2
-// aperture at the matching offset, so console writes and scanout stay coherent.
 bool
 IOIntelGen9Framebuffer::mapScanoutGtt(void)
 {
@@ -101,8 +100,10 @@ IOIntelGen9Framebuffer::mapScanoutGtt(void)
     // CPU view: the BAR2 aperture (gpu->vram) at the same GTT offset.
     fFbBase = (uint8_t *)(fGpu->vram + fGpuFbAddr);
 
-    IODeviceMemory *bar2 = fPCIDevice->getDeviceMemoryWithIndex(2);
-    fFbPhys = bar2 ? (uint64_t)bar2->getPhysicalAddress() + fGpuFbAddr : 0;
+    // Console view: the backing's own physical address. The CPU writing there
+    // hits the exact pages the display engine fetches through GTT@fGpuFbAddr, so
+    // there's no need for the BAR2 aperture physical (which reports 0 here).
+    fFbPhys = (uint64_t)base_phys;
 
     DEBUG("scanout: %u bytes, backing phys=0x%llx gtt@0x%x aperture=%p phys=0x%llx\n",
           size, (uint64_t)base_phys, fGpuFbAddr, fFbBase, fFbPhys);
@@ -112,6 +113,12 @@ IOIntelGen9Framebuffer::mapScanoutGtt(void)
 bool
 IOIntelGen9Framebuffer::lilBringup(void)
 {
+    if (__builtin_setjmp(gLilPanicBuf)) {
+        DEBUG("lil bringup aborted by lil_panic; falling back to GOP\n");
+        return false;
+    }
+    gLilPanicArmed = 1;
+
     uint16_t pch_id = findPchDeviceId();
 
     if (!lil_init_gpu(&fGpu, fPCIDevice, pch_id) || !fGpu) {
@@ -175,6 +182,7 @@ IOIntelGen9Framebuffer::lilBringup(void)
 
     DEBUG("modeset committed: %ux%u pitch=%u fbphys=0x%llx\n",
           fWidth, fHeight, fPitch, fFbPhys);
+    gLilPanicArmed = 0; // bringup done; stop catching lil_panic
     return true;
 }
 

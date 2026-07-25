@@ -30,8 +30,6 @@
             <string>org.puredarwin.driver.IOIntelGen9Framebuffer</string>
             <key>IOClass</key>
             <string>IOIntelGen9Framebuffer</string>
-            <!-- Intel gen9 iGPUs lil supports: 0xDEVICE 0x8086 (vendor).
-                 SKL 0x5916/0x5917, GLK 0x3184/0x3185, CFL 0x3E9B. -->
             <key>IOPCIPrimaryMatch</key>
             <string>0x59168086 0x59178086 0x31848086 0x31858086 0x3E9B8086</string>
             <key>IOProbeScore</key>

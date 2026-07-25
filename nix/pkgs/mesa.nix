@@ -23,6 +23,9 @@
 , libXdmcp
 , xorgproto
 , xtrans
+, pdVirglShim
+, virglWinsysSrc
+, virglAbiHeader
 }:
 
 let
@@ -47,8 +50,6 @@ let
     "-L${expat}/lib"
   ];
 
-  # X11 client libs (+ their proto headers) whose pkg-config files Mesa's GLX
-  # xlib front end discovers (x11, xext, xcb, xau, xdmcp, xproto/xextproto).
   xDeps = [ libX11 libXext libxcb libXau libXdmcp xorgproto xtrans ];
   xPkgConfigPath = lib.concatMapStringsSep ":"
     (p: "${p}/lib/pkgconfig:${p}/share/pkgconfig") xDeps;
@@ -67,6 +68,31 @@ stdenv.mkDerivation {
 
   postPatch = ''
     patchShebangs .
+
+    patch -p1 < ${./mesa/mesa-virgl-darwin.patch}
+
+    mkdir -p src/gallium/winsys/virgl/puredarwin
+    cp ${virglWinsysSrc}/virgl_puredarwin_winsys.c src/gallium/winsys/virgl/puredarwin/
+    cp ${virglWinsysSrc}/virgl_puredarwin_public.h src/gallium/winsys/virgl/puredarwin/
+    cp ${pdVirglShim}/include/pd_virgl_shim.h src/gallium/winsys/virgl/puredarwin/
+    cp ${virglAbiHeader} src/gallium/winsys/virgl/puredarwin/IOVirtIOGPU3DShared.h
+
+    helper=src/gallium/auxiliary/target-helpers/inline_sw_helper.h
+    substituteInPlace $helper \
+      --replace '#include "virgl/vtest/virgl_vtest_public.h"' \
+                '#include "virgl/puredarwin/virgl_puredarwin_public.h"' \
+      --replace 'vws = virgl_vtest_winsys_wrap(winsys);' \
+                'vws = virgl_puredarwin_winsys_wrap(winsys);'
+
+    xmeson=src/gallium/targets/libgl-xlib/meson.build
+    substituteInPlace $xmeson \
+      --replace "files('xlib.c')," \
+                "files('xlib.c', '../../winsys/virgl/puredarwin/virgl_puredarwin_winsys.c')," \
+      --replace 'gallium_xlib_ld_args = []' \
+                "gallium_xlib_ld_args = ['-L${pdVirglShim}/usr/lib', '-lpd_virgl_shim']"
+    substituteInPlace $xmeson \
+      --replace "include_directories('../../frontends/glx/xlib')," \
+                "include_directories('../../frontends/glx/xlib'), include_directories('../../winsys/virgl/puredarwin'), inc_virtio, inc_gallium_drivers,"
   '';
 
   configurePhase = ''
@@ -111,7 +137,7 @@ EOF
       --libdir=lib \
       --buildtype=release \
       -Ddefault_library=shared \
-      -Dgallium-drivers=swrast \
+      -Dgallium-drivers=swrast,virgl \
       -Dvulkan-drivers= \
       -Dplatforms=x11 \
       -Dosmesa=true \

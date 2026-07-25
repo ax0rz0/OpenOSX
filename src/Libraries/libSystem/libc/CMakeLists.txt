@@ -239,6 +239,7 @@ target_sources(libc_static PRIVATE
     gen/pd_netdb_stub.c          # gethostbyname/h_errno/hstrerror (no libinfo/libresolv yet)
     gen/pd_getservbyname.c       # getservbyname (/etc/services reader; no libinfo)
     libm/pd_libm_sincos_stret.c  # __sincos*_stret / __sincospi*_stret (Apple-only wrappers, not in openlibm; -fno-builtin below)
+    libm/pd_libm_exp10.c         # __exp10 / __exp10f (Apple-only base-10 exp, not in openlibm)
     gen/clock_gettime.c          # _clock_gettime / _clock_settime
     gen/FreeBSD/sethostname.c    # _sethostname
     net/FreeBSD/inet_ntoa.c      # _inet_ntoa

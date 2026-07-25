@@ -1,6 +1,8 @@
 #include <lil/imports.h>
 #include <lil/intel.h>
 
+#include "src/base.hpp"
+#include "src/gemini_lake/phy.hpp"
 #include "src/kaby_lake/dp-aux.hpp"
 #include "src/dpcd.hpp"
 #include "src/regs.hpp"
@@ -25,6 +27,13 @@ uint32_t vswing_emp_sel_table[32] = {
 void vswing_emp_select(LilGpu *gpu, LilCrtc *crtc, uint8_t vswing, uint8_t preemph) {
 	LilConnector *con = crtc->connector;
 	LilEncoder *enc = con->encoder;
+
+	// Broxton/Gemini Lake drive the voltage swing through the DPIO PHY TX
+	// registers, not the SKL/KBL DDI_BUF_CTL iboost/balance-leg bits.
+	if(static_cast<Gpu *>(gpu)->subgen == SUBGEN_GEMINI_LAKE) {
+		glk::phy::dp_vswing(gpu, con->ddi_id, vswing, preemph);
+		return;
+	}
 
 	uint8_t vswing_preemph = 1;
 

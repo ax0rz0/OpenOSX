@@ -58,11 +58,34 @@
 #define HSW_PWR_WELL_CTL1_POWER_WELL_MISC_IO_REQUEST (1 << 1)
 #define HSW_PWR_WELL_CTL1_POWER_WELL_MISC_IO_STATE (1 << 0)
 
+// Broxton/Gemini Lake (gen9 LP) power wells: driver uses CTL2 (CTL1 is BIOS-owned),
+// and there is no MISC_IO well - only PG1 and PG2 exist.
+#define PWR_WELL_CTL2 0x45404
+#define PWR_WELL_CTL2_POWER_WELL_2_REQUEST (1 << 31)
+#define PWR_WELL_CTL2_POWER_WELL_2_STATE (1 << 30)
+#define PWR_WELL_CTL2_POWER_WELL_1_REQUEST (1 << 29)
+#define PWR_WELL_CTL2_POWER_WELL_1_STATE (1 << 28)
+
+// NDE_RSTWRN_OPT bit 4 = RST PCH Handshake Enable. SKL sets it; BXT/GLK clear it.
+#define NDE_RSTWRN_OPT_RST_PCH_HANDSHAKE_EN (1 << 4)
+
 #define CDCLK_CTL 0x46000
 #define CDCLK_CTL_DECIMAL_MASK (0x7FF)
 #define CDCLK_CTL_DECIMAL(v) (v & CDCLK_CTL_DECIMAL_MASK)
 #define CDCLK_CTL_FREQ_SELECT_MASK (3 << 26)
 #define CDCLK_CTL_FREQ_SELECT(v) (((v) << 26) & CDCLK_CTL_FREQ_SELECT_MASK)
+// BXT/GLK CD2X divider lives in bits 23:22 (SKL's FREQ_SELECT bits 27:26 are unused here).
+#define CDCLK_CTL_BXT_CD2X_DIV_MASK (3 << 22)
+#define CDCLK_CTL_BXT_CD2X_DIV(v) (((v) << 22) & CDCLK_CTL_BXT_CD2X_DIV_MASK)
+
+// BXT/GLK CD clock is sourced from the DE PLL, not LCPLL1/DPLL_CTRL1.
+#define DE_PLL_ENABLE 0x46070
+#define DE_PLL_ENABLE_PLL_ENABLE (1u << 31)
+#define DE_PLL_ENABLE_PLL_LOCK (1 << 30)
+#define DE_PLL_CTL 0x6D000
+#define DE_PLL_CTL_RATIO_MASK (0xFF)
+// HSW_PCODE_DE_WRITE_FREQ_REQ: GT Driver Mailbox command to notify pcode of a CD clock change.
+#define HSW_PCODE_DE_WRITE_FREQ_REQ 0x17
 
 #define LCPLL1_CTL 0x46010
 #define LCPLL1_ENABLE (1u << 31)

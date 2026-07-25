@@ -18,6 +18,9 @@ set(LIL_SOURCES
     lil/src/kaby_lake/pcode.cpp lil/src/kaby_lake/pipe.cpp lil/src/kaby_lake/plane.cpp
     lil/src/kaby_lake/pll.cpp lil/src/kaby_lake/setup.cpp
     lil/src/kaby_lake/transcoder.cpp lil/src/kaby_lake/watermarks.cpp
+    lil/src/gemini_lake/glk.cpp lil/src/gemini_lake/hdmi.cpp
+    lil/src/gemini_lake/phy.cpp lil/src/gemini_lake/pll.cpp
+    lil/src/gemini_lake/dp.cpp
     lil/src/vbt/parsing.cpp lil/src/vbt/vbt.cpp)
 
 target_sources(IOIntelGen9Framebuffer.kext PRIVATE

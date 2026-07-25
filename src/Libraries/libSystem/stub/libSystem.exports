@@ -1029,6 +1029,8 @@ _tan
 _tanf
 _tanh
 _tanhf
+___exp10
+___exp10f
 ___sincos_stret
 ___sincosf_stret
 ___sincospi_stret

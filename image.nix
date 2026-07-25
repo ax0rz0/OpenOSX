@@ -28,7 +28,7 @@
   # xnu-loader reads this off the ESP at \EFI\BOOT\boot-args.txt
   # it falls back if it cannot find a boot-args.txt, so not strictly needed here
   # but generally nice to have so we can override things easily now
-, bootArgs ? "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 gen9_debug=1"
+, bootArgs ? "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 gen9_debug=1 vgpu_debug=1 pdtrace=1"
 }:
 
 assert lib.isDerivation baseSystem;
@@ -158,8 +158,15 @@ ${if rootFsType == "hfs" then ''
     # see them; the guest gets them at /usr/include.
     if [ -d "$staging/pd-guest-headers" ]; then
       mkdir -p "$staging/usr/include"
-      cp -a "$staging/pd-guest-headers"/. "$staging/usr/include/"
-      rm -rf "$staging/pd-guest-headers"
+      # Copy via an independent intermediate so this can't hit a "same file"
+      # error when a staged package left usr/include hardlinked to the
+      # pd-guest-headers inode (happens for the userland+stripped base combo);
+      # the intermediate has fresh inodes, so the final copy always overwrites
+      # cleanly. Result is identical to a plain cp for every image.
+      rm -rf "$staging/.pd-guest-headers-tmp"
+      cp -a "$staging/pd-guest-headers" "$staging/.pd-guest-headers-tmp"
+      cp -a "$staging/.pd-guest-headers-tmp"/. "$staging/usr/include/"
+      rm -rf "$staging/.pd-guest-headers-tmp" "$staging/pd-guest-headers"
     fi
 
     cat > $staging/etc/passwd <<'EOF'

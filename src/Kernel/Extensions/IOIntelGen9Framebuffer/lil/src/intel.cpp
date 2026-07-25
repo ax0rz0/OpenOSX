@@ -1,6 +1,7 @@
 #include <lil/intel.h>
 #include <lil/imports.h>
 
+#include "src/gemini_lake/glk.hpp"
 #include "src/ivy_bridge/ivb.hpp"
 #include "src/kaby_lake/kbl.hpp"
 #include "src/pch.hpp"
@@ -37,7 +38,16 @@ bool lil_init_gpu(LilGpu **ret, void *device, uint16_t pch_id) {
 		}
 
 		case 0x3184:
-		case 0x3185:
+		case 0x3185: {
+			vbt_init(gpu);
+
+			uint8_t prog_if = gpu->pci_read<uint8_t>(PCI_HDR_PROG_IF);
+			lil_assert(!prog_if);
+			glk::init_gpu(gpu);
+			*ret = gpu;
+			return true;
+		}
+
 		case 0x5916:
 		case 0x3E9B:
 		case 0x5917: {

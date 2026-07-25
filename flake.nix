@@ -131,6 +131,11 @@
             "src/Libraries/PDGOP"
             "src/Libraries/libSystem/libmalloc/compat-include"
             "src/Libraries/libSystem/libsystem_kernel/mach"
+            # 3D user-client ABI header, shared with the IOVirtIOGPU kext, used
+            # used by the pd-virgl-shim static lib the Mesa winsys links.
+            "src/Kernel/Extensions/IOVirtIOGPU/IOVirtIOGPU3DShared.h"
+            # plain-C virgl shim (built into a static archive for Mesa's libGL)
+            "src/Libraries/PDVirglShim"
             "src/Userspace"
             "tools/mig"
           ];
@@ -949,6 +954,35 @@
               libX11 = xlibBuild;
               inherit (pkgs) libepoxy xorgproto meson ninja python3;
             };
+          pdVirglShimBuild =
+            if isDarwin then null else (mkPureDarwinBuild {
+              pname = "puredarwin-pd-virgl-shim";
+              src = userlandSource;
+              buildTargets = [ "pd_virgl_shim" ];
+              enableProjects = false;
+              enableKernel = false;
+              enableLibraries = false;
+              installUserland = false;
+              installKernel = false;
+              prebuiltLibSystem = libSystemBuild;
+            }).overrideAttrs (old: {
+              installPhase = ''
+                runHook preInstall
+                mkdir -p $out/usr/lib $out/include
+                ar=${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar
+                mkdir -p repack && ( cd repack && \
+                  "$ar" x ../build-nix/src/Userspace/pd-virgl-shim/libpd_virgl_shim.a )
+                ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-clang \
+                  -dynamiclib -fuse-ld=${nativeLd}/bin/ld -nostdlib \
+                  -L${libSystemBuild}/usr/lib \
+                  -Wl,-install_name,/usr/lib/libpd_virgl_shim.dylib \
+                  -Wl,-platform_version,macos,11.0,11.5 -Wl,-fixup_chains \
+                  repack/*.o -lSystem \
+                  -o $out/usr/lib/libpd_virgl_shim.dylib
+                cp src/Libraries/PDVirglShim/include/pd_virgl_shim.h $out/include/
+                runHook postInstall
+              '';
+            });
           mesaBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa.nix {
               nativeMesonTools = nativeMesonToolsDir;
@@ -963,7 +997,23 @@
               libxcb = xcbBuild;
               libXau = xvfbLibXauBuild;
               libXdmcp = xvfbLibXdmcpBuild;
+              pdVirglShim = pdVirglShimBuild;
+              virglWinsysSrc = ./nix/pkgs/mesa/virgl-puredarwin;
+              virglAbiHeader = ./src/Kernel/Extensions/IOVirtIOGPU/IOVirtIOGPU3DShared.h;
               inherit (pkgs) meson ninja pkg-config python3 bison flex xorgproto xtrans;
+            };
+          mesaDemosBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa-demos.nix {
+              nativeMesonTools = nativeMesonToolsDir;
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              mesa = mesaBuild;
+              libX11 = xlibBuild;
+              libXext = xvfbLibXextBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              inherit (pkgs) meson ninja pkg-config xorgproto xtrans;
             };
           osmesaTriBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/osmesa-tri.nix {
@@ -1807,6 +1857,16 @@
             fi
           '');
 
+          # Stripped base plus the CLI userland (sw_vers, mount, virgl-smoke,
+          # etc.) - a lean image that still has usable tools, without the heavy
+          # tcc/cctools/X of the full base.
+          splitBaseSystemMinimal = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } ''
+            mkdir -p "$out"
+            cp -a ${splitBaseSystemStripped}/. "$out/"
+            chmod -R u+w "$out"
+            cp -a ${userlandBuild}/. "$out/"
+          '';
+
           imageExtraPackageSet = lib.optionalAttrs (!isDarwin) {
             xvfb = xvfbBuild;
             xorg = xorgBuild;
@@ -1873,9 +1933,10 @@
             libcxx-dylib = libcxxDylibBuild;
             libcxx-test = libcxxTestBuild;
             mesa = mesaBuild;
+            mesa-demos = mesaDemosBuild;
+            pd-virgl-shim = pdVirglShimBuild;
             osmesa-tri = osmesaTriBuild;
             osmesa-fb = osmesaFbBuild;
-            glxgears = glxgearsBuild;
             libobjc = libobjcBuild;
             foundation = foundationBuild;
             iokit = iokitBuild;
@@ -2016,13 +2077,22 @@
                 apfsprogs = pkgs.apfsprogs;
                 imageFileName = "puredarwin-debug.img";
               };
+              strippedExtraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild mesaBuild pdVirglShimBuild osmesaTriBuild osmesaFbBuild mesaDemosBuild ];
               imageStrippedBuild = pkgs.callPackage ./image.nix {
                 baseSystem = splitBaseSystemStripped;
-                extraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild mesaBuild osmesaTriBuild osmesaFbBuild glxgearsBuild ];
+                extraPackages = strippedExtraPackages;
                 kc = kcBuild;
                 xnuLoader = xnu-loader.packages.${system}.default;
                 apfsprogs = pkgs.apfsprogs;
                 imageFileName = "puredarwin-stripped.img";
+              };
+              imageMinimalBuild = pkgs.callPackage ./image.nix {
+                baseSystem = splitBaseSystemMinimal;
+                extraPackages = strippedExtraPackages;
+                kc = kcBuild;
+                xnuLoader = xnu-loader.packages.${system}.default;
+                apfsprogs = pkgs.apfsprogs;
+                imageFileName = "puredarwin-minimal.img";
               };
               runVm = pkgs.writeShellApplication {
                 name = "puredarwin-vm";
@@ -2166,6 +2236,7 @@
               image-hfs = imageHfsBuild;
               image-debug = imageDebugBuild;
               image-stripped = imageStrippedBuild;
+              image-minimal = imageMinimalBuild;
               xorg = xorgBuild;
               libxcvt = xvfbLibxcvtBuild;
               userland = userlandBuild;

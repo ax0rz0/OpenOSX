@@ -146,11 +146,16 @@ void vbt_setup_children(LilGpu *lil_gpu) {
 	const struct bdb_driver_features *driver_features = vbt_get_bdb_block<bdb_driver_features>(gpu->vbt_header);
 	const struct bdb_general_definitions *general_defs = vbt_get_bdb_block<bdb_general_definitions>(gpu->vbt_header);
 
-	if(driver_features->lvds_config != LVDS_CONFIG_NONE && !skipEmbeddedDisplayPort) {
+	// VBT may advertise an eDP (lvds_config != NONE) yet leave the first child
+	// device empty (device_type 0) on boards with no physical internal panel -
+	// common on Gemini Lake mini-PCs driven over HDMI/DP. Only claim child[0] as
+	// the eDP when it is actually an internal/DisplayPort connector; otherwise fall
+	// through to the general child loop so the real HDMI/DP connectors enumerate.
+	if(driver_features->lvds_config != LVDS_CONFIG_NONE && !skipEmbeddedDisplayPort
+	   && (reinterpret_cast<const child_device *>(&general_defs->child_dev)->device_type
+	       & (DEVICE_TYPE_DISPLAYPORT_OUTPUT | DEVICE_TYPE_INTERNAL_CONNECTOR))) {
 		auto dev = reinterpret_cast<const child_device *>(&general_defs->child_dev);
 		LilConnector *con = &gpu->connectors[0];
-
-		lil_assert((dev->device_type & (DEVICE_TYPE_DISPLAYPORT_OUTPUT | DEVICE_TYPE_INTERNAL_CONNECTOR)));
 
 		con->id = 0;
 		con->type = EDP;

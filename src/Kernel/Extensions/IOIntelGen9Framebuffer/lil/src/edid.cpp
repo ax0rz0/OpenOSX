@@ -33,9 +33,10 @@ void edid_timing_to_mode(DisplayData* edid, DetailTiming timing, LilModeInfo* mo
 		uint32_t bpp = 0;
 
 		switch(edid_bpp_val) {
-			case 0: {
-				lil_panic("unhandled");
-			}
+			case 0:
+				// EDID 1.4 "color bit depth undefined"; default to 8bpc.
+				bpp = 24;
+				break;
 			case 1:
 				bpp = 18;
 				break;
