@@ -25,24 +25,40 @@
           # at it (requires --impure). Mirrors the SDK tarball's requireFile
           # pattern - never hardcode a personal machine path into this file.
           fbdoomExternalSrcEnv = builtins.getEnv "PUREDARWIN_FBDOOM_SOURCE_ENV";
-          fbdoomExternalSrc =
-            if fbdoomExternalSrcEnv == "" then null
-            else builtins.path { path = /. + fbdoomExternalSrcEnv; name = "fbdoom-external-src"; };
-
-          chocolateDoomPatchedSrc = pkgs.runCommand "puredarwin-chocolate-doom-patched" { } ''
-            mkdir -p $out
-            cp -r ${pkgs.chocolate-doom.src}/opl $out/opl
-            cp ${pkgs.chocolate-doom.src}/src/midifile.c ${pkgs.chocolate-doom.src}/src/midifile.h \
-               ${pkgs.chocolate-doom.src}/src/mus2mid.c ${pkgs.chocolate-doom.src}/src/mus2mid.h \
-               $out/
-            chmod -R u+w $out
-            cd $out
-            patch -p1 < ${./src/Userspace/fbdoom/patches/midifile.c.patch}
-            patch -p1 < ${./src/Userspace/fbdoom/patches/midifile.h.patch}
-            patch -p1 < ${./src/Userspace/fbdoom/patches/mus2mid.c.patch}
-            patch -p1 < ${./src/Userspace/fbdoom/patches/opl.c.patch}
-            patch -p1 < ${./src/Userspace/fbdoom/patches/opl_internal.h.patch}
-          '';
+          # Component source trees (see nix/sources.nix).
+          sources = import ./nix/sources.nix {
+            inherit pkgs sourceWith libSystemSourcePaths fbdoomExternalSrcEnv;
+          };
+          inherit (sources)
+            fbdoomExternalSrc
+            chocolateDoomPatchedSrc
+            kernelSource
+            libSystemSource
+            kextsSource
+            userlandSource
+            fbdoomSource
+            cctoolsSource
+            coreFoundationSource
+            securitySource
+            systemConfigurationSource
+            iokitCFSource
+            diskArbitrationSource
+            objcSource
+            libcxxDylibSource
+            foundationSource
+            xfconfSrc
+            libxfce4uiSrc
+            xfwm4Src
+            garconSrc
+            exoSrc
+            xfce4SessionSrc
+            xfce4PanelSrc
+            xfdesktopSrc
+            vteSrc
+            xfce4TerminalSrc
+            xfce4SettingsSrc
+            xfce4AppfinderSrc
+            ;
           iig = iig-tools.packages.${system}.default or (
             (pkgs.callPackage iig-tools { }).overrideAttrs (old: {
               meta = (old.meta or { }) // {
@@ -50,19 +66,19 @@
               };
             })
           );
-          darwinCrossToolchain = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain.nix { };
-          arm64CrossToolchain = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain.nix {
+          darwinCrossToolchain = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/toolchain.nix { };
+          arm64CrossToolchain = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/toolchain.nix {
             target = "arm64-apple-darwin20.4";
             clangTarget = "arm64-apple-macosx11.0";
           };
-          libtapi = if isDarwin then null else pkgs.callPackage ./nix/pkgs/libtapi.nix { };
+          libtapi = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/libtapi.nix { };
           nativeLd =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/native-ld.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/native-ld.nix {
               inherit darwinCrossToolchain libtapi iig;
             };
-          nativeUnifdef = if isDarwin then null else pkgs.callPackage ./nix/pkgs/unifdef.nix { };
-          nativeMigcom = if isDarwin then null else pkgs.callPackage ./nix/pkgs/migcom.nix { };
-          libapfsrwBuild = pkgs.callPackage ./nix/pkgs/libapfsrw.nix { };
+          nativeUnifdef = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/unifdef.nix { };
+          nativeMigcom = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/migcom.nix { };
+          libapfsrwBuild = pkgs.callPackage ./nix/pkgs/apple/libapfsrw.nix { };
 
           sourceWith = name: prefixes:
             lib.cleanSourceWith {
@@ -83,18 +99,6 @@
                     || (type == "directory" && isParentOfPrefix prefix)
                   ) prefixes;
             };
-          kernelSource = sourceWith "puredarwin-kernel-source" [
-            "projects"
-            "src/Kernel/CMakeLists.txt"
-            "src/Kernel/xnu"
-            "src/Kernel/libfirehose_kernel"
-            "src/Libraries/CMakeLists.txt"
-            "src/Libraries/AvailabilityVersions"
-            "src/Libraries/libSystem/CMakeLists.txt"
-            "src/Libraries/libSystem/libplatform"
-            "src/Libraries/libSystem/pthread"
-            "tools"
-          ];
           libSystemSourcePaths = [
             "src/Kernel/xnu/EXTERNAL_HEADERS"
             "src/Kernel/xnu/osfmk"
@@ -122,147 +126,6 @@
             # libobjc needs the mach-o getsection helpers compiled into libSystem.
             "tools/cctools/libmacho/getsecbyname.c"
           ];
-          libSystemSource = sourceWith "puredarwin-libsystem-source" libSystemSourcePaths;
-          kextsSource = sourceWith "puredarwin-kexts-source" [
-            "projects"
-            "src/Kernel/CMakeLists.txt"
-            "src/Kernel/xnu/EXTERNAL_HEADERS"
-            "src/Kernel/Extensions"
-            "src/Kernel/libkmod"
-            "src/Kernel/xnu"
-            "src/Kernel/libfirehose_kernel"
-            "src/Libraries"
-            "tools"
-          ];
-          userlandSource = sourceWith "puredarwin-userland-source" [
-            "src/Kernel/xnu/osfmk"
-            # ping(8) from network_cmds needs <netinet/ip_var.h>,
-            # <netinet/in_systm.h>, <netinet/ip_icmp.h> and the SO_TC_* socket
-            # options in <sys/socket.h>'s PRIVATE block.
-            "src/Kernel/xnu/bsd"
-            "src/Libraries/IOKit"
-            "src/Libraries/PDGOP"
-            "src/Libraries/libSystem/libmalloc/compat-include"
-            "src/Libraries/libSystem/libsystem_kernel/mach"
-            # 3D user-client ABI header, shared with the IOVirtIOGPU kext, used
-            # used by the pd-virgl-shim static lib the Mesa winsys links.
-            "src/Kernel/Extensions/IOVirtIOGPU/IOVirtIOGPU3DShared.h"
-            # plain-C virgl shim (built into a static archive for Mesa's libGL)
-            "src/Libraries/PDVirglShim"
-            # mdnsd is built from src/Userspace/mdnsd but its sources are
-            # vendored alongside the libdns_sd client.
-            "src/Libraries/mDNSResponder"
-            "src/Userspace"
-            "tools/mig"
-          ];
-          fbdoomSource = sourceWith "puredarwin-fbdoom-source" [
-            "src/Kernel/xnu/EXTERNAL_HEADERS"
-            "src/Kernel/xnu/osfmk"
-            "src/Kernel/xnu/libkern/libkern"
-            "src/Kernel/xnu/libkern/os"
-            # os/log_private.h includes <firehose/tracepoint_private.h>
-            "src/Kernel/xnu/libkern/firehose"
-            "src/Kernel/xnu/bsd/i386"
-            # machine/_types.h selects the target arch header, so an arm64 build
-            # of anything in this tree needs bsd/arm as well as bsd/i386.
-            "src/Kernel/xnu/bsd/arm"
-            "src/Kernel/xnu/bsd/bsm"
-            "src/Kernel/xnu/bsd/machine"
-            "src/Kernel/xnu/bsd/net"
-            "src/Kernel/xnu/bsd/netinet"
-            "src/Kernel/xnu/bsd/netinet6"
-            "src/Kernel/xnu/bsd/pthread"
-            "src/Kernel/xnu/bsd/sys"
-            "src/Kernel/xnu/bsd/sys_private"
-            "src/Kernel/xnu/bsd/uuid"
-            "src/Kernel/xnu/bsd/kern/makesyscalls.sh"
-            "src/Kernel/xnu/bsd/kern/syscalls.master"
-            "src/Libraries"
-            "src/Libraries/libSystem/libmalloc/compat-include"
-            "src/Userspace"
-            "tools/mig"
-            # libobjc needs the mach-o getsection helpers compiled into libSystem.
-            "tools/cctools/libmacho/getsecbyname.c"
-          ];
-          cctoolsSource = sourceWith "puredarwin-cctools-source" [
-            "src/Kernel/xnu/osfmk"
-            "src/Libraries/IOKit"
-            "src/Libraries/PDGOP"
-            "src/Libraries/libSystem/libmalloc/compat-include"
-            "src/Libraries/libSystem/libsystem_kernel/mach"
-            "src/Libraries/libcxx/include"
-            "src/Libraries/libSystem/corecrypto/include"
-            "src/Libraries/CommonCrypto/include"
-            "src/Libraries/CommonCrypto/libcn/pd_cc_digest_bridge.c"
-            "src/Libraries/libSystem/libc/stdlib/FreeBSD/reallocf.c"
-            "src/Libraries/libSystem/libc/string/FreeBSD/strmode.c"
-            "src/Userspace"
-            "tools"
-          ];
-          coreFoundationSource = sourceWith "puredarwin-corefoundation-source" [
-            "src/Libraries/CoreFoundation"
-            "src/Libraries/libSystem/libc/pd-compat-include"
-          ];
-          securitySource = sourceWith "puredarwin-security-source" [
-            "src/Libraries/Security"
-          ];
-          # SystemConfiguration builds inside the same CMake project as libSystem
-          # (it links -lSystem), so it needs libSystem's whole source set plus
-          # its own directory.
-          systemConfigurationSource = sourceWith "puredarwin-systemconfiguration-source"
-            (libSystemSourcePaths ++ [
-              "src/Libraries/SystemConfiguration"
-              # SCPreferences.h includes <Security/Security.h>, and
-              # SCNetworkConfigurationPrivate.h <IOKit/IOKitLib.h>.
-              "src/Libraries/Security"
-              "src/Libraries/IOKit"
-              # SCNetworkInterface.c reads 802.1X config keys; ip_plugin.c reads
-              # PPP link states.
-              "src/Libraries/eap8021x"
-              "src/Libraries/ppp"
-              # configd's session.c needs IOKit/IOReturn.h; SCNetworkInterface.c
-              # and InterfaceNamer need the IONetworkingFamily headers.
-              "src/Kernel/xnu/iokit"
-              "src/Kernel/Extensions/IONetworkingFamily/include"
-              "src/Kernel/Extensions/IOStorageFamily/include"
-              "src/Kernel/Extensions/IOSerialFamily/include"
-              "src/Kernel/Extensions/IOUSBFamily/include"
-              "src/Libraries/dyld/upstream/include"
-            ]);
-          iokitCFSource = sourceWith "puredarwin-iokitcf-source"
-            (libSystemSourcePaths ++ [ "src/Kernel/xnu/iokit" ]);
-          diskArbitrationSource = sourceWith "puredarwin-diskarbitration-source"
-            (libSystemSourcePaths ++ [
-              "src/Libraries/DiskArbitration"
-              # DAServer.defs imports <Security/Authorization.h>.
-              "src/Libraries/Security"
-              "src/Libraries/IOKit"
-              # IOMedia/IOBSD plus the CD/DVD/BD media class-name constants.
-              "src/Kernel/Extensions/IOStorageFamily/include"
-              "src/Kernel/Extensions/IOCDStorageFamily/include"
-              "src/Kernel/Extensions/IODVDStorageFamily/include"
-              "src/Kernel/Extensions/IOBDStorageFamily/include"
-              "src/Kernel/xnu/iokit"
-              "src/Libraries/dyld/upstream/include"
-              # diskarbitrationd
-              "src/Libraries/XPC"
-              "src/Libraries/CommonCrypto"
-              "src/Libraries/libdarwin"
-              "src/Libraries/architecture"
-              "src/Libraries/libsystem_trace"
-            ]);
-          objcSource = sourceWith "puredarwin-objc-source" [
-            "src/Libraries/objc4"
-          ];
-          libcxxDylibSource = sourceWith "puredarwin-libcxx-dylib-source" [
-            "src/Libraries/libcxxabi"
-            "src/Libraries/libcxx"
-            "src/Libraries/libunwind"
-          ];
-          foundationSource = sourceWith "puredarwin-foundation-source" [
-            "src/Libraries/Foundation"
-          ];
-
           mkPureDarwinBuild = args: pkgs.callPackage ./build.nix ({
             inherit darwinCrossToolchain nativeLd nativeUnifdef nativeMigcom iig;
           } // args);
@@ -332,13 +195,13 @@
             ];
           };
           xvfbPixmanBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb-pixman.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-pixman.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) pixman;
             };
           xvfbLibXauBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb-stub-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-stub-lib.nix {
               inherit darwinCrossToolchain;
               name = "Xau";
               version = pkgs.libxau.version or "1.0.12";
@@ -352,7 +215,7 @@
               '';
             };
           xvfbLibXdmcpBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb-stub-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-stub-lib.nix {
               inherit darwinCrossToolchain;
               name = "Xdmcp";
               version = pkgs.libxdmcp.version or "1.1.5";
@@ -365,19 +228,19 @@
               '';
             };
           xvfbZlibBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb-zlib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-zlib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) zlib;
             };
           freetype2Build =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb-freetype.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-freetype.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) zlib freetype;
             };
           libfontencBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libfontenc";
@@ -386,7 +249,7 @@
               deps = [ pkgs.xorgproto xvfbZlibBuild ];
             };
           xvfbLibXfont2Build =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXfont2";
@@ -404,7 +267,7 @@
               ];
             };
           xlibBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libX11";
@@ -423,7 +286,7 @@
               ];
             };
           xcbBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libxcb";
@@ -446,7 +309,7 @@
               '';
             };
           xcbUtilBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libxcb-util";
@@ -455,7 +318,7 @@
               deps = [ pkgs.xorgproto xcbBuild ];
             };
           xcbKeysymsBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libxcb-keysyms";
@@ -464,7 +327,7 @@
               deps = [ pkgs.xorgproto xcbBuild xcbUtilBuild ];
             };
           xcbWmBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libxcb-wm";
@@ -474,7 +337,7 @@
               nativeDeps = [ pkgs.m4 ];
             };
           xcbRenderUtilBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libxcb-render-util";
@@ -483,7 +346,7 @@
               deps = [ pkgs.xorgproto xcbBuild xcbUtilBuild ];
             };
           xcbImageBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libxcb-image";
@@ -495,7 +358,7 @@
               '';
             };
           xcbCursorBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libxcb-cursor";
@@ -512,7 +375,7 @@
               nativeDeps = [ pkgs.m4 ];
             };
           xcbXrmBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-xcb-util-xrm";
@@ -525,7 +388,7 @@
               ];
             };
           libevBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libev";
@@ -538,7 +401,7 @@
               '';
             };
           pcre2Build =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-pcre2";
@@ -554,13 +417,13 @@
               ];
             };
           yajlBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/yajl.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/yajl.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) yajl;
             };
           startupNotificationBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-startup-notification";
@@ -579,7 +442,7 @@
               '';
             };
           cairoBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/cairo.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/cairo.nix {
               nativeMesonTools = nativeMesonToolsDir;
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
@@ -598,7 +461,7 @@
               libpng = libpngBuild;
             };
           libffiBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libffi";
@@ -610,7 +473,7 @@
               ];
             };
           glibBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/glib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/glib.nix {
               nativeMesonTools = nativeMesonToolsDir;
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
@@ -621,7 +484,7 @@
               libiconv = libiconvBuild;
             };
           expatBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-expat";
@@ -634,7 +497,7 @@
               ];
             };
           fontconfigBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/fontconfig.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/fontconfig.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) fontconfig;
@@ -642,20 +505,20 @@
               expat = expatBuild;
             };
           fribidiBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/fribidi.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/fribidi.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) fribidi;
             };
           harfbuzzBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/harfbuzz.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/harfbuzz.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) harfbuzz;
               freetype = freetype2Build;
             };
           pangoBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/pango.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/pango.nix {
               nativeMesonTools = nativeMesonToolsDir;
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
@@ -680,7 +543,7 @@
               libpng = libpngBuild;
             };
           i3Build =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/i3.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/i3.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) i3;
@@ -718,9 +581,9 @@
               libXrender = xvfbLibXrenderBuild;
             };
           i3statusShimBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/i3status-shim.nix { };
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/i3status-shim.nix { };
           xvfbLibICEBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libICE";
@@ -732,7 +595,7 @@
               '';
             };
           xvfbLibSMBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libSM";
@@ -744,7 +607,7 @@
               ];
             };
           xvfbLibXtBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXt";
@@ -758,7 +621,7 @@
               ];
             };
           xvfbLibXextBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXext";
@@ -767,7 +630,7 @@
               deps = [ pkgs.xorgproto xlibBuild xvfbLibXauBuild ];
             };
           xvfbLibXmuBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXmu";
@@ -783,7 +646,7 @@
               ];
             };
           xvfbLibXpmBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXpm";
@@ -792,7 +655,7 @@
               deps = [ pkgs.xorgproto xlibBuild ];
             };
           xvfbLibXawBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXaw";
@@ -816,7 +679,7 @@
               '';
             };
           xvfbLibXkbfileBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libxkbfile";
@@ -825,7 +688,7 @@
               deps = [ pkgs.xorgproto xlibBuild ];
             };
           xkbcompBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb-xkbcomp.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-xkbcomp.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) xkbcomp xorgproto;
@@ -836,7 +699,7 @@
               libxcb = xcbBuild;
             };
           xvfbFontsBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb-fonts.nix { };
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-fonts.nix { };
           xkeyboardConfigBuild =
             if isDarwin then null else pkgs.runCommand "puredarwin-xkeyboard-config" { } ''
               mkdir -p "$out/usr/share"
@@ -857,13 +720,13 @@
               chmod -R u+w "$out/usr/share/X11/locale"
             '';
           libzDylibBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libz-dylib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/libz-dylib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) zlib;
             };
           libcurlDylibBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libcurl-dylib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/libcurl-dylib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
@@ -873,21 +736,24 @@
               inherit (pkgs) curl;
             };
           dbusBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/dbus.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/dbus.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               expat = expatBuild;
               libX11 = xlibBuild;
-              inherit (pkgs) dbus meson ninja python3;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              inherit (pkgs) dbus meson ninja python3 xorgproto;
             };
           libxml2Build =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libxml2.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/libxml2.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) libxml2 meson ninja python3 git;
             };
           atspi2CoreBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/at-spi2-core.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/at-spi2-core.nix {
               nativeMesonTools = nativeMesonToolsDir;
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
@@ -901,44 +767,44 @@
               inherit (pkgs) at-spi2-core meson ninja python3;
             };
           libwapcapletBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libwapcaplet.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/libwapcaplet.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) libwapcaplet;
             };
           libparserutilsBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libparserutils.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/libparserutils.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libiconv = libiconvBuild;
               inherit (pkgs) libparserutils perl;
             };
           libnsutilsBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libnsutils.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/libnsutils.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) libnsutils;
             };
           libnsgifBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libnsgif.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/libnsgif.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) libnsgif;
             };
           libnsbmpBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libnsbmp.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/libnsbmp.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) libnsbmp;
             };
           libutf8procBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libutf8proc.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/libutf8proc.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) libutf8proc;
             };
           libhubbubBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libhubbub.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/libhubbub.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libwapcaplet = libwapcapletBuild;
@@ -946,7 +812,7 @@
               inherit (pkgs) libhubbub perl gperf gnused;
             };
           libcssBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libcss.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/libcss.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libwapcaplet = libwapcapletBuild;
@@ -954,7 +820,7 @@
               inherit (pkgs) libcss perl python3;
             };
           libdomBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libdom.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/libdom.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libwapcaplet = libwapcapletBuild;
@@ -964,7 +830,7 @@
               inherit (pkgs) libdom;
             };
           netsurfBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/netsurf.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/netsurf.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               hostOtool = hostOtoolBuild;
@@ -1015,7 +881,7 @@
               inherit (pkgs) perl pkg-config nsgenbind;
             };
           libepoxyBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libepoxy.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/libepoxy.nix {
               nativeMesonTools = nativeMesonToolsDir;
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
@@ -1052,7 +918,7 @@
               '';
             });
           mesaBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa/mesa.nix {
               nativeMesonTools = nativeMesonToolsDir;
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
@@ -1071,7 +937,7 @@
               inherit (pkgs) meson ninja pkg-config python3 bison flex xorgproto xtrans;
             };
           mesaDemosBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa-demos.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa/mesa-demos.nix {
               nativeMesonTools = nativeMesonToolsDir;
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
@@ -1084,7 +950,7 @@
               inherit (pkgs) meson ninja pkg-config xorgproto xtrans;
             };
           osmesaTriBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/osmesa-tri.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa/osmesa-tri.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libcxxDylib = libcxxDylibBuild;
@@ -1092,7 +958,7 @@
               mesa = mesaBuild;
             };
           hostOtoolBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/host-otool.nix { };
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/host-otool.nix { };
           nativeMesonToolsDir =
             if isDarwin then null else pkgs.runCommand "puredarwin-native-meson-tools" { } ''
               mkdir -p $out/bin
@@ -1100,14 +966,14 @@
               ln -s ${hostOtoolBuild}/bin/install_name_tool $out/bin/install_name_tool
             '';
           libpngBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libpng.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/libpng.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               zlib = xvfbZlibBuild;
               inherit (pkgs) libpng;
             };
           cairoGobjectBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/cairo-gobject.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/cairo-gobject.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               cairo = cairoBuild;
@@ -1115,7 +981,7 @@
               glib = glibBuild;
             };
           gdkPixbufBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gdk-pixbuf.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/gdk-pixbuf.nix {
               nativeMesonTools = nativeMesonToolsDir;
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
@@ -1128,7 +994,7 @@
               inherit (pkgs) gdk-pixbuf meson ninja python3;
             };
           gtk3Build =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk3.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/gtk3.nix {
               nativeMesonTools = nativeMesonToolsDir;
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
@@ -1164,8 +1030,48 @@
               glibNative = pkgs.glib.dev;
               inherit (pkgs) gtk3 xorgproto;
             };
+          libwnckBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xfce/libwnck.nix {
+              nativeMesonTools = nativeMesonToolsDir;
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              glib = glibBuild;
+              pcre2 = pcre2Build;
+              libffi = libffiBuild;
+              zlib = xvfbZlibBuild;
+              libiconv = libiconvBuild;
+              cairo = cairoBuild;
+              cairoGobject = cairoGobjectBuild;
+              pixman = xvfbPixmanBuild;
+              pango = pangoBuild;
+              fribidi = fribidiBuild;
+              harfbuzz = harfbuzzBuild;
+              freetype2 = freetype2Build;
+              fontconfig = fontconfigBuild;
+              expat = expatBuild;
+              gdkPixbuf = gdkPixbufBuild;
+              libepoxy = libepoxyBuild;
+              atspi2Core = atspi2CoreBuild;
+              dbus = dbusBuild;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXi = xvfbLibXiBuild;
+              libXrender = xvfbLibXrenderBuild;
+              libXrandr = xvfbLibXrandrBuild;
+              libXfixes = xvfbLibXfixesBuild;
+              libXcursor = xvfbLibXcursorBuild;
+              libXres = xvfbLibXresBuild;
+              libpng = libpngBuild;
+              glibNative = pkgs.glib.dev;
+              gtk3 = gtk3Build;
+              startupNotification = startupNotificationBuild;
+              inherit (pkgs) libwnck xorgproto;
+            };
           xvfbBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               xorg-server = pkgs.xorg-server;
@@ -1181,13 +1087,13 @@
               libXdmcp = pkgs.libxdmcp;
             };
           xvfbLibxcvtBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xvfb-libxcvt.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-libxcvt.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) libxcvt;
             };
           xorgBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               xorg-server = pkgs.xorg-server;
@@ -1204,7 +1110,7 @@
               libxcvt = xvfbLibxcvtBuild;
             };
           xvfbLibXrenderBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXrender";
@@ -1213,7 +1119,7 @@
               deps = [ pkgs.xorgproto xlibBuild ];
             };
           xvfbLibXfixesBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXfixes";
@@ -1222,7 +1128,7 @@
               deps = [ pkgs.xorgproto xlibBuild ];
             };
           xvfbLibXcursorBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXcursor";
@@ -1253,7 +1159,7 @@
               '';
             };
           xvfbLibXrandrBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXrandr";
@@ -1261,8 +1167,264 @@
               src = pkgs.libXrandr.src;
               deps = [ pkgs.xorgproto xlibBuild xvfbLibXrenderBuild xvfbLibXextBuild ];
             };
+          # XFCE desktop (see nix/xfce.nix).
+          xfceDesktop = import ./nix/xfce.nix {
+            inherit lib;
+            inherit atspi2CoreBuild;
+            inherit cairoBuild;
+            inherit cairoGobjectBuild;
+            inherit darwinCrossToolchain;
+            inherit dbusBuild;
+            inherit exoSrc;
+            inherit expatBuild;
+            inherit fontconfigBuild;
+            inherit freetype2Build;
+            inherit fribidiBuild;
+            inherit garconSrc;
+            inherit gdkPixbufBuild;
+            inherit glibBuild;
+            inherit gtk3Build;
+            inherit harfbuzzBuild;
+            inherit isDarwin;
+            inherit libSystemBuild;
+            inherit libdisplayInfoBuild;
+            inherit libepoxyBuild;
+            inherit libffiBuild;
+            inherit libiconvBuild;
+            inherit libpngBuild;
+            inherit libwnckBuild;
+            inherit libxfce4uiSrc;
+            inherit nativeLd;
+            inherit nativeMesonToolsDir;
+            inherit pangoBuild;
+            inherit pcre2Build;
+            inherit pkgs;
+            inherit startupNotificationBuild;
+            inherit vteBuild;
+            inherit xcbBuild;
+            inherit xfce4AppfinderSrc;
+            inherit xfce4PanelSrc;
+            inherit xfce4SessionSrc;
+            inherit xfce4SettingsSrc;
+            inherit xfce4TerminalSrc;
+            inherit xfconfSrc;
+            inherit xfdesktopSrc;
+            inherit xfwm4Src;
+            inherit xlibBuild;
+            inherit xvfbLibICEBuild;
+            inherit xvfbLibSMBuild;
+            inherit xvfbLibXauBuild;
+            inherit xvfbLibXcompositeBuild;
+            inherit xvfbLibXcursorBuild;
+            inherit xvfbLibXdamageBuild;
+            inherit xvfbLibXdmcpBuild;
+            inherit xvfbLibXextBuild;
+            inherit xvfbLibXfixesBuild;
+            inherit xvfbLibXiBuild;
+            inherit xvfbLibXineramaBuild;
+            inherit xvfbLibXpresentBuild;
+            inherit xvfbLibXrandrBuild;
+            inherit xvfbLibXrenderBuild;
+            inherit xvfbLibXresBuild;
+            inherit xvfbPixmanBuild;
+            inherit xvfbZlibBuild;
+          };
+          inherit (xfceDesktop)
+            xfconfBuild
+            libxfce4utilBuild
+            libxfce4uiBuild
+            xfwm4Build
+            libxfce4windowingBuild
+            garconBuild
+            exoBuild
+            xfce4SessionBuild
+            xfce4PanelBuild
+            xfdesktopBuild
+            xfce4TerminalBuild
+            xfce4SettingsBuild
+            xfce4AppfinderBuild
+            ;
+          iconThemesBuild =
+            if isDarwin then null else pkgs.runCommand "puredarwin-icon-themes" { } ''
+              mkdir -p "$out/share/icons"
+              cp -a ${pkgs.hicolor-icon-theme}/share/icons/hicolor "$out/share/icons/"
+              cp -a ${pkgs.adwaita-icon-theme}/share/icons/Adwaita "$out/share/icons/"
+              chmod -R u+w "$out/share/icons"
+            '';
+          libdisplayInfoBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa/libdisplay-info.nix {
+              nativeMesonTools = nativeMesonToolsDir;
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) libdisplay-info hwdata;
+            };
+          vteBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/vte.nix {
+              nativeMesonTools = nativeMesonToolsDir;
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              version = "0.70.6";
+              src = vteSrc;
+              glib = glibBuild;
+              pcre2 = pcre2Build;
+              libffi = libffiBuild;
+              zlib = xvfbZlibBuild;
+              libiconv = libiconvBuild;
+              cairo = cairoBuild;
+              cairoGobject = cairoGobjectBuild;
+              pixman = xvfbPixmanBuild;
+              pango = pangoBuild;
+              fribidi = fribidiBuild;
+              harfbuzz = harfbuzzBuild;
+              freetype2 = freetype2Build;
+              fontconfig = fontconfigBuild;
+              expat = expatBuild;
+              gdkPixbuf = gdkPixbufBuild;
+              libepoxy = libepoxyBuild;
+              atspi2Core = atspi2CoreBuild;
+              dbus = dbusBuild;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXi = xvfbLibXiBuild;
+              libXrender = xvfbLibXrenderBuild;
+              libXrandr = xvfbLibXrandrBuild;
+              libXfixes = xvfbLibXfixesBuild;
+              libXcursor = xvfbLibXcursorBuild;
+              libpng = libpngBuild;
+              glibNative = pkgs.glib.dev;
+              gtk3 = gtk3Build;
+              inherit (pkgs) xorgproto;
+            };
+          xrdbBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-xrdb";
+              version = "1.2.3";
+              # release tarball: nixpkgs' src is a git checkout with no configure
+              src = pkgs.fetchurl {
+                url = "https://www.x.org/releases/individual/app/xrdb-1.2.3.tar.xz";
+                sha256 = "sha256-yI9WAkMnjIls5PySrlpForUFoxb/pCf+VbAuXVkUxOQ=";
+              };
+              deps = [
+                pkgs.xorgproto
+                xlibBuild
+                xvfbLibXmuBuild
+                xvfbLibXtBuild
+                xvfbLibXextBuild
+                xvfbLibSMBuild
+                xvfbLibICEBuild
+                xcbBuild
+                xvfbLibXauBuild
+                xvfbLibXdmcpBuild
+              ];
+              preConfigureExtra = ''
+                export LIBS="-lXmu -lXt -lXext -lX11 -lxcb -lXau -lXdmcp -lSM -lICE $LIBS"
+              '';
+              configureFlags = [
+                "--with-cpp=/usr/bin/cpp,/bin/cpp"
+              ];
+            };
+          xinitBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              guestPrefix = true;
+              pname = "puredarwin-xinit";
+              version = "1.4.4";
+              src = pkgs.fetchurl {
+                url = "https://www.x.org/releases/individual/app/xinit-1.4.4.tar.xz";
+                sha256 = "sha256-QKR8ehZMf5gc43h7Szf35BH7QyMdzeVD1wCUB12s/vk=";
+              };
+              deps = [
+                pkgs.xorgproto
+                xlibBuild
+                xcbBuild
+                xvfbLibXauBuild
+                xvfbLibXdmcpBuild
+              ];
+              preConfigureExtra = ''
+                export LIBS="-lX11 -lxcb -lXau -lXdmcp $LIBS"
+              '';
+              configureFlags = [
+                "--with-xserver=/usr/bin/Xorg"
+                # launchd support here is the macOS org.x.startx plist machinery,
+                # which is unrelated to how PureDarwin starts X.
+                "--without-launchd"
+              ];
+              postInstallExtra = ''
+                rm -f "$out/bin/startx"
+              '';
+            };
+          iceauthBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-iceauth";
+              version = "1.0.11";
+              src = pkgs.fetchurl {
+                url = "https://www.x.org/releases/individual/app/iceauth-1.0.11.tar.xz";
+                sha256 = "sha256-nWM88NTR2Y4+8C0YZgNylYtgpnAW6Kcs0ECTqNj41Ok=";
+              };
+              deps = [ pkgs.xorgproto xlibBuild xvfbLibICEBuild ];
+            };
+          xvfbLibXineramaBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libXinerama";
+              version = pkgs.libXinerama.version;
+              src = pkgs.libXinerama.src;
+              deps = [ pkgs.xorgproto xlibBuild xvfbLibXextBuild ];
+            };
+          xvfbLibXresBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libXres";
+              version = pkgs.libXres.version;
+              src = pkgs.libXres.src;
+              deps = [ pkgs.xorgproto xlibBuild xvfbLibXextBuild ];
+            };
+          xvfbLibXcompositeBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libXcomposite";
+              version = pkgs.libXcomposite.version;
+              src = pkgs.libXcomposite.src;
+              deps = [ pkgs.xorgproto xlibBuild xvfbLibXfixesBuild ];
+            };
+          xvfbLibXdamageBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libXdamage";
+              version = pkgs.libXdamage.version;
+              src = pkgs.libXdamage.src;
+              deps = [ pkgs.xorgproto xlibBuild xvfbLibXfixesBuild ];
+            };
+          xvfbLibXpresentBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libXpresent";
+              version = pkgs.libXpresent.version;
+              src = pkgs.libXpresent.src;
+              deps = [
+                pkgs.xorgproto
+                xlibBuild
+                xvfbLibXextBuild
+                xvfbLibXfixesBuild
+                xvfbLibXrandrBuild
+                xvfbLibXrenderBuild
+              ];
+            };
           libXftBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXft";
@@ -1279,7 +1441,7 @@
               nativeDeps = [ pkgs.util-macros ];
             };
           dmenuBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/dmenu.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/dmenu.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) dmenu;
@@ -1295,7 +1457,7 @@
               expat = expatBuild;
             };
           xvfbLibXiBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xorg-cross-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pname = "puredarwin-libXi";
@@ -1312,7 +1474,7 @@
               ];
             };
           xeyesBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xeyes.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xeyes.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               xeyes = pkgs.xeyes;
@@ -1331,7 +1493,7 @@
               inherit (pkgs) xorgproto;
             };
           xclockBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xclock.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xclock.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               xclock = pkgs.xclock;
@@ -1354,7 +1516,7 @@
               inherit (pkgs) xorgproto;
             };
           xcalcBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xcalc.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xcalc.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               xcalc = pkgs.xcalc;
@@ -1371,7 +1533,7 @@
               inherit (pkgs) xorgproto;
             };
           xmessageBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xmessage.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xmessage.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               xmessage = pkgs.xmessage;
@@ -1388,7 +1550,7 @@
               inherit (pkgs) xorgproto;
             };
           fltkBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/fltk.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/fltk.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) fltk_1_3 util-macros;
@@ -1409,7 +1571,7 @@
               inherit (pkgs) xorgproto;
             };
           dilloBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/dillo.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/dillo.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) dillo util-macros;
@@ -1432,92 +1594,92 @@
               inherit (pkgs) xorgproto;
             };
           ncursesBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/ncurses.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/ncurses.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               ncurses = pkgs.ncurses;
             };
           libiconvBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libiconv.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/libiconv.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libiconvReal = pkgs.libiconvReal;
             };
           toyboxBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toybox.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/toybox.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               toybox = pkgs.toybox;
               zlib = xvfbZlibBuild;
             };
           nanoBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/nano.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/nano.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               nano = pkgs.nano;
               ncurses = ncursesBuild;
             };
           xxdBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xxd.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/xxd.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               tinyxxd = pkgs.tinyxxd;
             };
           xzBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xz.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/xz.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               xz = pkgs.xz;
             };
           bmakeBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/bmake.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/bmake.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               bmake = pkgs.bmake;
             };
           gnumakeBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gnumake.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/gnumake.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               gnumake = pkgs.gnumake;
             };
           pkgconfBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/pkgconf.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/pkgconf.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pkgconf = pkgs.pkgconf-unwrapped;
             };
           gnum4Build =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gnum4.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/gnum4.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               gnum4 = pkgs.gnum4;
             };
           autoconfBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/autoconf.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/autoconf.nix {
               autoconf = pkgs.autoconf;
             };
           automakeBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/automake.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/automake.nix {
               automake = pkgs.automake;
               # Host autoconf, not autoconfBuild: this only drives
               # automake's own build/test-generation on the Linux builder
               autoconf = pkgs.autoconf;
             };
           bisonBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/bison.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/bison.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               bison = pkgs.bison;
             };
           flexBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/flex.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/flex.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               flex = pkgs.flex;
             };
           pythonBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/python.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/python.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               python3 = pkgs.python3;
@@ -1526,34 +1688,34 @@
               libffi = libffiBuild;
             };
           perlBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/perl.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/perl.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               perl = pkgs.perl;
               zlib = xvfbZlibBuild;
             };
           zshBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/zsh.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/zsh.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               zsh = pkgs.zsh;
               ncurses = ncursesBuild;
             };
           fileBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/file.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/file.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               file = pkgs.file;
               zlib = xvfbZlibBuild;
             };
           opensslBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/openssl.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/openssl.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               openssl = pkgs.openssl;
             };
           curlBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/curl.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/curl.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
@@ -1563,7 +1725,7 @@
               zlib = xvfbZlibBuild;
             };
           opensshBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/openssh.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/openssh.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               openssh = pkgs.openssh;
@@ -1571,7 +1733,7 @@
               zlib = xvfbZlibBuild;
             };
           gitBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/git.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/git.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               git = pkgs.git;
@@ -1580,19 +1742,19 @@
               openssl = opensslBuild;
             };
           migcomDarwinBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/migcom-darwin.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/migcom-darwin.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
             };
           ioregBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/ioreg.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/ioreg.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
               iokit = iokitBuild;
             };
           xkbcommonBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xkbcommon.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xkbcommon.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libxcb = xcbBuild;
@@ -1601,7 +1763,7 @@
               xkeyboard-config = xkeyboardConfigBuild;
             };
           fastfetchBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/fastfetch.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/fastfetch.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               fastfetch = pkgs.fastfetch;
@@ -1611,7 +1773,7 @@
               mesa = mesaBuild;
             };
           xtermBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/xterm.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xterm.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               ncurses = ncursesBuild;
@@ -1630,13 +1792,13 @@
               inherit (pkgs) xorgproto;
             };
           icuCoreBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/icucore.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/icucore.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               icuSrc = pkgs.icu.src;
             };
           coreFoundationBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/corefoundation.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/corefoundation.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) icu;
@@ -1646,40 +1808,40 @@
               foundationSrc = "${foundationSource}/src/Libraries/Foundation";
             };
           libcxxabiDylibBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libcxxabi-dylib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/libcxxabi-dylib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               src = libcxxDylibSource;
             };
           libcxxDylibBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libcxx-dylib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/libcxx-dylib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libcxxabiDylib = libcxxabiDylibBuild;
               src = libcxxDylibSource;
             };
           libcxxTestBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libcxx-test.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/libcxx-test.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libcxxabiDylib = libcxxabiDylibBuild;
               libcxxDylib = libcxxDylibBuild;
             };
           libobjcBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/libobjc.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/libobjc.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libcxxabiDylib = libcxxabiDylibBuild;
               src = objcSource;
             };
           objcTestBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/objc-test.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/objc-test.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libobjc = libobjcBuild;
             };
           foundationBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/foundation.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/foundation.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libobjc = libobjcBuild;
@@ -1687,14 +1849,14 @@
               src = "${foundationSource}/src/Libraries/Foundation";
             };
           iokitBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/iokit.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/iokit.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
               iokitCFStatic = iokitCFStaticBuild;
             };
           openglFrameworkBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/opengl-framework.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/opengl-framework.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               mesa = mesaBuild;
@@ -1705,908 +1867,179 @@
           # come from mkArm64Build, and each package's own PureDarwin deps are
           # pointed at their arm64 builds.
 
-          atspi2CoreArm64Build = mkArm64Build ./nix/pkgs/at-spi2-core.nix {
-              nativeMesonTools = nativeMesonToolsDir;
-              glib = glibArm64Build;
-              libxml2 = libxml2Arm64Build;
-              dbus = dbusArm64Build;
-              pcre2 = pcre2Arm64Build;
-              libffi = libffiArm64Build;
-              zlib = xvfbZlibArm64Build;
-              libiconv = libiconvArm64Build;
-              inherit (pkgs) at-spi2-core meson ninja python3;
-          };
-          autoconfArm64Build = mkArm64Build ./nix/pkgs/autoconf.nix {
-              autoconf = pkgs.autoconf;
-          };
-          automakeArm64Build = mkArm64Build ./nix/pkgs/automake.nix {
-              automake = pkgs.automake;
-              # Host autoconf, not autoconfArm64Build: this only drives
-              # automake's own build/test-generation on the Linux builder
-              autoconf = pkgs.autoconf;
-          };
-          cairoArm64Build = mkArm64Build ./nix/pkgs/cairo.nix {
-              nativeMesonTools = nativeMesonToolsDir;
-              inherit (pkgs) cairo xorgproto;
-              pixman = xvfbPixmanArm64Build;
-              zlib = xvfbZlibArm64Build;
-              libX11 = xlibArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXrender = xvfbLibXrenderArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              freetype = freetype2Arm64Build;
-              fontconfig = fontconfigArm64Build;
-              expat = expatArm64Build;
-              libpng = libpngArm64Build;
-          };
-          cairoGobjectArm64Build = mkArm64Build ./nix/pkgs/cairo-gobject.nix {
-              cairo = cairoArm64Build;
-              cairoReal = pkgs.cairo;
-              glib = glibArm64Build;
-          };
-          curlArm64Build = mkArm64Build ./nix/pkgs/curl.nix {
-              curl = pkgs.curl;
-              openssl = opensslArm64Build;
-              zlib = xvfbZlibArm64Build;
-              corefoundation = coreFoundationArm64Build;
-              systemConfiguration = systemConfigurationArm64Build;
-          };
-          dbusArm64Build = mkArm64Build ./nix/pkgs/dbus.nix {
-              expat = expatArm64Build;
-              libX11 = xlibArm64Build;
-              inherit (pkgs) dbus meson ninja python3;
-          };
-          dilloArm64Build = mkArm64Build ./nix/pkgs/dillo.nix {
-              inherit (pkgs) dillo util-macros;
-              fltk = fltkArm64Build;
-              openssl = opensslArm64Build;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXrender = xvfbLibXrenderArm64Build;
-              libXfixes = xvfbLibXfixesArm64Build;
-              libXft = libXftArm64Build;
-              libxcbcursor = xcbCursorArm64Build;
-              libICE = xvfbLibICEArm64Build;
-              libSM = xvfbLibSMArm64Build;
-              fontconfig = fontconfigArm64Build;
-              freetype2 = freetype2Arm64Build;
-              expat = expatArm64Build;
-              inherit (pkgs) xorgproto;
-          };
-          dmenuArm64Build = mkArm64Build ./nix/pkgs/dmenu.nix {
-              inherit (pkgs) dmenu;
-              inherit (pkgs) xorgproto;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libXft = libXftArm64Build;
-              libXrender = xvfbLibXrenderArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              freetype2 = freetype2Arm64Build;
-              fontconfig = fontconfigArm64Build;
-              expat = expatArm64Build;
-          };
-          fastfetchArm64Build = mkArm64Build ./nix/pkgs/fastfetch.nix {
-              fastfetch = pkgs.fastfetch;
-              corefoundation = coreFoundationArm64Build;
-              iokit = iokitArm64Build;
-              openglFramework = openglFrameworkArm64Build;
-              mesa = mesaArm64Build;
-          };
-          fltkArm64Build = mkArm64Build ./nix/pkgs/fltk.nix {
-              inherit (pkgs) fltk_1_3 util-macros;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXrender = xvfbLibXrenderArm64Build;
-              libXfixes = xvfbLibXfixesArm64Build;
-              libXft = libXftArm64Build;
-              libxcbcursor = xcbCursorArm64Build;
-              libICE = xvfbLibICEArm64Build;
-              libSM = xvfbLibSMArm64Build;
-              fontconfig = fontconfigArm64Build;
-              freetype2 = freetype2Arm64Build;
-              expat = expatArm64Build;
-              inherit (pkgs) xorgproto;
-          };
-          foundationArm64Build = mkArm64Build ./nix/pkgs/foundation.nix {
-              libobjc = libobjcArm64Build;
-              corefoundation = coreFoundationArm64Build;
-              src = "${foundationSource}/src/Libraries/Foundation";
-          };
-          fribidiArm64Build = mkArm64Build ./nix/pkgs/fribidi.nix {
-              inherit (pkgs) fribidi;
-          };
-          gdkPixbufArm64Build = mkArm64Build ./nix/pkgs/gdk-pixbuf.nix {
-              nativeMesonTools = nativeMesonToolsDir;
-              glib = glibArm64Build;
-              pcre2 = pcre2Arm64Build;
-              libffi = libffiArm64Build;
-              zlib = xvfbZlibArm64Build;
-              libiconv = libiconvArm64Build;
-              libpng = libpngArm64Build;
-              inherit (pkgs) gdk-pixbuf meson ninja python3;
-          };
-          gitArm64Build = mkArm64Build ./nix/pkgs/git.nix {
-              git = pkgs.git;
-              zlib = xvfbZlibArm64Build;
-              curl = curlArm64Build;
-              openssl = opensslArm64Build;
-          };
-          gtk3Arm64Build = mkArm64Build ./nix/pkgs/gtk3.nix {
-              nativeMesonTools = nativeMesonToolsDir;
-              glib = glibArm64Build;
-              pcre2 = pcre2Arm64Build;
-              libffi = libffiArm64Build;
-              zlib = xvfbZlibArm64Build;
-              libiconv = libiconvArm64Build;
-              cairo = cairoArm64Build;
-              cairoGobject = cairoGobjectArm64Build;
-              pixman = xvfbPixmanArm64Build;
-              pango = pangoArm64Build;
-              fribidi = fribidiArm64Build;
-              harfbuzz = harfbuzzArm64Build;
-              freetype2 = freetype2Arm64Build;
-              fontconfig = fontconfigArm64Build;
-              expat = expatArm64Build;
-              gdkPixbuf = gdkPixbufArm64Build;
-              libepoxy = libepoxyArm64Build;
-              atspi2Core = atspi2CoreArm64Build;
-              dbus = dbusArm64Build;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXi = xvfbLibXiArm64Build;
-              libXrender = xvfbLibXrenderArm64Build;
-              libXrandr = xvfbLibXrandrArm64Build;
-              libXfixes = xvfbLibXfixesArm64Build;
-              libXcursor = xvfbLibXcursorArm64Build;
-              libpng = libpngArm64Build;
-              glibNative = pkgs.glib.dev;
-              inherit (pkgs) gtk3 xorgproto;
-          };
-          harfbuzzArm64Build = mkArm64Build ./nix/pkgs/harfbuzz.nix {
-              inherit (pkgs) harfbuzz;
-              freetype = freetype2Arm64Build;
-          };
-          i3Arm64Build = mkArm64Build ./nix/pkgs/i3.nix {
-              inherit (pkgs) i3;
-              inherit (pkgs) xorgproto;
-              startup-notification = startupNotificationArm64Build;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libxcb-util = xcbUtilArm64Build;
-              libxcb-keysyms = xcbKeysymsArm64Build;
-              libxcb-wm = xcbWmArm64Build;
-              libxcb-render-util = xcbRenderUtilArm64Build;
-              libxcb-image = xcbImageArm64Build;
-              libxcb-cursor = xcbCursorArm64Build;
-              xcb-util-xrm = xcbXrmArm64Build;
-              xkbcommon = xkbcommonArm64Build;
-              yajl = yajlArm64Build;
-              pcre2 = pcre2Arm64Build;
-              cairo = cairoArm64Build;
-              pango = pangoArm64Build;
-              glib = glibArm64Build;
-              fribidi = fribidiArm64Build;
-              harfbuzz = harfbuzzArm64Build;
-              libev = libevArm64Build;
-              libiconv = libiconvArm64Build;
-              zlib = xvfbZlibArm64Build;
-              libffi = libffiArm64Build;
-              pixman = xvfbPixmanArm64Build;
-              fontconfig = fontconfigArm64Build;
-              freetype = freetype2Arm64Build;
-              expat = expatArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libpng = libpngArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXrender = xvfbLibXrenderArm64Build;
-          };
-          ioregArm64Build = mkArm64Build ./nix/pkgs/ioreg.nix {
-              corefoundation = coreFoundationArm64Build;
-              iokit = iokitArm64Build;
-          };
-          libXftArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXft";
-              version = pkgs.libXft.version;
-              src = pkgs.libXft.src;
-              deps = [
-                pkgs.xorgproto
-                xlibArm64Build
-                xvfbLibXrenderArm64Build
-                freetype2Arm64Build
-                fontconfigArm64Build
-                expatArm64Build
-              ];
-              nativeDeps = [ pkgs.util-macros ];
-          };
-          libcssArm64Build = mkArm64Build ./nix/pkgs/libcss.nix {
-              libwapcaplet = libwapcapletArm64Build;
-              libparserutils = libparserutilsArm64Build;
-              inherit (pkgs) libcss perl python3;
-          };
-          libcurlDylibArm64Build = mkArm64Build ./nix/pkgs/libcurl-dylib.nix {
-              zlib = xvfbZlibArm64Build;
-              openssl = opensslArm64Build;
-              corefoundation = coreFoundationArm64Build;
-              systemConfiguration = systemConfigurationArm64Build;
-              inherit (pkgs) curl;
-          };
-          libcxxTestArm64Build = mkArm64Build ./nix/pkgs/libcxx-test.nix {
-              libcxxabiDylib = libcxxabiDylibArm64Build;
-              libcxxDylib = libcxxDylibArm64Build;
-          };
-          libdomArm64Build = mkArm64Build ./nix/pkgs/libdom.nix {
-              libwapcaplet = libwapcapletArm64Build;
-              libparserutils = libparserutilsArm64Build;
-              libhubbub = libhubbubArm64Build;
-              expat = expatArm64Build;
-              inherit (pkgs) libdom;
-          };
-          libepoxyArm64Build = mkArm64Build ./nix/pkgs/libepoxy.nix {
-              nativeMesonTools = nativeMesonToolsDir;
-              libX11 = xlibArm64Build;
-              inherit (pkgs) libepoxy xorgproto meson ninja python3;
-          };
-          libfontencArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libfontenc";
-              version = pkgs.libfontenc.version;
-              src = pkgs.libfontenc.src;
-              deps = [ pkgs.xorgproto xvfbZlibArm64Build ];
-          };
-          libhubbubArm64Build = mkArm64Build ./nix/pkgs/libhubbub.nix {
-              libwapcaplet = libwapcapletArm64Build;
-              libparserutils = libparserutilsArm64Build;
-              inherit (pkgs) libhubbub perl gperf gnused;
-          };
-          libnsbmpArm64Build = mkArm64Build ./nix/pkgs/libnsbmp.nix {
-              inherit (pkgs) libnsbmp;
-          };
-          libnsgifArm64Build = mkArm64Build ./nix/pkgs/libnsgif.nix {
-              inherit (pkgs) libnsgif;
-          };
-          libnsutilsArm64Build = mkArm64Build ./nix/pkgs/libnsutils.nix {
-              inherit (pkgs) libnsutils;
-          };
-          libparserutilsArm64Build = mkArm64Build ./nix/pkgs/libparserutils.nix {
-              libiconv = libiconvArm64Build;
-              inherit (pkgs) libparserutils perl;
-          };
-          libutf8procArm64Build = mkArm64Build ./nix/pkgs/libutf8proc.nix {
-              inherit (pkgs) libutf8proc;
-          };
-          libwapcapletArm64Build = mkArm64Build ./nix/pkgs/libwapcaplet.nix {
-              inherit (pkgs) libwapcaplet;
-          };
-          libzDylibArm64Build = mkArm64Build ./nix/pkgs/libz-dylib.nix {
-              inherit (pkgs) zlib;
-          };
-          mesaArm64Build = mkArm64Build ./nix/pkgs/mesa.nix {
-              nativeMesonTools = nativeMesonToolsDir;
-              libcxxDylib = libcxxDylibArm64Build;
-              libcxxabiDylib = libcxxabiDylibArm64Build;
-              zlib = xvfbZlibArm64Build;
-              expat = expatArm64Build;
-              libX11 = xlibArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              pdVirglShim = pdVirglShimArm64Build;
-              virglWinsysSrc = ./nix/pkgs/mesa/virgl-puredarwin;
-              virglAbiHeader = ./src/Kernel/Extensions/IOVirtIOGPU/IOVirtIOGPU3DShared.h;
-              inherit (pkgs) meson ninja pkg-config python3 bison flex xorgproto xtrans;
-          };
-          mesaDemosArm64Build = mkArm64Build ./nix/pkgs/mesa-demos.nix {
-              nativeMesonTools = nativeMesonToolsDir;
-              mesa = mesaArm64Build;
-              libX11 = xlibArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              inherit (pkgs) meson ninja pkg-config xorgproto xtrans;
-          };
-          migcomDarwinArm64Build = mkArm64Build ./nix/pkgs/migcom-darwin.nix {
-          };
-          netsurfArm64Build = mkArm64Build ./nix/pkgs/netsurf.nix {
-              hostOtool = hostOtoolArm64Build;
-              glibNative = pkgs.glib.dev;
-              gdkPixbufNative = pkgs.gdk-pixbuf.dev;
-              inherit (pkgs) inetutils;
-              gtk3 = gtk3Arm64Build;
-              glib = glibArm64Build;
-              cairo = cairoArm64Build;
-              cairoGobject = cairoGobjectArm64Build;
-              pango = pangoArm64Build;
-              gdkPixbuf = gdkPixbufArm64Build;
-              libepoxy = libepoxyArm64Build;
-              atspi2Core = atspi2CoreArm64Build;
-              dbus = dbusArm64Build;
-              libcurl = libcurlDylibArm64Build;
-              openssl = opensslArm64Build;
-              zlib = xvfbZlibArm64Build;
-              libpng = libpngArm64Build;
-              libiconv = libiconvArm64Build;
-              libwapcaplet = libwapcapletArm64Build;
-              libparserutils = libparserutilsArm64Build;
-              libhubbub = libhubbubArm64Build;
-              libcss = libcssArm64Build;
-              libdom = libdomArm64Build;
-              libnsgif = libnsgifArm64Build;
-              libnsbmp = libnsbmpArm64Build;
-              libnsutils = libnsutilsArm64Build;
-              libutf8proc = libutf8procArm64Build;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXi = xvfbLibXiArm64Build;
-              libXrender = xvfbLibXrenderArm64Build;
-              libXrandr = xvfbLibXrandrArm64Build;
-              libXfixes = xvfbLibXfixesArm64Build;
-              libXcursor = xvfbLibXcursorArm64Build;
-              xorgproto = pkgs.xorgproto;
-              expat = expatArm64Build;
-              pcre2 = pcre2Arm64Build;
-              libffi = libffiArm64Build;
-              fribidi = fribidiArm64Build;
-              harfbuzz = harfbuzzArm64Build;
-              freetype2 = freetype2Arm64Build;
-              fontconfig = fontconfigArm64Build;
-              inherit (pkgs) perl pkg-config nsgenbind;
-          };
-          openglFrameworkArm64Build = mkArm64Build ./nix/pkgs/opengl-framework.nix {
-              mesa = mesaArm64Build;
-              src = ./src/Libraries/OpenGL;
-          };
-          opensshArm64Build = mkArm64Build ./nix/pkgs/openssh.nix {
-              openssh = pkgs.openssh;
-              openssl = opensslArm64Build;
-              zlib = xvfbZlibArm64Build;
-          };
-          osmesaTriArm64Build = mkArm64Build ./nix/pkgs/osmesa-tri.nix {
-              libcxxDylib = libcxxDylibArm64Build;
-              libcxxabiDylib = libcxxabiDylibArm64Build;
-              mesa = mesaArm64Build;
-          };
-          pangoArm64Build = mkArm64Build ./nix/pkgs/pango.nix {
-              nativeMesonTools = nativeMesonToolsDir;
-              inherit (pkgs) pango;
-              glib = glibArm64Build;
-              fribidi = fribidiArm64Build;
-              harfbuzz = harfbuzzArm64Build;
-              cairo = cairoArm64Build;
-              pcre2 = pcre2Arm64Build;
-              libffi = libffiArm64Build;
-              zlib = xvfbZlibArm64Build;
-              libiconv = libiconvArm64Build;
-              pixman = xvfbPixmanArm64Build;
-              libxcb = xcbArm64Build;
-              fontconfig = fontconfigArm64Build;
-              freetype = freetype2Arm64Build;
-              expat = expatArm64Build;
-              libX11 = xlibArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXrender = xvfbLibXrenderArm64Build;
-              inherit (pkgs) xorgproto;
-              libpng = libpngArm64Build;
-          };
-          pythonArm64Build = mkArm64Build ./nix/pkgs/python.nix {
-              python3 = pkgs.python3;
-              zlib = xvfbZlibArm64Build;
-              openssl = opensslArm64Build;
-              libffi = libffiArm64Build;
-          };
-          securityArm64Build = mkArm64Build ./nix/pkgs/security.nix {
-              corefoundation = coreFoundationArm64Build;
-              src = "${securitySource}/src/Libraries/Security";
-          };
-          systemConfigurationArm64Build =
-            let base = mkSystemConfigurationBuild {
-              corefoundation = coreFoundationArm64Build;
-              libobjc = libobjcArm64Build;
-              security = securityArm64Build;
-            };
-            in if base == null then null else base.override {
-              puredarwinArch = "arm64";
-              inherit arm64CrossToolchain;
-            };
-          startupNotificationArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-startup-notification";
-              version = pkgs.libstartup_notification.version;
-              src = pkgs.libstartup_notification.src;
-              deps = [ pkgs.xorgproto xlibArm64Build xcbArm64Build xcbUtilArm64Build ];
-              configureFlags = [
-                "--x-includes=${lib.getDev xlibArm64Build}/include"
-                "--x-libraries=${xlibArm64Build}/lib"
-              ];
-              preConfigureExtra = ''
-                export lf_cv_sane_realloc=yes
-              '';
-              postPatchExtra = ''
-                sed -i 's/^SUBDIRS=libsn test doc/SUBDIRS=libsn/' Makefile.in
-              '';
-          };
-          xcalcArm64Build = mkArm64Build ./nix/pkgs/xcalc.nix {
-              xcalc = pkgs.xcalc;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXmu = xvfbLibXmuArm64Build;
-              libXt = xvfbLibXtArm64Build;
-              libXaw = xvfbLibXawArm64Build;
-              libICE = xvfbLibICEArm64Build;
-              libSM = xvfbLibSMArm64Build;
-              inherit (pkgs) xorgproto;
-          };
-          xcbArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libxcb";
-              version = pkgs.libxcb.version;
-              src = pkgs.libxcb.src;
-              deps = [
-                pkgs.xorgproto
-                xvfbLibXauArm64Build
-                xvfbLibXdmcpArm64Build
-              ];
-              nativeDeps = [
-                pkgs.python3
-                pkgs.xcb-proto
-              ];
-              configureFlags = [
-                "--disable-devel-docs"
-              ];
-              preConfigureExtra = ''
-                export PYTHONPATH="${pkgs.xcb-proto}/${pkgs.python3.sitePackages}:$PYTHONPATH"
-              '';
-          };
-          xcbCursorArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libxcb-cursor";
-              version = pkgs.libxcb-cursor.version;
-              src = pkgs.libxcb-cursor.src;
-              deps = [
-                pkgs.xorgproto
-                xcbArm64Build
-                xcbUtilArm64Build
-                xcbKeysymsArm64Build
-                xcbImageArm64Build
-                xcbRenderUtilArm64Build
-              ];
-              nativeDeps = [ pkgs.m4 ];
-          };
-          xcbImageArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libxcb-image";
-              version = pkgs.libxcb-image.version;
-              src = pkgs.libxcb-image.src;
-              deps = [ pkgs.xorgproto xcbArm64Build xcbUtilArm64Build xcbRenderUtilArm64Build ];
-              postPatchExtra = ''
-                sed -i 's/^SUBDIRS = image test/SUBDIRS = image/' Makefile.in
-              '';
-          };
-          xcbKeysymsArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libxcb-keysyms";
-              version = pkgs.libxcb-keysyms.version;
-              src = pkgs.libxcb-keysyms.src;
-              deps = [ pkgs.xorgproto xcbArm64Build xcbUtilArm64Build ];
-          };
-          xcbRenderUtilArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libxcb-render-util";
-              version = pkgs.libxcb-render-util.version;
-              src = pkgs.libxcb-render-util.src;
-              deps = [ pkgs.xorgproto xcbArm64Build xcbUtilArm64Build ];
-          };
-          xcbUtilArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libxcb-util";
-              version = pkgs.libxcb-util.version;
-              src = pkgs.libxcb-util.src;
-              deps = [ pkgs.xorgproto xcbArm64Build ];
-          };
-          xcbWmArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libxcb-wm";
-              version = pkgs.libxcb-wm.version;
-              src = pkgs.libxcb-wm.src;
-              deps = [ pkgs.xorgproto xcbArm64Build xcbUtilArm64Build ];
-              nativeDeps = [ pkgs.m4 ];
-          };
-          xcbXrmArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-xcb-util-xrm";
-              version = pkgs.xcbutilxrm.version;
-              src = pkgs.xcbutilxrm.src;
-              deps = [ pkgs.xorgproto xlibArm64Build xcbArm64Build xcbUtilArm64Build ];
-              nativeDeps = [ pkgs.m4 pkgs.util-macros ];
-              configureFlags = [
-                "--disable-devel-docs"
-              ];
-          };
-          xclockArm64Build = mkArm64Build ./nix/pkgs/xclock.nix {
-              xclock = pkgs.xclock;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXrender = xvfbLibXrenderArm64Build;
-              libXmu = xvfbLibXmuArm64Build;
-              libXt = xvfbLibXtArm64Build;
-              libXaw = xvfbLibXawArm64Build;
-              libXft = libXftArm64Build;
-              libxkbfile = xvfbLibXkbfileArm64Build;
-              freetype2 = freetype2Arm64Build;
-              fontconfig = fontconfigArm64Build;
-              expat = expatArm64Build;
-              libICE = xvfbLibICEArm64Build;
-              libSM = xvfbLibSMArm64Build;
-              inherit (pkgs) xorgproto;
-          };
-          xeyesArm64Build = mkArm64Build ./nix/pkgs/xeyes.nix {
-              xeyes = pkgs.xeyes;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXi = xvfbLibXiArm64Build;
-              libXrender = xvfbLibXrenderArm64Build;
-              libXfixes = xvfbLibXfixesArm64Build;
-              libXmu = xvfbLibXmuArm64Build;
-              libXt = xvfbLibXtArm64Build;
-              libICE = xvfbLibICEArm64Build;
-              libSM = xvfbLibSMArm64Build;
-              inherit (pkgs) xorgproto;
-          };
-          xkbcommonArm64Build = mkArm64Build ./nix/pkgs/xkbcommon.nix {
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              xkeyboard-config = xkeyboardConfigArm64Build;
-          };
-          xkbcompArm64Build = mkArm64Build ./nix/pkgs/xvfb-xkbcomp.nix {
-              inherit (pkgs) xkbcomp xorgproto;
-              libX11 = xlibArm64Build;
-              libxkbfile = xvfbLibXkbfileArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libxcb = xcbArm64Build;
-          };
-          xlibArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libX11";
-              version = pkgs.libX11.version;
-              src = pkgs.libX11.src;
-              deps = [
-                pkgs.xorgproto
-                pkgs.xtrans
-                xcbArm64Build
-                xvfbLibXauArm64Build
-                xvfbLibXdmcpArm64Build
-              ];
-              configureFlags = [
-                "--disable-specs"
-                "--enable-xlocaledir"
-              ];
-          };
-          xmessageArm64Build = mkArm64Build ./nix/pkgs/xmessage.nix {
-              xmessage = pkgs.xmessage;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXmu = xvfbLibXmuArm64Build;
-              libXt = xvfbLibXtArm64Build;
-              libXaw = xvfbLibXawArm64Build;
-              libICE = xvfbLibICEArm64Build;
-              libSM = xvfbLibSMArm64Build;
-              inherit (pkgs) xorgproto;
-          };
-          xorgArm64Build = mkArm64Build ./nix/pkgs/xorg.nix {
-              xorg-server = pkgs.xorg-server;
-              pixman = xvfbPixmanArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXfont2 = xvfbLibXfont2Arm64Build;
-              zlib = xvfbZlibArm64Build;
-              freetype2 = freetype2Arm64Build;
-              libfontenc = libfontencArm64Build;
-              xvfbZlib = xvfbZlibArm64Build;
-              inherit (pkgs) xorgproto xtrans;
-              libxkbfile = xvfbLibXkbfileArm64Build;
-              libXdmcp = pkgs.libxdmcp;
-              libxcvt = xvfbLibxcvtArm64Build;
-          };
-          xtermArm64Build = mkArm64Build ./nix/pkgs/xterm.nix {
-              xterm = pkgs.xterm;
-              libX11 = xlibArm64Build;
-              libxcb = xcbArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXdmcp = xvfbLibXdmcpArm64Build;
-              libICE = xvfbLibICEArm64Build;
-              libSM = xvfbLibSMArm64Build;
-              libXt = xvfbLibXtArm64Build;
-              libXext = xvfbLibXextArm64Build;
-              libXmu = xvfbLibXmuArm64Build;
-              libXpm = xvfbLibXpmArm64Build;
-              libXaw = xvfbLibXawArm64Build;
-              inherit (pkgs) xorgproto;
-            ncurses = ncursesArm64Build;
-          };
-          xvfbArm64Build = mkArm64Build ./nix/pkgs/xvfb.nix {
-              xorg-server = pkgs.xorg-server;
-              pixman = xvfbPixmanArm64Build;
-              libXau = xvfbLibXauArm64Build;
-              libXfont2 = xvfbLibXfont2Arm64Build;
-              zlib = xvfbZlibArm64Build;
-              freetype2 = freetype2Arm64Build;
-              libfontenc = libfontencArm64Build;
-              xvfbZlib = xvfbZlibArm64Build;
-              inherit (pkgs) xorgproto xtrans;
-              libxkbfile = xvfbLibXkbfileArm64Build;
-              libXdmcp = pkgs.libxdmcp;
-          };
-          xvfbLibICEArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libICE";
-              version = pkgs.libICE.version;
-              src = pkgs.libICE.src;
-              deps = [ pkgs.xorgproto pkgs.xtrans ];
-              preConfigureExtra = ''
-                export ac_cv_func_arc4random_buf=yes
-              '';
-          };
-          xvfbLibSMArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libSM";
-              version = pkgs.libSM.version;
-              src = pkgs.libSM.src;
-              deps = [ pkgs.xorgproto pkgs.xtrans xvfbLibICEArm64Build ];
-              configureFlags = [
-                "--without-libuuid"
-              ];
-          };
-          xvfbLibXauArm64Build = mkArm64Build ./nix/pkgs/xvfb-stub-lib.nix {
-              name = "Xau";
-              version = pkgs.libxau.version or "1.0.12";
-              pcName = "xau";
-              pcDescription = "X authorization file management library";
-              includeFrom = [ pkgs.libxau pkgs.xorgproto ];
-              source = ''
-                void *XauGetBestAuthByAddr(unsigned int family, unsigned int address_length, const char *address, unsigned int number_length, const char *number, int types_length, char **types, const int *type_lengths) { (void)family; (void)address_length; (void)address; (void)number_length; (void)number; (void)types_length; (void)types; (void)type_lengths; return 0; }
-                void *XauReadAuth(const char *auth_file_name) { (void)auth_file_name; return 0; }
-                void XauDisposeAuth(void *auth) { (void)auth; }
-              '';
-          };
-          xvfbLibXawArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXaw";
-              version = pkgs.libXaw.version;
-              src = pkgs.libXaw.src;
-              deps = [
-                pkgs.xorgproto
-                xlibArm64Build
-                xvfbLibXextArm64Build
-                xvfbLibXmuArm64Build
-                xvfbLibXpmArm64Build
-                xvfbLibXtArm64Build
-                xvfbLibSMArm64Build
-                xvfbLibICEArm64Build
-              ];
-              preConfigureExtra = ''
-                export CFLAGS="$CFLAGS -include limits.h"
-              '';
-              postInstallExtra = ''
-                ln -sf libXaw7.a $out/lib/libXaw.a
-              '';
-          };
-          xvfbLibXcursorArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXcursor";
-              version = pkgs.libXcursor.version;
-              src = pkgs.libXcursor.src;
-              deps = [ pkgs.xorgproto xlibArm64Build xvfbLibXfixesArm64Build xvfbLibXrenderArm64Build ];
-              postInstallExtra = ''
-                mkdir -p .libXcursor-dylib
-                (
-                  cd .libXcursor-dylib
-                  ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-ar x "$out/lib/libXcursor.a"
-                  ${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-clang \
-                    -isysroot "$DARWIN_SDK_ROOT" \
-                    -mmacosx-version-min=11.0 \
-                    -fuse-ld=${nativeLd}/bin/ld \
-                    -nostdlib \
-                    -dynamiclib \
-                    -Wl,-install_name,/lib/libXcursor.1.dylib \
-                    -Wl,-compatibility_version,1.0.0 \
-                    -Wl,-current_version,1.0.2 \
-                    -Wl,-undefined,dynamic_lookup \
-                    -L${libSystemArm64Build}/usr/lib \
-                    -o "$out/lib/libXcursor.1.dylib" \
-                    ./*.o \
-                    -lSystem
-                )
-                ln -sf libXcursor.1.dylib "$out/lib/libXcursor.dylib"
-              '';
-          };
-          xvfbLibXdmcpArm64Build = mkArm64Build ./nix/pkgs/xvfb-stub-lib.nix {
-              name = "Xdmcp";
-              version = pkgs.libxdmcp.version or "1.1.5";
-              pcName = "xdmcp";
-              pcDescription = "X Display Manager Control Protocol library";
-              includeFrom = [ pkgs.libxdmcp pkgs.xorgproto ];
-              source = ''
-                int XdmcpWrap(const unsigned char *input, unsigned char *wrapper, const unsigned char *key) { (void)input; (void)wrapper; (void)key; return 0; }
-                int XdmcpUnwrap(const unsigned char *input, unsigned char *wrapper, const unsigned char *key) { (void)input; (void)wrapper; (void)key; return 0; }
-              '';
-          };
-          xvfbLibXextArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXext";
-              version = pkgs.libXext.version;
-              src = pkgs.libXext.src;
-              deps = [ pkgs.xorgproto xlibArm64Build xvfbLibXauArm64Build ];
-          };
-          xvfbLibXfixesArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXfixes";
-              version = pkgs.libXfixes.version;
-              src = pkgs.libXfixes.src;
-              deps = [ pkgs.xorgproto xlibArm64Build ];
-          };
-          xvfbLibXfont2Arm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXfont2";
-              version = pkgs.libxfont_2.version;
-              src = pkgs.libxfont_2.src;
-              deps = [
-                pkgs.xorgproto
-                pkgs.xtrans
-                xvfbZlibArm64Build
-                freetype2Arm64Build
-                libfontencArm64Build
-              ];
-              configureFlags = [
-                "--disable-devel-docs"
-              ];
-          };
-          xvfbLibXiArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXi";
-              version = pkgs.libXi.version;
-              src = pkgs.libXi.src;
-              deps = [
-                pkgs.xorgproto
-                xlibArm64Build
-                xvfbLibXextArm64Build
-                xvfbLibXfixesArm64Build
-              ];
-              configureFlags = [
-                "--disable-malloc0returnsnull"
-              ];
-          };
-          xvfbLibXkbfileArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libxkbfile";
-              version = pkgs.libxkbfile.version;
-              src = pkgs.libxkbfile.src;
-              deps = [ pkgs.xorgproto xlibArm64Build ];
-          };
-          xvfbLibXmuArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXmu";
-              version = pkgs.libXmu.version;
-              src = pkgs.libXmu.src;
-              deps = [
-                pkgs.xorgproto
-                xlibArm64Build
-                xvfbLibXextArm64Build
-                xvfbLibXtArm64Build
-                xvfbLibSMArm64Build
-                xvfbLibICEArm64Build
-              ];
-          };
-          xvfbLibXpmArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXpm";
-              version = pkgs.libXpm.version;
-              src = pkgs.libXpm.src;
-              deps = [ pkgs.xorgproto xlibArm64Build ];
-          };
-          xvfbLibXrandrArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXrandr";
-              version = pkgs.libXrandr.version;
-              src = pkgs.libXrandr.src;
-              deps = [ pkgs.xorgproto xlibArm64Build xvfbLibXrenderArm64Build xvfbLibXextArm64Build ];
-          };
-          xvfbLibXrenderArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXrender";
-              version = pkgs.libXrender.version;
-              src = pkgs.libXrender.src;
-              deps = [ pkgs.xorgproto xlibArm64Build ];
-          };
-          xvfbLibXtArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-              pname = "puredarwin-libXt";
-              version = pkgs.libXt.version;
-              src = pkgs.libXt.src;
-              deps = [
-                pkgs.xorgproto
-                xlibArm64Build
-                xvfbLibICEArm64Build
-                xvfbLibSMArm64Build
-              ];
-          };
-          xvfbLibxcvtArm64Build = mkArm64Build ./nix/pkgs/xvfb-libxcvt.nix {
-              inherit (pkgs) libxcvt;
-          };
-          xvfbPixmanArm64Build = mkArm64Build ./nix/pkgs/xvfb-pixman.nix {
-              inherit (pkgs) pixman;
-          };
-          pdVirglShimArm64Build =
-            if isDarwin then null else (mkPureDarwinBuild {
-              pname = "puredarwin-pd-virgl-shim-arm64";
-              src = userlandSource;
-              buildTargets = [ "pd_virgl_shim" ];
-              enableProjects = false;
-              enableKernel = false;
-              enableLibraries = false;
-              installUserland = false;
-              installKernel = false;
-              prebuiltLibSystem = libSystemArm64Build;
-              puredarwinArch = "arm64";
-              inherit arm64CrossToolchain;
-            }).overrideAttrs (old: {
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out/usr/lib $out/include
-                ar=${arm64CrossToolchain}/bin/arm64-apple-darwin20.4-ar
-                mkdir -p repack && ( cd repack && \
-                  "$ar" x ../build-nix/src/Userspace/pd-virgl-shim/libpd_virgl_shim.a )
-                ${arm64CrossToolchain}/bin/arm64-apple-darwin20.4-clang \
-                  -dynamiclib -fuse-ld=${nativeLd}/bin/ld -nostdlib \
-                  -L${libSystemArm64Build}/usr/lib \
-                  -Wl,-install_name,/usr/lib/libpd_virgl_shim.dylib \
-                  -Wl,-platform_version,macos,11.0,11.5 -Wl,-fixup_chains \
-                  repack/*.o -lSystem \
-                  -o $out/usr/lib/libpd_virgl_shim.dylib
-                cp src/Libraries/PDVirglShim/include/pd_virgl_shim.h $out/include/
-                runHook postInstall
-              '';
-            });
-          # Arch-independent: a host-side tool and a pure data package, so the
-          # x86 builds are reused rather than duplicated.
-          hostOtoolArm64Build = hostOtoolBuild;
-          xkeyboardConfigArm64Build = xkeyboardConfigBuild;
-
-          osmesaFbArm64Build =
-            if isDarwin then null else (mkPureDarwinBuild {
-              pname = "puredarwin-osmesa-fb-arm64";
-              src = fbdoomSource;
-              buildTargets = [ "osmesa-fb" ];
-              enableProjects = false;
-              enableKernel = false;
-              installUserland = false;
-              installKernel = false;
-              puredarwinArch = "arm64";
-              inherit arm64CrossToolchain;
-              extraCmakeFlags = [
-                "-DPUREDARWIN_ENABLE_OSMESA_FB=ON"
-                "-DPUREDARWIN_OSMESA_PREFIX=${mesaArm64Build}/usr"
-              ];
-            }).overrideAttrs (old: {
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out/usr/bin
-                cp build-nix/src/Userspace/osmesa-fb/osmesa-fb $out/usr/bin/osmesa-fb
-                runHook postInstall
-              '';
-            });
-          # Arch-independent: X11 locale data, fonts, and a stdenvNoCC shim, so
-          # the x86 builds are reused rather than duplicated.
-          xlibLocaleArm64Build = xlibLocaleBuild;
-          xvfbFontsArm64Build = xvfbFontsBuild;
-          i3statusShimArm64Build = i3statusShimBuild;
-
+          # arm64 cross-compiled package set. Split out to keep this file
+          # focused on the x86 build and the shared plumbing both arches use.
+          arm64 = import ./nix/arm64.nix {
+            inherit lib pkgs isDarwin;
+            inherit arm64CrossToolchain;
+            inherit coreFoundationBuild;
+            inherit darwinCrossToolchain;
+            inherit fbdoomSource;
+            inherit foundationSource;
+            inherit hostOtoolBuild;
+            inherit i3statusShimBuild;
+            inherit icuCoreBuild;
+            inherit iokitBuild;
+            inherit kernelSource;
+            inherit kextsSource;
+            inherit launchctlBuild;
+            inherit launchdBuild;
+            inherit libSystemBuild;
+            inherit libcxxDylibBuild;
+            inherit libcxxabiDylibBuild;
+            inherit libiconvBuild;
+            inherit libobjcBuild;
+            inherit mkPureDarwinBuild;
+            inherit mkSystemConfigurationBuild;
+            inherit nativeLd;
+            inherit nativeMesonToolsDir;
+            inherit ncursesBuild;
+            inherit securitySource;
+            inherit userlandBuild;
+            inherit userlandSource;
+            inherit xkeyboardConfigBuild;
+            inherit xlibLocaleBuild;
+            inherit xvfbFontsBuild;
+            inherit zshBuild;
+          };
+          inherit (arm64)
+            atspi2CoreArm64Build
+            autoconfArm64Build
+            automakeArm64Build
+            cairoArm64Build
+            cairoGobjectArm64Build
+            curlArm64Build
+            dbusArm64Build
+            dilloArm64Build
+            dmenuArm64Build
+            fastfetchArm64Build
+            fltkArm64Build
+            foundationArm64Build
+            fribidiArm64Build
+            gdkPixbufArm64Build
+            gitArm64Build
+            gtk3Arm64Build
+            harfbuzzArm64Build
+            i3Arm64Build
+            ioregArm64Build
+            libXftArm64Build
+            libcssArm64Build
+            libcurlDylibArm64Build
+            libcxxTestArm64Build
+            libdomArm64Build
+            libepoxyArm64Build
+            libfontencArm64Build
+            libhubbubArm64Build
+            libnsbmpArm64Build
+            libnsgifArm64Build
+            libnsutilsArm64Build
+            libparserutilsArm64Build
+            libutf8procArm64Build
+            libwapcapletArm64Build
+            libzDylibArm64Build
+            mesaArm64Build
+            mesaDemosArm64Build
+            migcomDarwinArm64Build
+            netsurfArm64Build
+            openglFrameworkArm64Build
+            opensshArm64Build
+            osmesaTriArm64Build
+            pangoArm64Build
+            pythonArm64Build
+            securityArm64Build
+            systemConfigurationArm64Build
+            startupNotificationArm64Build
+            xcalcArm64Build
+            xcbArm64Build
+            xcbCursorArm64Build
+            xcbImageArm64Build
+            xcbKeysymsArm64Build
+            xcbRenderUtilArm64Build
+            xcbUtilArm64Build
+            xcbWmArm64Build
+            xcbXrmArm64Build
+            xclockArm64Build
+            xeyesArm64Build
+            xkbcommonArm64Build
+            xkbcompArm64Build
+            xlibArm64Build
+            xmessageArm64Build
+            xorgArm64Build
+            xtermArm64Build
+            xvfbArm64Build
+            xvfbLibICEArm64Build
+            xvfbLibSMArm64Build
+            xvfbLibXauArm64Build
+            xvfbLibXawArm64Build
+            xvfbLibXcursorArm64Build
+            xvfbLibXdmcpArm64Build
+            xvfbLibXextArm64Build
+            xvfbLibXfixesArm64Build
+            xvfbLibXfont2Arm64Build
+            xvfbLibXiArm64Build
+            xvfbLibXkbfileArm64Build
+            xvfbLibXmuArm64Build
+            xvfbLibXpmArm64Build
+            xvfbLibXrandrArm64Build
+            xvfbLibXrenderArm64Build
+            xvfbLibXtArm64Build
+            xvfbLibxcvtArm64Build
+            xvfbPixmanArm64Build
+            pdVirglShimArm64Build
+            hostOtoolArm64Build
+            xkeyboardConfigArm64Build
+            osmesaFbArm64Build
+            xlibLocaleArm64Build
+            xvfbFontsArm64Build
+            i3statusShimArm64Build
+            libSystemArm64Build
+            icuCoreArm64Build
+            libcxxabiDylibArm64Build
+            libcxxDylibArm64Build
+            libobjcArm64Build
+            coreFoundationArm64Build
+            iokitArm64Build
+            launchdArm64Build
+            launchctlArm64Build
+            mkArm64Build
+            xvfbZlibArm64Build
+            toyboxArm64Build
+            xzArm64Build
+            fileArm64Build
+            opensslArm64Build
+            bmakeArm64Build
+            gnumakeArm64Build
+            gnum4Arm64Build
+            pkgconfArm64Build
+            bisonArm64Build
+            flexArm64Build
+            xxdArm64Build
+            nanoArm64Build
+            libffiArm64Build
+            expatArm64Build
+            pcre2Arm64Build
+            libevArm64Build
+            libpngArm64Build
+            freetype2Arm64Build
+            fontconfigArm64Build
+            libxml2Arm64Build
+            yajlArm64Build
+            glibArm64Build
+            libiconvArm64Build
+            ncursesArm64Build
+            zshArm64Build
+            userlandArm64Build
+            kernelArm64Build
+            kernelArm64VirtBuild
+            kernelArm64VirtDebugBuild
+            kextsArm64Build
+            splitBaseSystemArm64VirtMinimal
+            splitBaseSystemArm64VirtMinimalRelease
+            imageExtraPackageSetArm64
+            imageExtraPackagesArm64
+            ;
           securityBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/security.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/security.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
@@ -2692,7 +2125,7 @@
           # Diagnostic: replays diskarbitrationd's DADiskCreateFromIOMedia checks
           # against one IOMedia and names the failing one.
           iomediacheckBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/iomediacheck.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/iomediacheck.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
@@ -2748,7 +2181,7 @@
               security = securityBuild;
             };
           systemStarterBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/systemstarter.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/systemstarter.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
@@ -2756,7 +2189,7 @@
               src = libSystemSource;
             };
           launchctlBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/launchctl.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/launchctl.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
@@ -2764,7 +2197,7 @@
               src = libSystemSource;
             };
           launchdBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/launchd.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/launchd.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
@@ -2780,191 +2213,6 @@
             installUserland = false;
             installKernel = false;
             installLibSystem = true;
-          };
-          libSystemArm64Build = libSystemBuild.override {
-            puredarwinArch = "arm64";
-            inherit arm64CrossToolchain;
-          };
-          icuCoreArm64Build = icuCoreBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-          };
-          libcxxabiDylibArm64Build = libcxxabiDylibBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-          };
-          libcxxDylibArm64Build = libcxxDylibBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-            libcxxabiDylib = libcxxabiDylibArm64Build;
-          };
-          libobjcArm64Build = libobjcBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-            libcxxabiDylib = libcxxabiDylibArm64Build;
-          };
-          coreFoundationArm64Build = coreFoundationBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-            icu = icuCoreArm64Build;
-            libobjc = libobjcArm64Build;
-          };
-          iokitArm64Build = iokitBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-            corefoundation = coreFoundationArm64Build;
-          };
-          launchdArm64Build = launchdBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-            corefoundation = coreFoundationArm64Build;
-            iokit = iokitArm64Build;
-          };
-          launchctlArm64Build = launchctlBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-            corefoundation = coreFoundationArm64Build;
-            iokit = iokitArm64Build;
-          };
-          # Re-instantiate a package file for arm64. The arm64 toolchain/triple/
-          # libSystem are filtered down to the arguments each package actually
-          # declares, so the same call works everywhere; callPackage still fills
-          # the plain nixpkgs inputs, and `deps` rewires that package's own
-          # PureDarwin dependencies onto their arm64 builds.
-          mkArm64Build = file: deps:
-            if isDarwin then null else
-            let
-              f = import file;
-              common = {
-                darwinCrossToolchain = arm64CrossToolchain;
-                targetTriple = "arm64-apple-darwin20.4";
-                libSystem = libSystemArm64Build;
-                inherit nativeLd;
-              };
-            in
-            pkgs.callPackage f
-              (builtins.intersectAttrs (builtins.functionArgs f) common // deps);
-
-          xvfbZlibArm64Build = mkArm64Build ./nix/pkgs/xvfb-zlib.nix { inherit (pkgs) zlib; };
-          toyboxArm64Build = mkArm64Build ./nix/pkgs/toybox.nix { zlib = xvfbZlibArm64Build; };
-          xzArm64Build = mkArm64Build ./nix/pkgs/xz.nix { };
-          fileArm64Build = mkArm64Build ./nix/pkgs/file.nix { zlib = xvfbZlibArm64Build; };
-          opensslArm64Build = mkArm64Build ./nix/pkgs/openssl.nix { };
-
-          # Core tools. autoconf/automake are host-side scripts with no
-          # cross-compiled component, so they are shared with the x86 build
-          # rather than re-instantiated.
-          bmakeArm64Build = mkArm64Build ./nix/pkgs/bmake.nix { };
-          gnumakeArm64Build = mkArm64Build ./nix/pkgs/gnumake.nix { };
-          gnum4Arm64Build = mkArm64Build ./nix/pkgs/gnum4.nix { };
-          pkgconfArm64Build = mkArm64Build ./nix/pkgs/pkgconf.nix {
-            pkgconf = pkgs.pkgconf-unwrapped;
-          };
-          bisonArm64Build = mkArm64Build ./nix/pkgs/bison.nix { };
-          flexArm64Build = mkArm64Build ./nix/pkgs/flex.nix { };
-          xxdArm64Build = mkArm64Build ./nix/pkgs/xxd.nix { };
-          nanoArm64Build = mkArm64Build ./nix/pkgs/nano.nix {
-            ncurses = ncursesArm64Build;
-          };
-
-          # Core libraries.
-          libffiArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-            pname = "puredarwin-libffi";
-            version = pkgs.libffi.version;
-            src = pkgs.libffi.src;
-            configureFlags = [
-              "--disable-docs"
-              "--disable-multi-os-directory"
-            ];
-          };
-          expatArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-            pname = "puredarwin-expat";
-            version = pkgs.expat.version;
-            src = pkgs.expat.src;
-            configureFlags = [
-              "--without-docbook"
-              "--without-examples"
-              "--without-tests"
-            ];
-          };
-          pcre2Arm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-            pname = "puredarwin-pcre2";
-            version = pkgs.pcre2.version;
-            src = pkgs.pcre2.src;
-            configureFlags = [
-              "--disable-pcre2-16"
-              "--disable-pcre2-32"
-              "--disable-jit"
-              "--disable-pcre2grep-jit"
-              "--disable-pcre2grep-callout"
-              "--disable-pcre2grep-callout-fork"
-            ];
-          };
-          libevArm64Build = mkArm64Build ./nix/pkgs/xorg-cross-lib.nix {
-            pname = "puredarwin-libev";
-            version = pkgs.libev.version;
-            src = pkgs.libev.src;
-            preConfigureExtra = ''
-              export ac_cv_func_poll=yes
-              export ac_cv_func_select=yes
-              export ac_cv_header_poll_h=yes
-            '';
-          };
-          libpngArm64Build = mkArm64Build ./nix/pkgs/libpng.nix {
-            zlib = xvfbZlibArm64Build;
-            inherit (pkgs) libpng;
-          };
-          freetype2Arm64Build = mkArm64Build ./nix/pkgs/xvfb-freetype.nix {
-            inherit (pkgs) zlib freetype;
-          };
-          fontconfigArm64Build = mkArm64Build ./nix/pkgs/fontconfig.nix {
-            inherit (pkgs) fontconfig;
-            freetype = freetype2Arm64Build;
-            expat = expatArm64Build;
-          };
-          libxml2Arm64Build = mkArm64Build ./nix/pkgs/libxml2.nix {
-            inherit (pkgs) libxml2 meson ninja python3 git;
-          };
-          yajlArm64Build = mkArm64Build ./nix/pkgs/yajl.nix {
-            inherit (pkgs) yajl;
-          };
-          glibArm64Build = mkArm64Build ./nix/pkgs/glib.nix {
-            nativeMesonTools = nativeMesonToolsDir;
-            inherit (pkgs) glib;
-            pcre2 = pcre2Arm64Build;
-            libffi = libffiArm64Build;
-            zlib = xvfbZlibArm64Build;
-            libiconv = libiconvArm64Build;
-          };
-
-          libiconvArm64Build = libiconvBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-          };
-          ncursesArm64Build = ncursesBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-          };
-          zshArm64Build = zshBuild.override {
-            darwinCrossToolchain = arm64CrossToolchain;
-            targetTriple = "arm64-apple-darwin20.4";
-            libSystem = libSystemArm64Build;
-            ncurses = ncursesArm64Build;
-          };
-          userlandArm64Build = userlandBuild.override {
-            puredarwinArch = "arm64";
-            inherit arm64CrossToolchain;
-            prebuiltLibSystem = libSystemArm64Build;
           };
           fbdoomBuild = (mkPureDarwinBuild {
             pname = "puredarwin-fbdoom";
@@ -3017,29 +2265,6 @@
             installKernel = true;
             xnuKernelConfig = "RELEASE";
           };
-          kernelArm64Build = mkPureDarwinBuild {
-            pname = "puredarwin-kernel-arm64";
-            src = kernelSource;
-            buildTargets = [ "xnu" ];
-            enableUserspace = false;
-            installUserland = false;
-            installKernel = true;
-            xnuKernelConfig = "RELEASE";
-            puredarwinArch = "arm64";
-            inherit arm64CrossToolchain;
-          };
-          kernelArm64VirtBuild = mkPureDarwinBuild {
-            pname = "puredarwin-kernel-arm64-virt";
-            src = kernelSource;
-            buildTargets = [ "xnu" ];
-            enableUserspace = false;
-            installUserland = false;
-            installKernel = true;
-            xnuKernelConfig = "RELEASE";
-            puredarwinArch = "arm64";
-            inherit arm64CrossToolchain;
-            extraCmakeFlags = [ "-DPUREDARWIN_ARM64_MACHINE_CONFIG=VIRT" ];
-          };
           kernelDebugBuild = mkPureDarwinBuild {
             pname = "puredarwin-kernel-debug";
             src = kernelSource;
@@ -3048,18 +2273,6 @@
             installUserland = false;
             installKernel = true;
             xnuKernelConfig = "DEBUG";
-          };
-          kernelArm64VirtDebugBuild = mkPureDarwinBuild {
-            pname = "puredarwin-kernel-arm64-virt-debug";
-            src = kernelSource;
-            buildTargets = [ "xnu" ];
-            enableUserspace = false;
-            installUserland = false;
-            installKernel = true;
-            xnuKernelConfig = "DEBUG";
-            puredarwinArch = "arm64";
-            inherit arm64CrossToolchain;
-            extraCmakeFlags = [ "-DPUREDARWIN_ARM64_MACHINE_CONFIG=VIRT" ];
           };
           xnuHeadersBuild = mkPureDarwinBuild {
             pname = "puredarwin-xnu-headers";
@@ -3081,45 +2294,6 @@
             installKexts = true;
             enableIOGraphicsFamily = true;
           };
-          kextsArm64Build = mkPureDarwinBuild {
-            pname = "puredarwin-kexts-arm64";
-            src = kextsSource;
-            buildTargets = [
-              "IOPCIFamily" "IOStorageFamily" "IOVirtIOFamily.kext"
-              "IOVirtIONet.kext" "IONetworkingFamily.kext" "IOHIDFamily.kext"
-              "RavynAHCIPort.kext" "ext4.kext" "Ext4FileSystemDriver.kext"
-              "AppleFileSystemDriver.kext" "corecrypto.kext" "pthread.kext"
-              "PDArmPlatformExpert" "PDArmPCI"
-              # Arch-neutral drivers, matching what x86 builds: filesystems,
-              # USB, the rest of VirtIO, and the remaining storage families.
-              "msdosfs.kext" "apfs.kext" "hfs.kext" "HFSEncodings.kext"
-              "IOUSBFamily" "AppleUSBEHCI.kext" "AppleUSBOHCI.kext"
-              "IOUSBCompositeDriver.kext"
-              "IOUSBHIDDriver.kext" "AppleUSBMergeNub.kext"
-              "RavynXHCIPort.kext" "IOVirtIOGPU.kext" "IONVMEFamily.kext"
-              "RavynHDAudio.kext" "PDE1000.kext"
-            ];
-            enableUserspace = false;
-            installUserland = false;
-            installKernel = false;
-            installKexts = true;
-            installKextNames = [
-              "IOPCIFamily.kext" "IOStorageFamily.kext" "IOVirtIOFamily.kext"
-              "IOVirtIONet.kext" "IONetworkingFamily.kext" "IOHIDFamily.kext"
-              "RavynAHCIPort.kext" "ext4.kext" "Ext4FileSystemDriver.kext"
-              "AppleFileSystemDriver.kext" "corecrypto.kext" "pthread.kext"
-              "PDArmPlatformExpert.kext" "PDArmPCI.kext"
-              "msdosfs.kext" "apfs.kext" "hfs.kext" "HFSEncodings.kext"
-              "IOUSBFamily.kext" "AppleUSBEHCI.kext" "AppleUSBOHCI.kext"
-              "IOUSBCompositeDriver.kext"
-              "IOUSBHIDDriver.kext" "AppleUSBMergeNub.kext"
-              "RavynXHCIPort.kext" "IOVirtIOGPU.kext" "IONVMEFamily.kext"
-              "RavynHDAudio.kext" "PDE1000.kext"
-            ];
-            enableIOGraphicsFamily = false;
-            puredarwinArch = "arm64";
-            inherit arm64CrossToolchain;
-          };
           iographicsBuild = mkPureDarwinBuild {
             pname = "puredarwin-iographics";
             src = kextsSource;
@@ -3131,393 +2305,52 @@
             installKextNames = [ "IOGraphicsFamily.kext" ];
             enableIOGraphicsFamily = true;
           };
-          fullBuild = mkPureDarwinBuild {
-            pname = "puredarwin";
-            src = ./.;
-            buildTargets = [ "xnu" "kexts" "libsystem_kernel" "pcmplay" ];
-            installUserland = false;
-            installKernel = false;
-            installBaseSystem = true;
-            enableIOGraphicsFamily = true;
+          # Image contents (see nix/image-contents.nix).
+          imageContents = import ./nix/image-contents.nix {
+            inherit
+              atspi2CoreBuild autoconfBuild automakeBuild bisonBuild bmakeBuild cairoBuild
+              cairoGobjectBuild cctoolsBuild coreFoundationBuild curlBuild darwinCrossToolchain
+              dbusBuild dilloBuild diskArbitrationBuild dmenuBuild exoBuild expatBuild fastfetchBuild
+              fbdoomBuild fbdoomExternalSrc fileBuild flexBuild fontconfigBuild foundationBuild
+              freetype2Build fribidiBuild garconBuild gdkPixbufBuild gitBuild glibBuild gnum4Build
+              gnumakeBuild gtk3Build harfbuzzBuild i3Build i3statusShimBuild iceauthBuild
+              iconThemesBuild icuCoreBuild imageExtraPackagesArm64 iographicsBuild iokitBuild
+              iomediacheckBuild ioregBuild isDarwin kc-tools kernelArm64Build kernelArm64VirtBuild
+              kernelArm64VirtDebugBuild kernelBuild kernelDebugBuild kextsArm64Build kextsBuild
+              launchctlBuild launchdBuild lib libSystemBuild libXftBuild libapfsrwBuild libcssBuild
+              libcurlDylibBuild libcxxDylibBuild libcxxTestBuild libcxxabiDylibBuild libdisplayInfoBuild
+              libdomBuild libepoxyBuild libevBuild libffiBuild libhubbubBuild libiconvArm64Build
+              libiconvBuild libnsbmpBuild libnsgifBuild libnsutilsBuild libobjcBuild libparserutilsBuild
+              libpngBuild libutf8procBuild libwapcapletBuild libwnckBuild libxfce4uiBuild
+              libxfce4utilBuild libxfce4windowingBuild libxml2Build libzDylibBuild mesaBuild
+              mesaDemosBuild migcomDarwinBuild mkPureDarwinBuild nanoBuild nativeLd ncursesBuild
+              netsurfBuild objcTestBuild openglFrameworkBuild opensshBuild opensslBuild osmesaFbBuild
+              osmesaTriBuild pangoBuild pcre2Build pdVirglShimBuild pkgconfBuild pkgs pythonBuild
+              securityBuild splitBaseSystemArm64VirtMinimal splitBaseSystemArm64VirtMinimalRelease
+              startupNotificationBuild system systemConfigurationBuild systemStarterBuild tccBuild
+              toyboxArm64Build toyboxBuild userlandBuild vteBuild xcalcBuild xcbBuild xcbCursorBuild
+              xcbImageBuild xcbKeysymsBuild xcbRenderUtilBuild xcbUtilBuild xcbWmBuild xcbXrmBuild
+              xclockBuild xeyesBuild xfce4AppfinderBuild xfce4PanelBuild xfce4SessionBuild
+              xfce4SettingsBuild xfce4TerminalBuild xfconfBuild xfdesktopBuild xfwm4Build xinitBuild
+              xkbcommonBuild xkbcompBuild xkeyboardConfigBuild xlibBuild xlibLocaleBuild xmessageBuild
+              xnu-loader xnuHeadersBuild xorgBuild xrdbBuild xtermBuild xvfbBuild xvfbFontsBuild
+              xvfbLibICEBuild xvfbLibSMBuild xvfbLibXauBuild xvfbLibXcompositeBuild xvfbLibXcursorBuild
+              xvfbLibXdamageBuild xvfbLibXdmcpBuild xvfbLibXextBuild xvfbLibXfixesBuild
+              xvfbLibXineramaBuild xvfbLibXkbfileBuild xvfbLibXpresentBuild xvfbLibXrandrBuild
+              xvfbLibXrenderBuild xvfbLibXresBuild xvfbLibxcvtBuild xvfbZlibBuild xxdBuild xzBuild
+              yajlBuild zshArm64Build zshBuild
+              ;
           };
-          splitBaseSystem = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } (''
-            mkdir -p "$out"
-            cp -a ${kernelBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${kextsBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${libSystemBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${userlandBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${tccBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${cctoolsBuild}/. "$out/"
-          '' + lib.optionalString (!isDarwin && launchdBuild != null) ''
-            chmod -R u+w "$out"
-            cp -a ${launchdBuild}/. "$out/"
-            chmod -R u+w "$out"
-          '' + lib.optionalString (!isDarwin && launchctlBuild != null) ''
-            cp -a ${launchctlBuild}/. "$out/"
-            chmod -R u+w "$out"
-            if [ -e "$out/pd-sbin/launchd" ]; then
-              mkdir -p "$out/sbin"
-              cp "$out/pd-sbin/launchd" "$out/sbin/launchd"
-              rm -rf "$out/pd-sbin"
-            fi
-          ''
-          + lib.optionalString (!isDarwin) ''
-            chmod -R u+w "$out"
-            cp -a ${bmakeBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${xvfbBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${xeyesBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${xkbcompBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${xkeyboardConfigBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${xvfbFontsBuild}/. "$out/"
-          '');
-          splitBaseSystemStripped = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } (''
-            mkdir -p "$out"
-            cp -a ${kernelBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${kextsBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${libSystemBuild}/. "$out/"
-          '' + lib.optionalString (!isDarwin && launchdBuild != null) ''
-            chmod -R u+w "$out"
-            cp -a ${launchdBuild}/. "$out/"
-            chmod -R u+w "$out"
-          '' + lib.optionalString (!isDarwin && launchctlBuild != null) ''
-            cp -a ${launchctlBuild}/. "$out/"
-            chmod -R u+w "$out"
-            if [ -e "$out/pd-sbin/launchd" ]; then
-              mkdir -p "$out/sbin"
-              cp "$out/pd-sbin/launchd" "$out/sbin/launchd"
-              rm -rf "$out/pd-sbin"
-            fi
-          '');
-
-          # Stripped base plus the CLI userland (sw_vers, mount, virgl-smoke,
-          # etc.) - a lean image that still has usable tools, without the heavy
-          # tcc/cctools/X of the full base.
-          splitBaseSystemMinimal = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } ''
-            mkdir -p "$out"
-            cp -a ${splitBaseSystemStripped}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${userlandBuild}/. "$out/"
-          '';
-
-          # ARM64 minimal mirrors the x86 minimal split: native libSystem,
-          # launchd/launchctl, and the CLI userland are present alongside the
-          # ARM64 kernel and kexts. Keep the kernel payload separate so this
-          # composition cannot accidentally pull the x86 kernel into the ARM
-          # image.
-          splitBaseSystemArm64VirtMinimal = pkgs.runCommand "puredarwin-basesystem-arm64-virt-minimal-0.1" { } ''
-            mkdir -p "$out"
-            cp -a ${libSystemArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            # launchd is dynamically linked against the native framework and
-            # runtime libraries. Keep these in the minimal image so dyld can
-            # resolve launchd before any service jobs are submitted.
-            cp -a ${icuCoreArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${libcxxabiDylibArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${libcxxDylibArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${libobjcArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${coreFoundationArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${iokitArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${launchdArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${launchctlArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            if [ -e "$out/pd-sbin/launchd" ]; then
-              mkdir -p "$out/sbin"
-              cp "$out/pd-sbin/launchd" "$out/sbin/launchd"
-              rm -rf "$out/pd-sbin"
-            fi
-            cp -a ${userlandArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${kernelArm64VirtDebugBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${kextsArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-          '';
-
-          splitBaseSystemArm64VirtMinimalRelease = pkgs.runCommand "puredarwin-basesystem-arm64-virt-minimal-release-0.1" { } ''
-            mkdir -p "$out"
-            cp -a ${libSystemArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            # Keep the release image's runtime closure identical to debug.
-            cp -a ${icuCoreArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${libcxxabiDylibArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${libcxxDylibArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${libobjcArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${coreFoundationArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${iokitArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${launchdArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${launchctlArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            if [ -e "$out/pd-sbin/launchd" ]; then
-              mkdir -p "$out/sbin"
-              cp "$out/pd-sbin/launchd" "$out/sbin/launchd"
-              rm -rf "$out/pd-sbin"
-            fi
-            cp -a ${userlandArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${kernelArm64VirtBuild}/. "$out/"
-            chmod -R u+w "$out"
-            cp -a ${kextsArm64Build}/. "$out/"
-            chmod -R u+w "$out"
-          '';
-
-          # The same package set as imageExtraPackageSet, resolved to the arm64
-          # builds, so the two architectures ship the same userland.
-          imageExtraPackageSetArm64 = lib.optionalAttrs (!isDarwin) {
-            xvfb = xvfbArm64Build;
-            xorg = xorgArm64Build;
-            libxcvt = xvfbLibxcvtArm64Build;
-            xeyes = xeyesArm64Build;
-            xclock = xclockArm64Build;
-            xcalc = xcalcArm64Build;
-            xmessage = xmessageArm64Build;
-            dillo = dilloArm64Build;
-            libz-dylib = libzDylibArm64Build;
-            libcurl-dylib = libcurlDylibArm64Build;
-            dbus = dbusArm64Build;
-            libxml2 = libxml2Arm64Build;
-            at-spi2-core = atspi2CoreArm64Build;
-            libepoxy = libepoxyArm64Build;
-            gdk-pixbuf = gdkPixbufArm64Build;
-            cairo-gobject = cairoGobjectArm64Build;
-            libXrandr = xvfbLibXrandrArm64Build;
-            gtk3 = gtk3Arm64Build;
-            libpng = libpngArm64Build;
-            libwapcaplet = libwapcapletArm64Build;
-            libparserutils = libparserutilsArm64Build;
-            libnsutils = libnsutilsArm64Build;
-            libnsgif = libnsgifArm64Build;
-            libnsbmp = libnsbmpArm64Build;
-            libutf8proc = libutf8procArm64Build;
-            libhubbub = libhubbubArm64Build;
-            libcss = libcssArm64Build;
-            libdom = libdomArm64Build;
-            netsurf = netsurfArm64Build;
-            xxd = xxdArm64Build;
-            xz = xzArm64Build;
-            xterm = xtermArm64Build;
-            xkbcomp = xkbcompArm64Build;
-            xkeyboard-config = xkeyboardConfigArm64Build;
-            libx11-locale = xlibLocaleArm64Build;
-            fonts = xvfbFontsArm64Build;
-            libiconv = libiconvArm64Build;
-            nano = nanoArm64Build;
-            bmake = bmakeArm64Build;
-            gnumake = gnumakeArm64Build;
-            pkgconf = pkgconfArm64Build;
-            gnum4 = gnum4Arm64Build;
-            autoconf = autoconfArm64Build;
-            automake = automakeArm64Build;
-            bison = bisonArm64Build;
-            flex = flexArm64Build;
-            python = pythonArm64Build;
-            #perl = perlBuild;
-            zsh = zshArm64Build;
-            toybox = toyboxArm64Build;
-            file = fileArm64Build;
-            openssl = opensslArm64Build;
-            curl = curlArm64Build;
-            openssh = opensshArm64Build;
-            git = gitArm64Build;
-            migcomDarwin = migcomDarwinArm64Build;
-            ioreg = ioregArm64Build;
-            xkbcommon = xkbcommonArm64Build;
-            fastfetch = fastfetchArm64Build;
-            corefoundation = coreFoundationArm64Build;
-            icucore = icuCoreArm64Build;
-            libcxxabi-dylib = libcxxabiDylibArm64Build;
-            libcxx-dylib = libcxxDylibArm64Build;
-            libcxx-test = libcxxTestArm64Build;
-            mesa = mesaArm64Build;
-            mesa-demos = mesaDemosArm64Build;
-            pd-virgl-shim = pdVirglShimArm64Build;
-            osmesa-tri = osmesaTriArm64Build;
-            osmesa-fb = osmesaFbArm64Build;
-            libobjc = libobjcArm64Build;
-            foundation = foundationArm64Build;
-            iokit = iokitArm64Build;
-            security = securityArm64Build;
-            systemConfiguration = systemConfigurationArm64Build;
-            opengl-framework = openglFrameworkArm64Build;
-            i3 = i3Arm64Build;
-            i3status = i3statusShimArm64Build;
-            startup-notification = startupNotificationArm64Build;
-            libX11 = xlibArm64Build;
-            libxcb = xcbArm64Build;
-            libxcb-util = xcbUtilArm64Build;
-            libxcb-keysyms = xcbKeysymsArm64Build;
-            libxcb-wm = xcbWmArm64Build;
-            libxcb-render-util = xcbRenderUtilArm64Build;
-            libxcb-image = xcbImageArm64Build;
-            libxcb-cursor = xcbCursorArm64Build;
-            xcb-util-xrm = xcbXrmArm64Build;
-            libev = libevArm64Build;
-            pcre2 = pcre2Arm64Build;
-            yajl = yajlArm64Build;
-            cairo = cairoArm64Build;
-            libffi = libffiArm64Build;
-            glib = glibArm64Build;
-            fribidi = fribidiArm64Build;
-            harfbuzz = harfbuzzArm64Build;
-            expat = expatArm64Build;
-            fontconfig = fontconfigArm64Build;
-            freetype2 = freetype2Arm64Build;
-            pango = pangoArm64Build;
-            libXft = libXftArm64Build;
-            dmenu = dmenuArm64Build;
-            zlib = xvfbZlibArm64Build;
-            libXau = xvfbLibXauArm64Build;
-            libXdmcp = xvfbLibXdmcpArm64Build;
-            libXext = xvfbLibXextArm64Build;
-            libXrender = xvfbLibXrenderArm64Build;
-            libXfixes = xvfbLibXfixesArm64Build;
-            libXcursor = xvfbLibXcursorArm64Build;
-            libICE = xvfbLibICEArm64Build;
-            libSM = xvfbLibSMArm64Build;
-          };
-
-          imageExtraPackagesArm64 = lib.attrValues imageExtraPackageSetArm64;
-
-          imageExtraPackageSet = lib.optionalAttrs (!isDarwin) {
-            xvfb = xvfbBuild;
-            xorg = xorgBuild;
-            libxcvt = xvfbLibxcvtBuild;
-            xeyes = xeyesBuild;
-            xclock = xclockBuild;
-            xcalc = xcalcBuild;
-            xmessage = xmessageBuild;
-            dillo = dilloBuild;
-            libz-dylib = libzDylibBuild;
-            libcurl-dylib = libcurlDylibBuild;
-            dbus = dbusBuild;
-            libxml2 = libxml2Build;
-            at-spi2-core = atspi2CoreBuild;
-            libepoxy = libepoxyBuild;
-            gdk-pixbuf = gdkPixbufBuild;
-            cairo-gobject = cairoGobjectBuild;
-            libXrandr = xvfbLibXrandrBuild;
-            gtk3 = gtk3Build;
-            libpng = libpngBuild;
-            libwapcaplet = libwapcapletBuild;
-            libparserutils = libparserutilsBuild;
-            libnsutils = libnsutilsBuild;
-            libnsgif = libnsgifBuild;
-            libnsbmp = libnsbmpBuild;
-            libutf8proc = libutf8procBuild;
-            libhubbub = libhubbubBuild;
-            libcss = libcssBuild;
-            libdom = libdomBuild;
-            netsurf = netsurfBuild;
-            xxd = xxdBuild;
-            xz = xzBuild;
-            xterm = xtermBuild;
-            xkbcomp = xkbcompBuild;
-            xkeyboard-config = xkeyboardConfigBuild;
-            libx11-locale = xlibLocaleBuild;
-            fonts = xvfbFontsBuild;
-            libiconv = libiconvBuild;
-            nano = nanoBuild;
-            bmake = bmakeBuild;
-            gnumake = gnumakeBuild;
-            pkgconf = pkgconfBuild;
-            gnum4 = gnum4Build;
-            autoconf = autoconfBuild;
-            automake = automakeBuild;
-            bison = bisonBuild;
-            flex = flexBuild;
-            python = pythonBuild;
-            #perl = perlBuild;
-            zsh = zshBuild;
-            toybox = toyboxBuild;
-            file = fileBuild;
-            openssl = opensslBuild;
-            curl = curlBuild;
-            openssh = opensshBuild;
-            git = gitBuild;
-            migcomDarwin = migcomDarwinBuild;
-            ioreg = ioregBuild;
-            xkbcommon = xkbcommonBuild;
-            fastfetch = fastfetchBuild;
-            corefoundation = coreFoundationBuild;
-            icucore = icuCoreBuild;
-            libcxxabi-dylib = libcxxabiDylibBuild;
-            libcxx-dylib = libcxxDylibBuild;
-            libcxx-test = libcxxTestBuild;
-            mesa = mesaBuild;
-            mesa-demos = mesaDemosBuild;
-            pd-virgl-shim = pdVirglShimBuild;
-            osmesa-tri = osmesaTriBuild;
-            osmesa-fb = osmesaFbBuild;
-            libobjc = libobjcBuild;
-            foundation = foundationBuild;
-            iokit = iokitBuild;
-            security = securityBuild;
-            systemConfiguration = systemConfigurationBuild;
-            diskArbitration = diskArbitrationBuild;
-            iomediacheck = iomediacheckBuild;
-            opengl-framework = openglFrameworkBuild;
-            i3 = i3Build;
-            i3status = i3statusShimBuild;
-            startup-notification = startupNotificationBuild;
-            libX11 = xlibBuild;
-            libxcb = xcbBuild;
-            libxcb-util = xcbUtilBuild;
-            libxcb-keysyms = xcbKeysymsBuild;
-            libxcb-wm = xcbWmBuild;
-            libxcb-render-util = xcbRenderUtilBuild;
-            libxcb-image = xcbImageBuild;
-            libxcb-cursor = xcbCursorBuild;
-            xcb-util-xrm = xcbXrmBuild;
-            libev = libevBuild;
-            pcre2 = pcre2Build;
-            yajl = yajlBuild;
-            cairo = cairoBuild;
-            libffi = libffiBuild;
-            glib = glibBuild;
-            fribidi = fribidiBuild;
-            harfbuzz = harfbuzzBuild;
-            expat = expatBuild;
-            fontconfig = fontconfigBuild;
-            freetype2 = freetype2Build;
-            pango = pangoBuild;
-            libXft = libXftBuild;
-            dmenu = dmenuBuild;
-            zlib = xvfbZlibBuild;
-            libXau = xvfbLibXauBuild;
-            libXdmcp = xvfbLibXdmcpBuild;
-            libXext = xvfbLibXextBuild;
-            libXrender = xvfbLibXrenderBuild;
-            libXfixes = xvfbLibXfixesBuild;
-            libXcursor = xvfbLibXcursorBuild;
-            libICE = xvfbLibICEBuild;
-            libSM = xvfbLibSMBuild;
-          };
-
+          inherit (imageContents)
+            fullBuild
+            splitBaseSystem
+            splitBaseSystemStripped
+            splitBaseSystemMinimal
+            imageExtraPackageSet
+            commonPackages
+            linuxPackages
+            linuxApps
+            ;
           arm64Packages = lib.optionalAttrs (!isDarwin) {
             zlib-arm64 = xvfbZlibArm64Build;
             toybox-arm64 = toyboxArm64Build;
@@ -3644,506 +2477,6 @@
             xvfbLibxcvt-arm64 = xvfbLibxcvtArm64Build;
             xvfbPixman-arm64 = xvfbPixmanArm64Build;
           };
-
-          commonPackages = {
-            userland = userlandBuild;
-            tcc = tccBuild;
-            cctools = cctoolsBuild;
-            libsystem = libSystemBuild;
-            libSystem = libSystemBuild;
-            libapfsrw = libapfsrwBuild;
-            xnu-headers = xnuHeadersBuild;
-            xnu = kernelBuild;
-            xnu-debug = kernelDebugBuild;
-            kernel = kernelBuild;
-            kernel-debug = kernelDebugBuild;
-            kernel-arm64 = kernelArm64Build;
-            kernel-arm64-virt = kernelArm64VirtBuild;
-            kernel-arm64-virt-debug = kernelArm64VirtDebugBuild;
-            kexts = kextsBuild;
-            kexts-arm64 = kextsArm64Build;
-            iographics = iographicsBuild;
-            basesystem = fullBuild;
-            basesystem-split = splitBaseSystem;
-            default = fullBuild;
-            fbdoom = fbdoomBuild;
-          } // imageExtraPackageSet // lib.optionalAttrs (!isDarwin) {
-            libX11 = xlibBuild;
-            libxcb = xcbBuild;
-            freetype2 = freetype2Build;
-            ncurses = ncursesBuild;
-            libiconv = libiconvBuild;
-            libxkbfile = xvfbLibXkbfileBuild;
-            libxcb-util = xcbUtilBuild;
-            libxcb-keysyms = xcbKeysymsBuild;
-            libxcb-wm = xcbWmBuild;
-            libxcb-render-util = xcbRenderUtilBuild;
-            libxcb-image = xcbImageBuild;
-            libxcb-cursor = xcbCursorBuild;
-            xcb-util-xrm = xcbXrmBuild;
-            libev = libevBuild;
-            pcre2 = pcre2Build;
-            yajl = yajlBuild;
-            startup-notification = startupNotificationBuild;
-            cairo = cairoBuild;
-            libffi = libffiBuild;
-            glib = glibBuild;
-            fribidi = fribidiBuild;
-            harfbuzz = harfbuzzBuild;
-            expat = expatBuild;
-            fontconfig = fontconfigBuild;
-            pango = pangoBuild;
-            i3 = i3Build;
-            i3status = i3statusShimBuild;
-            openssh = opensshBuild;
-            gnumake = gnumakeBuild;
-            pkgconf = pkgconfBuild;
-            gnum4 = gnum4Build;
-            autoconf = autoconfBuild;
-            automake = automakeBuild;
-            bison = bisonBuild;
-            flex = flexBuild;
-            python = pythonBuild;
-            #perl = perlBuild;
-          };
-
-          linuxPackages =
-            let
-              kcBuild = pkgs.callPackage ./nix/pkgs/kc.nix {
-                kernel = kernelBuild;
-                kexts = kextsBuild;
-                kcTools = kc-tools.packages.${system}.default;
-              };
-              kcDebugBuild = pkgs.callPackage ./nix/pkgs/kc.nix {
-                kernel = kernelDebugBuild;
-                kexts = kextsBuild;
-                kcTools = kc-tools.packages.${system}.default;
-              };
-              kcArm64DebugBuild = pkgs.callPackage ./nix/pkgs/kc-arm64.nix {
-                kernel = kernelArm64VirtDebugBuild;
-                kexts = kextsArm64Build;
-                kcTools = kc-tools.packages.${system}.default;
-              };
-              kcArm64ReleaseBuild = pkgs.callPackage ./nix/pkgs/kc-arm64.nix {
-                kernel = kernelArm64VirtBuild;
-                kexts = kextsArm64Build;
-                kcTools = kc-tools.packages.${system}.default;
-              };
-              imageExtraPackages = lib.attrValues imageExtraPackageSet
-                ++ lib.optional (fbdoomExternalSrc != null) fbdoomBuild;
-              imageBuild = pkgs.callPackage ./image.nix {
-                baseSystem = splitBaseSystem;
-                extraPackages = imageExtraPackages;
-                kc = kcBuild;
-                xnuLoader = xnu-loader.packages.${system}.default;
-                apfsprogs = pkgs.apfsprogs;
-                #testAudioFile = /home/vali/development/darwin/stillalive.pcm;
-              };
-              imageHfsBuild = pkgs.callPackage ./image.nix {
-                baseSystem = splitBaseSystem;
-                extraPackages = imageExtraPackages;
-                kc = kcBuild;
-                xnuLoader = xnu-loader.packages.${system}.default;
-                apfsprogs = pkgs.apfsprogs;
-                hfsprogs = pkgs.hfsprogs;
-                libdmg-hfsplus = pkgs.callPackage ./nix/pkgs/libdmg-hfsplus.nix { };
-                rootFsType = "hfs";
-                #testAudioFile = /home/vali/development/darwin/badapple.pcm;
-              };
-              imageDebugBuild = pkgs.callPackage ./image.nix {
-                baseSystem = splitBaseSystem;
-                extraPackages = lib.attrValues imageExtraPackageSet;
-                kc = kcDebugBuild;
-                xnuLoader = xnu-loader.packages.${system}.default;
-                apfsprogs = pkgs.apfsprogs;
-                imageFileName = "puredarwin-debug.img";
-              };
-              imageArm64VirtBuild = pkgs.callPackage ./image.nix {
-                baseSystem = splitBaseSystem;
-                extraPackages = imageExtraPackages;
-                kc = kcArm64DebugBuild;
-                xnuLoader = xnu-loader.packages.${system}.arm64-virt;
-                apfsprogs = pkgs.apfsprogs;
-                efiBinary = "BOOTAA64.EFI";
-                imageFileName = "puredarwin-arm64-virt.img";
-              };
-              imageArm64VirtMinimalBuild = pkgs.callPackage ./image.nix {
-                baseSystem = splitBaseSystemArm64VirtMinimal;
-                extraPackages = [ ];
-                kc = kcArm64DebugBuild;
-                xnuLoader = xnu-loader.packages.${system}.arm64-virt;
-                apfsprogs = pkgs.apfsprogs;
-                efiBinary = "BOOTAA64.EFI";
-                espMB = 64;
-                rootMB = 256;
-                imageFileName = "puredarwin-arm64-virt-minimal.img";
-                bootArgs = "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 -noprogress gen9_debug=1 vgpu_debug=1 pdtrace=1 ahci_debug=1 no_interrupt_masked_debug=1";
-              };
-              # Full arm64 image: the same userland as the x86 .#image, on the
-              # arm64 base system and release KC. Sized for the whole stack
-              # (ICU data and Mesa alone are most of a minimal image).
-              imageArm64VirtFullBuild = pkgs.callPackage ./image.nix {
-                baseSystem = splitBaseSystemArm64VirtMinimalRelease;
-                extraPackages = imageExtraPackagesArm64;
-                kc = kcArm64ReleaseBuild;
-                xnuLoader = xnu-loader.packages.${system}.arm64-virt;
-                apfsprogs = pkgs.apfsprogs;
-                efiBinary = "BOOTAA64.EFI";
-                espMB = 64;
-                rootMB = 3072;
-                imageFileName = "puredarwin-arm64-virt-full.img";
-                bootArgs = "serial=3 -noprogress";
-              };
-              imageArm64VirtMinimalReleaseBuild = pkgs.callPackage ./image.nix {
-                baseSystem = splitBaseSystemArm64VirtMinimalRelease;
-                # toybox backs /bin/ls, /bin/cp and friends (they are symlinks
-                # to it), so without it those are all dangling.
-                extraPackages = [ zshArm64Build libiconvArm64Build toyboxArm64Build ];
-                kc = kcArm64ReleaseBuild;
-                xnuLoader = xnu-loader.packages.${system}.arm64-virt;
-                apfsprogs = pkgs.apfsprogs;
-                efiBinary = "BOOTAA64.EFI";
-                espMB = 64;
-                rootMB = 512;
-                imageFileName = "puredarwin-arm64-virt-minimal-release.img";
-                bootArgs = "serial=3 -noprogress ahci_debug=1 kext=0xffff io=0xffff";
-              };
-              strippedExtraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild mesaBuild pdVirglShimBuild osmesaTriBuild osmesaFbBuild mesaDemosBuild ];
-              imageStrippedBuild = pkgs.callPackage ./image.nix {
-                baseSystem = splitBaseSystemStripped;
-                extraPackages = strippedExtraPackages;
-                kc = kcBuild;
-                xnuLoader = xnu-loader.packages.${system}.default;
-                apfsprogs = pkgs.apfsprogs;
-                imageFileName = "puredarwin-stripped.img";
-              };
-              imageMinimalBuild = pkgs.callPackage ./image.nix {
-                baseSystem = splitBaseSystemMinimal;
-                extraPackages = strippedExtraPackages;
-                kc = kcBuild;
-                xnuLoader = xnu-loader.packages.${system}.default;
-                apfsprogs = pkgs.apfsprogs;
-                imageFileName = "puredarwin-minimal.img";
-              };
-              runVm = pkgs.writeShellApplication {
-                name = "puredarwin-vm";
-                runtimeInputs = [ pkgs.qemu ];
-                text = ''
-                  set -euo pipefail
-
-                  state_dir="''${PUREDARWIN_VM_STATE_DIR:-$PWD/.puredarwin-vm}"
-                  image="''${PUREDARWIN_IMAGE:-}"
-                  ovmf_code="''${PUREDARWIN_OVMF_CODE:-${pkgs.OVMF.fd}/FV/OVMF_CODE.fd}"
-                  ovmf_vars_template="''${PUREDARWIN_OVMF_VARS_TEMPLATE:-${pkgs.OVMF.fd}/FV/OVMF_VARS.fd}"
-                  ovmf_vars="''${PUREDARWIN_OVMF_VARS:-$state_dir/OVMF_VARS.fd}"
-
-                  if [ -z "$image" ]; then
-                    if [ -e "$PWD/puredarwin.img" ]; then
-                      image="$PWD/puredarwin.img"
-                    elif [ -e "$PWD/result/puredarwin.img" ]; then
-                      image="$PWD/result/puredarwin.img"
-                    else
-                      echo "puredarwin-vm: no image found; set PUREDARWIN_IMAGE or run nix build .#image" >&2
-                      exit 1
-                    fi
-                  fi
-                  image_readonly_opt=""
-                  if [ ! -w "$image" ]; then
-                    image_readonly_opt=",snapshot=on"
-                  fi
-
-                  mkdir -p "$state_dir"
-                  if [ ! -e "$ovmf_vars" ]; then
-                    cp "$ovmf_vars_template" "$ovmf_vars"
-                    chmod u+w "$ovmf_vars"
-                  fi
-
-                  exec qemu-system-x86_64 \
-                    -M q35 \
-                    -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
-                    -smp "''${PUREDARWIN_VM_SMP:-4}" \
-                    -vga "''${PUREDARWIN_VM_VGA:-std}" \
-                    -cpu IvyBridge,vendor=GenuineIntel \
-                    -fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=2048 \
-                    -drive if=pflash,format=raw,unit=0,readonly=on,file="$ovmf_code" \
-                    -drive if=pflash,format=raw,unit=1,file="$ovmf_vars" \
-                    -drive id=root,format=raw,file="$image"$image_readonly_opt \
-                    -device qemu-xhci,id=xhci \
-                    -device usb-kbd,bus=xhci.0 \
-                    -device usb-mouse,bus=xhci.0 \
-                    -device intel-hda,id=hda \
-                    -device hda-duplex,audiodev=snd0 \
-                    -audiodev "''${PUREDARWIN_VM_AUDIODEV:-none},id=snd0" \
-                    -serial mon:stdio \
-                    -no-reboot \
-                    -no-shutdown \
-                    "$@"
-                '';
-              };
-              runKvm = pkgs.writeShellApplication {
-                name = "puredarwin-kvm";
-                runtimeInputs = [ pkgs.qemu ];
-                text = ''
-                  set -euo pipefail
-
-                  state_dir="''${PUREDARWIN_VM_STATE_DIR:-$PWD/.puredarwin-kvm}"
-                  image="''${PUREDARWIN_IMAGE:-}"
-                  ovmf_code="''${PUREDARWIN_OVMF_CODE:-${pkgs.OVMF.fd}/FV/OVMF_CODE.fd}"
-                  ovmf_vars_template="''${PUREDARWIN_OVMF_VARS_TEMPLATE:-${pkgs.OVMF.fd}/FV/OVMF_VARS.fd}"
-                  ovmf_vars="''${PUREDARWIN_OVMF_VARS:-$state_dir/OVMF_VARS.fd}"
-
-                  if [ -z "$image" ]; then
-                    if [ -e "$PWD/puredarwin.img" ]; then
-                      image="$PWD/puredarwin.img"
-                    elif [ -e "$PWD/result/puredarwin.img" ]; then
-                      image="$PWD/result/puredarwin.img"
-                    else
-                      echo "puredarwin-kvm: no image found; set PUREDARWIN_IMAGE or run nix build .#image" >&2
-                      exit 1
-                    fi
-                  fi
-                  image_readonly_opt=""
-                  if [ ! -w "$image" ]; then
-                    image_readonly_opt=",snapshot=on"
-                  fi
-
-                  mkdir -p "$state_dir"
-                  if [ ! -e "$ovmf_vars" ]; then
-                    cp "$ovmf_vars_template" "$ovmf_vars"
-                    chmod u+w "$ovmf_vars"
-                  fi
-
-                  exec qemu-system-x86_64 \
-                    -machine q35,accel=kvm \
-                    -cpu "''${PUREDARWIN_KVM_CPU:-host}" \
-                    -smp "''${PUREDARWIN_VM_SMP:-4}" \
-                    -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
-                    -vga "''${PUREDARWIN_VM_VGA:-std}" \
-                    -fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=2048 \
-                    -drive if=pflash,format=raw,unit=0,readonly=on,file="$ovmf_code" \
-                    -drive if=pflash,format=raw,unit=1,file="$ovmf_vars" \
-                    -device ich9-ahci,id=sata \
-                    -drive if=none,id=system,file="$image",format=raw,cache=writeback"$image_readonly_opt" \
-                    -device ide-hd,bus=sata.0,drive=system \
-                    -device e1000-82545em,netdev=net0 \
-                    -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-                    ''${PUREDARWIN_VM_NETDUMP:+-object filter-dump,id=netdump,netdev=net0,file="$PUREDARWIN_VM_NETDUMP"} \
-                    -device qemu-xhci,id=xhci \
-                    -device usb-kbd,bus=xhci.0 \
-                    -device usb-mouse,bus=xhci.0 \
-                    -device intel-hda,id=hda \
-                    -device hda-duplex,audiodev=snd0 \
-                    -audiodev "''${PUREDARWIN_VM_AUDIODEV:-none},id=snd0" \
-                    -serial mon:stdio \
-                    -no-reboot \
-                    -no-shutdown \
-                    "$@"
-                '';
-              };
-              runArm64Uefi = pkgs.writeShellApplication {
-                name = "puredarwin-arm64-uefi";
-                runtimeInputs = [ pkgs.qemu ];
-                text = ''
-                  set -euo pipefail
-
-                  state_dir="''${PUREDARWIN_ARM64_UEFI_STATE_DIR:-$PWD/.puredarwin-arm64-uefi}"
-                  aavmf_code="''${PUREDARWIN_AAVMF_CODE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_CODE.fd}"
-                  aavmf_vars_template="''${PUREDARWIN_AAVMF_VARS_TEMPLATE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_VARS.fd}"
-                  aavmf_vars="''${PUREDARWIN_AAVMF_VARS:-$state_dir/AAVMF_VARS.fd}"
-
-                  mkdir -p "$state_dir"
-                  if [ "''${PUREDARWIN_ARM64_RESET_VARS:-0}" = 1 ]; then
-                    rm -f "$aavmf_vars"
-                  fi
-                  if [ ! -e "$aavmf_vars" ]; then
-                    cp "$aavmf_vars_template" "$aavmf_vars"
-                    chmod u+w "$aavmf_vars"
-                  fi
-
-                  exec qemu-system-aarch64 \
-                    -machine virt,gic-version=3 \
-                    -cpu "''${PUREDARWIN_ARM64_VM_CPU:-max}" \
-                    -m "''${PUREDARWIN_VM_MEMORY:-1024}" \
-                    -drive if=pflash,format=raw,unit=0,readonly=on,file="$aavmf_code" \
-                    -drive if=pflash,format=raw,unit=1,file="$aavmf_vars" \
-                    -device virtio-gpu-pci \
-                    -serial mon:stdio \
-                    -display "''${PUREDARWIN_ARM64_UEFI_DISPLAY:-gtk}" \
-                    -no-reboot \
-                    -no-shutdown \
-                    "$@"
-                '';
-              };
-              runArm64Uboot = pkgs.writeShellApplication {
-                name = "puredarwin-arm64-uboot";
-                runtimeInputs = [ pkgs.qemu ];
-                text = ''
-                  set -euo pipefail
-
-                  image="''${PUREDARWIN_IMAGE:-}"
-                  if [ -z "$image" ]; then
-                    if [ -e "$PWD/puredarwin-arm64-virt.img" ]; then
-                      image="$PWD/puredarwin-arm64-virt.img"
-                    elif [ -e "$PWD/result/puredarwin-arm64-virt.img" ]; then
-                      image="$PWD/result/puredarwin-arm64-virt.img"
-                    else
-                      echo "puredarwin-arm64-uboot: no image found" >&2
-                      exit 1
-                    fi
-                  fi
-
-                  image_readonly_opt=""
-                  if [ ! -w "$image" ]; then
-                    image_readonly_opt=",snapshot=on"
-                  fi
-
-                  exec qemu-system-aarch64 \
-                    -machine virt,gic-version=3 \
-                    -cpu "''${PUREDARWIN_ARM64_VM_CPU:-max}" \
-                    -smp "''${PUREDARWIN_VM_SMP:-4}" \
-                    -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
-                    -bios "${pkgs.pkgsCross.aarch64-multiplatform.ubootQemuAarch64}/u-boot.bin" \
-                    -drive if=none,id=system,file="$image",format=raw$image_readonly_opt \
-                    -device ich9-ahci,id=ahci0 \
-                    -device ide-hd,drive=system,bus=ahci0.0 \
-                    -serial mon:stdio \
-                    -display none \
-                    -no-reboot \
-                    -no-shutdown \
-                    "$@"
-                '';
-              };
-              runArm64Virt = pkgs.writeShellApplication {
-                name = "puredarwin-arm64-virt";
-                runtimeInputs = [ pkgs.qemu ];
-                text = ''
-                  set -euo pipefail
-
-                  state_dir="''${PUREDARWIN_ARM64_VM_STATE_DIR:-$PWD/.puredarwin-arm64-virt}"
-                  image="''${PUREDARWIN_IMAGE:-}"
-                  aavmf_code="''${PUREDARWIN_AAVMF_CODE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_CODE.fd}"
-                  aavmf_vars_template="''${PUREDARWIN_AAVMF_VARS_TEMPLATE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_VARS.fd}"
-                  aavmf_vars="''${PUREDARWIN_AAVMF_VARS:-$state_dir/AAVMF_VARS.fd}"
-
-                  if [ -z "$image" ]; then
-                    if [ -e "$PWD/puredarwin-arm64-virt.img" ]; then
-                      image="$PWD/puredarwin-arm64-virt.img"
-                    elif [ -e "$PWD/result/puredarwin-arm64-virt.img" ]; then
-                      image="$PWD/result/puredarwin-arm64-virt.img"
-                    else
-                      echo "puredarwin-arm64-virt: no image found; run nix build .#image-arm64-virt" >&2
-                      exit 1
-                    fi
-                  fi
-
-                  image_readonly_opt=""
-                  if [ ! -w "$image" ]; then
-                    image_readonly_opt=",snapshot=on"
-                  fi
-
-                  mkdir -p "$state_dir"
-                  if [ "''${PUREDARWIN_ARM64_RESET_VARS:-0}" = 1 ]; then
-                    rm -f "$aavmf_vars"
-                  fi
-                  if [ ! -e "$aavmf_vars" ]; then
-                    cp "$aavmf_vars_template" "$aavmf_vars"
-                    chmod u+w "$aavmf_vars"
-                  fi
-
-                  exec qemu-system-aarch64 \
-                    -machine virt,gic-version=3 \
-                    -boot order=c,strict=on \
-                    -cpu "''${PUREDARWIN_ARM64_VM_CPU:-max}" \
-                    -smp "''${PUREDARWIN_VM_SMP:-4}" \
-                    -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
-                    -drive if=pflash,format=raw,unit=0,readonly=on,file="$aavmf_code" \
-                    -drive if=pflash,format=raw,unit=1,file="$aavmf_vars" \
-                    -drive if=none,id=system,file="$image",format=raw$image_readonly_opt \
-                    -device virtio-blk-pci,drive=system,bootindex=1 \
-                    -device virtio-net-pci,netdev=net0 \
-                    -netdev user,id=net0,hostfwd=tcp::2223-:22 \
-                    -serial mon:stdio \
-                    -display none \
-                    -no-reboot \
-                    -no-shutdown \
-                    "$@"
-                '';
-              };
-            in {
-              darwin-cross-toolchain = darwinCrossToolchain;
-              native-ld = nativeLd;
-              kc = kcBuild;
-              kc-debug = kcDebugBuild;
-              kc-arm64-debug = kcArm64DebugBuild;
-              kc-arm64 = kcArm64ReleaseBuild;
-              corefoundation = coreFoundationBuild;
-              icucore = icuCoreBuild;
-              libcxxabi-dylib = libcxxabiDylibBuild;
-              libcxx-dylib = libcxxDylibBuild;
-              libcxx-test = libcxxTestBuild;
-              mesa = mesaBuild;
-              osmesa-tri = osmesaTriBuild;
-              osmesa-fb = osmesaFbBuild;
-              libobjc = libobjcBuild;
-              objc-test = objcTestBuild;
-              foundation = foundationBuild;
-              autoconf = autoconfBuild;
-              automake = automakeBuild;
-              iokit = iokitBuild;
-              security = securityBuild;
-              systemstarter = systemStarterBuild;
-              launchd = launchdBuild;
-              launchctl = launchctlBuild;
-              image = imageBuild;
-              image-arm64-virt = imageArm64VirtBuild;
-              image-arm64-virt-minimal = imageArm64VirtMinimalBuild;
-              image-arm64-virt-minimal-release = imageArm64VirtMinimalReleaseBuild;
-              image-arm64-virt-full = imageArm64VirtFullBuild;
-              image-hfs = imageHfsBuild;
-              image-debug = imageDebugBuild;
-              image-stripped = imageStrippedBuild;
-              image-minimal = imageMinimalBuild;
-              xorg = xorgBuild;
-              libxcvt = xvfbLibxcvtBuild;
-              userland = userlandBuild;
-              vm-runner = runVm;
-              kvm-runner = runKvm;
-              arm64-virt-runner = runArm64Virt;
-              arm64-uefi-runner = runArm64Uefi;
-              arm64-uboot-runner = runArm64Uboot;
-            };
-
-          linuxApps =
-            let
-              runVm = linuxPackages.vm-runner;
-              runKvm = linuxPackages.kvm-runner;
-              runVirt = linuxPackages.arm64-virt-runner;
-            in {
-              default = {
-                type = "app";
-                program = "${runVm}/bin/puredarwin-vm";
-              };
-              vm = {
-                type = "app";
-                program = "${runVm}/bin/puredarwin-vm";
-              };
-              arm64-virt = {
-                type = "app";
-                program = "${runVirt}/bin/puredarwin-arm64-virt";
-              };
-              arm64-uefi = {
-                type = "app";
-                program = "${linuxPackages.arm64-uefi-runner}/bin/puredarwin-arm64-uefi";
-              };
-              arm64-uboot = {
-                type = "app";
-                program = "${linuxPackages.arm64-uboot-runner}/bin/puredarwin-arm64-uboot";
-              };
-              kvm = {
-                type = "app";
-                program = "${runKvm}/bin/puredarwin-kvm";
-              };
-            };
 
           devShell = pkgs.mkShell ({
             packages = [

@@ -165,12 +165,12 @@ main(int argc, char **argv)
     if (rc != 0) {
         return rc;
     }
-    setenv("DISPLAY", "127.0.0.1:0", 1);
+    setenv("DISPLAY", ":0", 1);
     setenv("FONTCONFIG_FILE", "/etc/fonts/fonts.conf", 0);
     setenv("XDG_CONFIG_DIRS", "/etc", 0);
     setenv("XDG_DATA_DIRS", "/usr/share:/share", 0);
 
-    fprintf(stderr, "startx: launching %s on 127.0.0.1:0\n", client);
+    fprintf(stderr, "startx: launching %s on :0\n", client);
     cpid = fork();
     if (cpid < 0) {
         fprintf(stderr, "startx: fork client failed: %s\n", strerror(errno));

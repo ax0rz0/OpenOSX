@@ -650,6 +650,7 @@ _os_unfair_lock_assert_owner
 _os_unfair_lock_lock_with_options
 _pthread_setugid_np
 _shm_open
+_shm_unlink
 __simple_asl_log
 __simple_getenv
 __simple_salloc
@@ -764,6 +765,13 @@ _memmem
 _memset_s
 _backtrace
 _strtoq
+_timespec_get
+_erf
+_erff
+_erfc
+_erfcf
+_sched_get_priority_min
+_sched_get_priority_max
 _if_nameindex
 _execle
 _setattrlist
@@ -1146,6 +1154,8 @@ _arc4random_buf
 _atexit
 _clock_gettime
 _endgrent
+_getgrent
+_setgrent
 _endusershell
 _execlp
 _fpathconf
@@ -1741,6 +1751,8 @@ _vm_kernel_page_mask
 _vm_protect
 _vm_remap
 _vproc_swap_integer
+_vproc_transaction_begin
+_vproc_transaction_end
 _asprintf_l
 _btowc_l
 _localeconv_l

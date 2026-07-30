@@ -34,6 +34,7 @@ target_sources(openlibm_static PRIVATE
     src/s_ceil.c src/s_ceilf.c
     src/s_copysign.c src/s_copysignf.c
     src/s_cos.c src/s_cosf.c
+    src/s_erf.c src/s_erff.c
     src/s_csqrt.c src/s_csqrtf.c
     src/s_erf.c src/s_erff.c
     src/s_exp2.c src/s_exp2f.c

@@ -124,6 +124,7 @@ target_sources(libc_static PRIVATE
     gen/FreeBSD/waitpid.c        # _waitpid (init reaps/respawns children)
     gen/FreeBSD/wait.c           # __wait
     gen/FreeBSD/wait3.c          # _wait3 (zsh job/process accounting)
+    gen/FreeBSD/timespec_get.c   # _timespec_get (C11 <time.h>; picom)
     gen/oldsyslog.c              # openlog/closelog/syslog (curl)
     gen/FreeBSD/wordexp.c        # wordexp/wordfree (fastfetch shell-style expansion)
     gen/NetBSD/utmpx.c           # setutxent/getutxent/endutxent (fastfetch users detection)

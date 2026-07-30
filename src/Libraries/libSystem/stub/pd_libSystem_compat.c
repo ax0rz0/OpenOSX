@@ -147,6 +147,51 @@ ldexp(double x, int n)
     return scalbn(x, n);
 }
 
+static pthread_key_t pd_dlerror_key;
+static pthread_once_t pd_dlerror_once = PTHREAD_ONCE_INIT;
+
+static void
+pd_dlerror_key_init(void)
+{
+    if (pthread_key_create(&pd_dlerror_key, free) != 0) {
+        pd_dlerror_key = 0;
+    }
+}
+
+static void
+pd_dlerror_set(const char *fmt, const char *a, const char *b)
+{
+    char *msg;
+
+    pthread_once(&pd_dlerror_once, pd_dlerror_key_init);
+    if (pd_dlerror_key == 0) {
+        return;
+    }
+    if (asprintf(&msg, fmt, a, b) < 0) {
+        return;
+    }
+    free(pthread_getspecific(pd_dlerror_key));
+    (void)pthread_setspecific(pd_dlerror_key, msg);
+}
+
+static char *
+pd_dlerror_take(void)
+{
+    char *msg;
+
+    pthread_once(&pd_dlerror_once, pd_dlerror_key_init);
+    if (pd_dlerror_key == 0) {
+        return NULL;
+    }
+    msg = pthread_getspecific(pd_dlerror_key);
+    if (msg != NULL) {
+        /* dlerror() reports an error once, then clears it. The buffer is kept
+         * and freed on the next set or at thread exit so the caller can read it. */
+        (void)pthread_setspecific(pd_dlerror_key, NULL);
+    }
+    return msg;
+}
+
 int
 dlclose(void *handle)
 {
@@ -170,7 +215,11 @@ dlopen(const char *path, int mode)
         return NULL;
     }
 
-    return fn(path, mode, __builtin_return_address(0));
+    void *handle = fn(path, mode, __builtin_return_address(0));
+    if (handle == NULL) {
+        pd_dlerror_set("dlopen(%s): image not loaded%s", path ? path : "(null)", "");
+    }
+    return handle;
 }
 
 void *
@@ -183,7 +232,11 @@ dlsym(void *handle, const char *symbol)
         return NULL;
     }
 
-    return fn(handle, symbol, __builtin_return_address(0));
+    void *addr = fn(handle, symbol, __builtin_return_address(0));
+    if (addr == NULL) {
+        pd_dlerror_set("dlsym(%s%s): symbol not found", symbol ? symbol : "(null)", "");
+    }
+    return addr;
 }
 
 bool
@@ -205,11 +258,14 @@ dlerror(void)
     typedef char *(*dlerror_fn)(void);
     static dlerror_fn fn;
 
-    if (fn == NULL && !_dyld_func_lookup("__dyld_dlerror", (void **)&fn)) {
-        return NULL;
+    if (fn != NULL || _dyld_func_lookup("__dyld_dlerror", (void **)&fn)) {
+        char *from_dyld = fn();
+        if (from_dyld != NULL) {
+            return from_dyld;
+        }
     }
 
-    return fn();
+    return pd_dlerror_take();
 }
 
 char *index(const char *s, int c)

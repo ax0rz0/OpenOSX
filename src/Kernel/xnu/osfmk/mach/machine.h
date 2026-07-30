@@ -422,9 +422,8 @@ __END_DECLS
 
 /*
  * Families Apple never shipped hardware for, added so cpuid.c can identify the
- * CPUs QEMU emulates and AMD hosts report. Each value is the CPU family's
- * name-string hash in the same scheme as the constants above, so it cannot be
- * recomputed by inspection - do not edit these by hand.
+ * CPUs QEMU emulates and AMD hosts report. These are just random values, as they
+ * only need to be coherent identifiers
  */
 #define CPUFAMILY_INTEL_SILVERMONT      0x35e4dae6
 #define CPUFAMILY_INTEL_BROADWELL       0x582ed09c

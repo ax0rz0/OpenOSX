@@ -1,0 +1,26 @@
+--- a/Xext/shm.c
++++ b/Xext/shm.c
+@@ -1204,7 +1204,23 @@ ShmAttachFd(ClientPtr client)
+ static int
+ shm_tmpfile(void)
+ {
++#if defined(__APPLE__)
++    /* Use an unlinked regular file: PureDarwin's POSIX-shm ftruncate path
++     * allocates Mach named-memory objects, which is not suitable for the
++     * variable-sized MIT-SHM segments Xorg creates. The descriptor is still
++     * passed over the local socket with SCM_RIGHTS. */
++    char template[] = "/tmp/xorg-shm-XXXXXX";
++    int pd_fd = mkstemp(template);
++    if (pd_fd >= 0) {
++        unlink(template);
++        int flags = fcntl(pd_fd, F_GETFD);
++        if (flags != -1)
++            (void)fcntl(pd_fd, F_SETFD, flags | FD_CLOEXEC);
++        DebugF("Using Darwin temporary shared memory file\n");
++        return pd_fd;
++    }
++#endif
+     const char *shmdirs[] = {
+         "/run/shm",
+         "/var/tmp",
+         "/tmp",

@@ -814,16 +814,12 @@ struct PerThreadErrorMessage
 static void dlerror_perThreadKey_once(void* ctx)
 {
     pthread_key_t* dlerrorPThreadKeyPtr = (pthread_key_t*)ctx;
-    // PureDarwin: pthread_key_create() only writes *key on success - on failure
-    // (EAGAIN, no TSD slot available) it leaves the caller's variable untouched.
-    // Upstream drops the return value, so a failure left dlerrorPThreadKey at its
-    // static-zero init. Key 0 is not an unallocated key on Darwin: TSD slot 0 holds
-    // the pthread_self pointer. pthread_getspecific(0) therefore returned a valid
-    // non-NULL pointer, setErrorString() read sizeAllocated out of the pthread
-    // struct, decided the buffer was too small, and called free(pthread_self) -
-    // "pointer being freed was not allocated", on every dyld error path (failed
-    // dlopen, failed module load), in every process. Pin the key to 0 explicitly on
-    // failure so it is unambiguously "no key", and make the users below skip TSD.
+    // PureDarwin: pthread_key_create() only writes *key on success, and it always
+    // fails here - dyld links libpthread's VARIANT_DYLD build, which excludes
+    // pthread_key_create entirely
+    //
+    // Apple drops the return value, leaving dlerrorPThreadKey at its static-zero
+    // init.
     if ( pthread_key_create(dlerrorPThreadKeyPtr, &free) != 0 )
         *dlerrorPThreadKeyPtr = 0;
 }
@@ -836,19 +832,9 @@ static pthread_key_t dlerror_perThreadKey()
     return dlerrorPThreadKey;
 }
 
-// PureDarwin: 0 means pthread_key_create() failed (see dlerror_perThreadKey_once).
-// Slot 0 is pthread_self, not our buffer - never read or free it.
-static PerThreadErrorMessage* dlerrorBuffer()
-{
-    pthread_key_t key = dlerror_perThreadKey();
-    if ( key == 0 )
-        return nullptr;
-    return (PerThreadErrorMessage*)pthread_getspecific(key);
-}
-
 static void clearErrorString()
 {
-    PerThreadErrorMessage* errorBuffer = dlerrorBuffer();
+    PerThreadErrorMessage* errorBuffer = (PerThreadErrorMessage*)pthread_getspecific(dlerror_perThreadKey());
     if ( errorBuffer != nullptr )
         errorBuffer->valid = false;
 }
@@ -864,14 +850,15 @@ static void setErrorString(const char* format, ...)
         va_end(list);
         size_t strLen = strlen(_simple_string(buf)) + 1;
         size_t sizeNeeded = sizeof(PerThreadErrorMessage) + strLen;
-        // PureDarwin: with no usable TSD key there is nowhere to stash the message.
-        // Drop it rather than fall back on slot 0 (pthread_self) and free() it.
-        pthread_key_t key = dlerror_perThreadKey();
-        if ( key == 0 ) {
+        // PureDarwin: see dlerror_perThreadKey_once() - with no usable key there is
+        // nowhere to stash the message, and slot 0 is pthread_self. Drop it here;
+        // libSystem's dl* shims record the error on their side instead.
+        pthread_key_t dlerrorKey = dlerror_perThreadKey();
+        if ( dlerrorKey == 0 ) {
             _simple_sfree(buf);
             return;
         }
-        PerThreadErrorMessage* errorBuffer = (PerThreadErrorMessage*)pthread_getspecific(key);
+        PerThreadErrorMessage* errorBuffer = (PerThreadErrorMessage*)pthread_getspecific(dlerrorKey);
         if ( errorBuffer != nullptr ) {
             if ( errorBuffer->sizeAllocated < sizeNeeded ) {
                 free(errorBuffer);
@@ -881,13 +868,9 @@ static void setErrorString(const char* format, ...)
         if ( errorBuffer == nullptr ) {
             size_t allocSize = std::max(sizeNeeded, (size_t)256);
             PerThreadErrorMessage* p = (PerThreadErrorMessage*)malloc(allocSize);
-            if ( p == nullptr ) {
-                _simple_sfree(buf);
-                return;
-            }
             p->sizeAllocated = allocSize;
             p->valid = false;
-            pthread_setspecific(key, p);
+            pthread_setspecific(dlerrorKey, p);
             errorBuffer = p;
         }
         strcpy(errorBuffer->message, _simple_string(buf));
@@ -900,7 +883,11 @@ char* dlerror()
 {
     log_apis("dlerror()\n");
 
-    PerThreadErrorMessage* errorBuffer = dlerrorBuffer();
+    // PureDarwin: key 0 means no key at all - slot 0 is pthread_self, never our
+    // buffer, so it must not be read or freed.
+    pthread_key_t dlerrorKey = dlerror_perThreadKey();
+    PerThreadErrorMessage* errorBuffer = (dlerrorKey == 0)
+        ? nullptr : (PerThreadErrorMessage*)pthread_getspecific(dlerrorKey);
     if ( errorBuffer != nullptr ) {
         if ( errorBuffer->valid ) {
             // you can only call dlerror() once, then the message is cleared

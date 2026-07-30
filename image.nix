@@ -29,7 +29,7 @@
   # xnu-loader reads this off the ESP at \EFI\BOOT\boot-args.txt
   # it falls back if it cannot find a boot-args.txt, so not strictly needed here
   # but generally nice to have so we can override things easily now
-, bootArgs ? "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 -noprogress gen9_debug=1 vgpu_debug=1 pdtrace=1"
+, bootArgs ? "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 -noprogress gen9_debug=1"
 }:
 
 assert lib.isDerivation baseSystem;
@@ -293,6 +293,21 @@ EOF
 # pidfile/socket here, and this project has no per-file chown yet. (toybox has
 # no chmod applet, so set the mode via mkdir -m.)
 /bin/mkdir -p -m 1777 /var/run/dbus
+# D-Bus refuses to spawn a bus without a machine ID, and glib looks for it at
+# /etc/machine-id or the compiled-in $prefix/var/lib/dbus/machine-id - which for a
+# store-prefixed glib is a path that does not exist in the guest. Without one
+# every GTK client that touches D-Bus fails with "Cannot spawn a message bus
+# without a machine-id", which is what broke xfconf init for xfwm4, xfce4-panel,
+# xfdesktop and xfce4-appfinder. Generate it once, on first boot.
+if ! test -s /etc/machine-id; then
+    if test -x /bin/dbus-uuidgen; then
+        /bin/dbus-uuidgen > /etc/machine-id
+    fi
+fi
+/bin/mkdir -p /var/lib/dbus
+if test -s /etc/machine-id && ! test -s /var/lib/dbus/machine-id; then
+    /bin/cp /etc/machine-id /var/lib/dbus/machine-id
+fi
 if test -x /bin/dbus-daemon; then
     exec /bin/dbus-daemon --config-file=/share/dbus-1/system.conf
 fi
