@@ -1296,6 +1296,8 @@
               libpng = libpngBuild;
               glibNative = pkgs.glib.dev;
               gtk3 = gtk3Build;
+              libcxxDylib = libcxxDylibBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
               inherit (pkgs) xorgproto;
             };
           xrdbBuild =

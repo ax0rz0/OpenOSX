@@ -567,8 +567,7 @@ let
         "--disable-linker-opts"
       ];
     };
-in
-{
+in {
   inherit
     xfconfBuild
     libxfce4utilBuild

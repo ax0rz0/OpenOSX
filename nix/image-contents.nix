@@ -899,8 +899,7 @@ let
         program = "${runKvm}/bin/puredarwin-kvm";
       };
     };
-in
-{
+in {
   inherit
     fullBuild
     splitBaseSystem
