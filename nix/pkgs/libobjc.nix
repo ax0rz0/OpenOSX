@@ -2,6 +2,7 @@
 , lib
 , requireFile
 , darwinCrossToolchain
+, targetTriple ? "x86_64-apple-darwin20.4"
 , nativeLd
 , libSystem
 , libcxxabiDylib
@@ -30,7 +31,7 @@ let
     '';
   };
 
-  cc = "${darwinCrossToolchain}/bin/x86_64-apple-darwin20.4-clang";
+  cc = "${darwinCrossToolchain}/bin/${targetTriple}-clang";
   # All runtime/*.mm are part of libobjc (the -old variants self-gate on the
   # current config). objcdt/objcrt tools and their sources are not included.
   mmSrcs = [
@@ -44,7 +45,11 @@ let
     "Object" "Protocol"
   ];
   # x86_64 assembly.
-  asmSrcs = [
+  asmSrcs = if targetTriple == "arm64-apple-darwin20.4" then [
+    "Messengers.subproj/objc-msg-arm64"
+    "objc-blocktramps-arm64"
+    "objc-sel-table"
+  ] else [
     "Messengers.subproj/objc-msg-x86_64"
     "objc-blocktramps-x86_64"
     "objc-sel-table"
@@ -90,7 +95,13 @@ stdenv.mkDerivation {
 
     # -fno-objc-arc: objc4 runtime is MRC. RTTI/exceptions on (objc-exception,
     # private_typeinfo). Our incdir is ahead of -isysroot so <objc/*> is ours.
+    # -fno-delete-null-pointer-checks is required, not cosmetic. objc4 reaches
+    # nil through C++ member functions on objc_object - objc_release(nil) calls
+    # objc_object::isTaggedPointerOrNil(), whose "!this" is exactly the null
+    # check that matters. C++ says "this" is never null, so without this flag
+    # clang folds that test away and objc_release(nil) dereferences 0.
     CXXFLAGS="-x objective-c++ -std=gnu++17 -fno-objc-arc -fexceptions \
+      -fno-delete-null-pointer-checks \
       -fobjc-exceptions -fPIC -Os -DNDEBUG -DLIBC_NO_LIBCRASHREPORTERCLIENT \
       -D__PUREDARWIN__=1 \
       -Wno-undef-prefix \

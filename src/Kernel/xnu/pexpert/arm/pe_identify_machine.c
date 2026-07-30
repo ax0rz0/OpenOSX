@@ -54,7 +54,37 @@ pe_identify_machine(boot_args * bootArgs)
 	(void)bootArgs;
 
 	if (pe_arm_get_soc_base_phys() == 0) {
+#if defined(QEMUVIRT)
+		/* QEMU virt has the ARM architectural timer but no Apple arm-io node. */
+		uint64_t timer_frequency = __builtin_arm_rsr64("CNTFRQ_EL0");
+
+		if (timer_frequency == 0) {
+			/* QEMU's virt machine default; keep early boot deterministic. */
+			timer_frequency = 62500000;
+		}
+
+		bzero((void *)&gPEClockFrequencyInfo, sizeof(clock_frequency_info_t));
+		gPEClockFrequencyInfo.timebase_frequency_hz = timer_frequency;
+		gPEClockFrequencyInfo.dec_clock_rate_hz = timer_frequency;
+		gPEClockFrequencyInfo.fix_frequency_hz = timer_frequency;
+		gPEClockFrequencyInfo.bus_frequency_hz = timer_frequency;
+		gPEClockFrequencyInfo.bus_frequency_min_hz = timer_frequency;
+		gPEClockFrequencyInfo.bus_frequency_max_hz = timer_frequency;
+		gPEClockFrequencyInfo.cpu_frequency_hz = timer_frequency;
+		gPEClockFrequencyInfo.cpu_frequency_min_hz = timer_frequency;
+		gPEClockFrequencyInfo.cpu_frequency_max_hz = timer_frequency;
+		gPEClockFrequencyInfo.bus_clock_rate_hz = timer_frequency;
+		gPEClockFrequencyInfo.cpu_clock_rate_hz = timer_frequency;
+		gPEClockFrequencyInfo.bus_clock_rate_num = timer_frequency;
+		gPEClockFrequencyInfo.bus_clock_rate_den = 1;
+		gPEClockFrequencyInfo.bus_to_cpu_rate_num = 1;
+		gPEClockFrequencyInfo.bus_to_cpu_rate_den = 1;
+		gPEClockFrequencyInfo.bus_to_dec_rate_num = 1;
+		gPEClockFrequencyInfo.bus_to_dec_rate_den = 1;
 		return;
+#else
+		return;
+#endif
 	}
 
 	/* Clear the gPEClockFrequencyInfo struct */
@@ -129,7 +159,16 @@ pe_identify_machine(boot_args * bootArgs)
 				if (size == 8) {
 					gPEClockFrequencyInfo.timebase_frequency_hz = *(unsigned long long const *)value;
 				} else {
-					gPEClockFrequencyInfo.timebase_frequency_hz = *value;
+					/*
+					 * The property is a 32-bit cell; read it as
+					 * 32 bits. Dereferencing "value" (an unsigned
+					 * long *) would read 8 bytes and pull the low
+					 * word of the following property into the high
+					 * bits, producing a garbage (far too high)
+					 * timebase frequency that miscalibrates every
+					 * kernel delay and timer.
+					 */
+					gPEClockFrequencyInfo.timebase_frequency_hz = *(unsigned int const *)value;
 				}
 			}
 			gPEClockFrequencyInfo.dec_clock_rate_hz = gPEClockFrequencyInfo.timebase_frequency_hz;
@@ -495,6 +534,12 @@ pe_arm_init_debug(void *args)
 	uintptr_t const *reg_prop;
 	uint32_t        prop_size;
 
+#if defined(QEMUVIRT)
+	/* QEMU virt has no Apple cpu-debug-interface. */
+	(void)args;
+	return;
+#endif
+
 	if (gSocPhys == 0) {
 		kprintf("pe_arm_init_debug: failed to initialize gSocPhys == 0\n");
 		return;
@@ -587,6 +632,12 @@ uint32_t
 pe_arm_init_interrupts(void *args)
 {
 	kprintf("pe_arm_init_interrupts: args: %p\n", args);
+
+	#if defined(QEMUVIRT)
+	/* QEMU virt has no Apple arm-io interrupt-controller or timer nodes.
+	 * Its GIC and architectural timer are accessed through system registers. */
+	return pe_arm_init_timer(args);
+	#endif
 
 	/* Set up mappings for interrupt controller and possibly timers (if they haven't been set up already) */
 	if (args != NULL) {

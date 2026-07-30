@@ -719,7 +719,7 @@ SECURITY_READ_ONLY_LATE(static struct pe_serial_functions) pi3_uart_serial_funct
 
 /*****************************************************************************/
 
-#ifdef VMAPPLE_UART
+#if defined(VMAPPLE_UART) || defined(QEMUVIRT_UART)
 
 static vm_offset_t vmapple_uart0_base_vaddr = 0;
 
@@ -805,7 +805,7 @@ SECURITY_READ_ONLY_LATE(static struct pe_serial_functions) vmapple_uart_serial_f
 	.rd0 = vmapple_uart_receive_data
 };
 
-#endif /* VMAPPLE_UART */
+#endif /* VMAPPLE_UART || QEMUVIRT_UART */
 
 /*****************************************************************************/
 
@@ -852,6 +852,16 @@ serial_init(void)
 	soc_base = pe_arm_get_soc_base_phys();
 
 	if (soc_base == 0) {
+#if defined(QEMUVIRT_UART)
+		/* QEMU virt has no Apple arm-io node. Map the architectural PL011
+		 * directly from the board definition so post-MMU kernel logging works. */
+		vmapple_uart0_base_vaddr = ml_io_map(QEMUVIRT_UART_BASE_PHYS,
+		    QEMUVIRT_UART_SIZE);
+		if (vmapple_uart0_base_vaddr != 0) {
+			register_serial_functions(&vmapple_uart_serial_functions);
+			return 1;
+		}
+#endif
 		return 0;
 	}
 
@@ -869,7 +879,7 @@ serial_init(void)
 	}
 #endif /* PI3_UART */
 
-#ifdef VMAPPLE_UART
+#if defined(VMAPPLE_UART) || defined(QEMUVIRT_UART)
 	if (SecureDTFindEntry("name", "uart0", &entryP) == kSuccess) {
 		SecureDTGetProperty(entryP, "reg", (void const **)&reg_prop, &prop_size);
 		vmapple_uart0_base_vaddr = ml_io_map(soc_base + *reg_prop, *(reg_prop + 1));
@@ -878,7 +888,7 @@ serial_init(void)
 	if (vmapple_uart0_base_vaddr != 0) {
 		register_serial_functions(&vmapple_uart_serial_functions);
 	}
-#endif /* VMAPPLE_UART */
+#endif /* VMAPPLE_UART || QEMUVIRT_UART */
 
 #ifdef DOCKCHANNEL_UART
 	uint32_t no_dockchannel_uart = 0;

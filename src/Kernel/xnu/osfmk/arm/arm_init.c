@@ -256,6 +256,7 @@ arm_slide_rebase_and_sign_image(void)
 			    &__thread_starts_sect_end[0],
 			    (uintptr_t)k_mh, (uintptr_t)k_mh - slide, slide);
 		}
+
 #if defined(HAS_APPLE_PAC)
 		OSRuntimeSignStructors(&_mh_execute_header);
 #endif /* defined(HAS_APPLE_PAC) */
@@ -311,7 +312,6 @@ arm_init(
 	uint32_t        memsize;
 	uint64_t        xmaxmem;
 	thread_t        thread;
-
 	arm_slide_rebase_and_sign_image();
 
 	/* If kernel integrity is supported, use a constant copy of the boot args. */
@@ -324,6 +324,32 @@ arm_init(
 	BootCpuData.rop_key = ml_default_rop_pid();
 	BootCpuData.jop_key = ml_default_jop_pid();
 #endif /* defined(HAS_APPLE_PAC) */
+
+	/*
+	 * PureDarwin: PE_init_platform(FALSE, args) below calls phystokv() (via
+	 * ml_static_ptovirt()) on the device tree pointer before arm_vm_init()
+	 * (called much further down, ~line 490) has set gPhysBase/gVirtBase/
+	 * real_phys_size. Without them, phystokv()'s fallback formula
+	 * (pa - gPhysBase + gVirtBase) degenerates to the identity function
+	 * (both operands still zero), handing PE_state.deviceTreeHead a raw
+	 * *physical* address instead of a real kernel VA. That's usable only if
+	 * TTBR0's V=P bootstrap mapping (start.s) is still reachable from
+	 * TTBR1-mode high-VA kernel code, which it isn't once kernel execution
+	 * has trampolined to the high VA range (__ARM_KERNEL_PROTECT__-style
+	 * setups stop using TTBR0 from EL1 at that point) - SecureDTInit's
+	 * FindChild/GetNextComponent then dereference that bogus "VA" and fault.
+	 * Populate the real values now instead of waiting for arm_vm_init():
+	 * they don't change between here and there, so this is exactly the
+	 * value arm_vm_init() would compute anyway, just available earlier.
+	 */
+	{
+		extern unsigned long gVirtBase, gPhysBase, gPhysSize;
+		extern unsigned long real_phys_size;
+		gPhysBase = args->physBase;
+		gVirtBase = args->virtBase;
+		gPhysSize = args->memSize;
+		real_phys_size = args->memSize;
+	}
 
 	PE_init_platform(FALSE, args); /* Get platform expert set up */
 
@@ -338,6 +364,10 @@ arm_init(
 		/*
 		 * Select the advertised kernel page size.
 		 */
+		#if defined(QEMUVIRT)
+		/* QEMU virt exposes a 4 KB translation granule even with 4 GB RAM. */
+		PAGE_SHIFT_CONST = ARM_PGSHIFT;
+		#else
 		if (args->memSize > 1ULL * 1024 * 1024 * 1024) {
 			/*
 			 * arm64 device with > 1GB of RAM:
@@ -352,6 +382,7 @@ arm_init(
 			 */
 			PAGE_SHIFT_CONST = ARM_PGSHIFT;
 		}
+		#endif
 
 		/* 32-bit apps always see 16KB page size */
 		page_shift_user32 = PAGE_MAX_SHIFT;

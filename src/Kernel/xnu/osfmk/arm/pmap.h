@@ -88,7 +88,7 @@
  */
 #define BOOTSTRAP_TABLE_SIZE (ARM_PGBYTES * 34)
 #else // ARM_LARGE_MEMORY
-#define BOOTSTRAP_TABLE_SIZE (ARM_PGBYTES * 8)
+#define BOOTSTRAP_TABLE_SIZE (ARM_PGBYTES * 34)
 #endif
 
 typedef uint64_t        tt_entry_t;                                     /* translation table entry type */
@@ -283,6 +283,9 @@ extern pmap_paddr_t get_mmu_ttb(void);
 extern pmap_paddr_t mmu_kvtop(vm_offset_t va);
 extern pmap_paddr_t mmu_kvtop_wpreflight(vm_offset_t va);
 extern pmap_paddr_t mmu_uvtop(vm_offset_t va);
+#if defined(__arm64__)
+extern pmap_paddr_t mmu_uvtop_wtop(vm_offset_t va);
+#endif
 
 #if (__ARM_VMSA__ <= 7)
 /* Convert address offset to translation table index */
@@ -664,7 +667,7 @@ extern pmap_cpu_data_t * pmap_get_cpu_data(void);
  */
 #define PMAP_DEFAULT_PREEMPTION_CHECK_PAGE_INTERVAL 64
 
-inline bool
+static inline bool
 pmap_pending_preemption(void)
 {
 	return !!(*((volatile ast_t*)ast_pending()) & AST_URGENT);
