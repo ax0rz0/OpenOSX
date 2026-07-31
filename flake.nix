@@ -67,16 +67,25 @@
               };
             })
           );
-          darwinCrossToolchain = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/toolchain.nix { };
-          arm64CrossToolchain = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/toolchain.nix {
-            target = "arm64-apple-darwin20.4";
-            clangTarget = "arm64-apple-macosx11.0";
-          };
+          # Bootstrap toolchain: ld64.lld, used only to build the real cctools
+          # ld64 below. Everything else uses darwinCrossToolchain, which has the
+          # real linker - lld silently ignores -dylib_file/-image_base/-segaddr.
+          bootstrapCrossToolchain =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/toolchain.nix { };
           libtapi = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/libtapi.nix { };
           nativeLd =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/native-ld.nix {
-              inherit darwinCrossToolchain libtapi iig;
+              darwinCrossToolchain = bootstrapCrossToolchain;
+              inherit libtapi iig;
             };
+          darwinCrossToolchain = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/toolchain.nix {
+            inherit nativeLd;
+          };
+          arm64CrossToolchain = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/toolchain.nix {
+            inherit nativeLd;
+            target = "arm64-apple-darwin20.4";
+            clangTarget = "arm64-apple-macosx11.0";
+          };
           nativeUnifdef = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/unifdef.nix { };
           nativeMigcom = if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/migcom.nix { };
           libapfsrwBuild = pkgs.callPackage ./nix/pkgs/apple/libapfsrw.nix { };
@@ -234,19 +243,14 @@
               libSystem = libSystemBuild;
               inherit (pkgs) zlib;
             };
+          # Always shared: fontconfig is a dylib and records a dependency on
+          # /lib/libfreetype.6.N.dylib, so a static freetype cannot satisfy it.
           freetype2Build =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-freetype.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              inherit (pkgs) zlib freetype;
-            };
-          freetypeSharedBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-freetype.nix {
-              inherit darwinCrossToolchain nativeLd;
-              libSystem = libSystemBuild;
-              inherit (pkgs) zlib freetype;
               nativeMesonTools = nativeMesonToolsDir;
-              shared = true;
+              inherit (pkgs) zlib freetype;
             };
           libfontencBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
@@ -510,6 +514,7 @@
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) fontconfig;
+              nativeMesonTools = nativeMesonToolsDir;
               freetype = freetype2Build;
               expat = expatBuild;
             };
@@ -1732,8 +1737,9 @@
               libXi = libXiSharedBuild;
               libXcursor = libXcursorSharedBuild;
               libXrandr = libXrandrSharedBuild;
-              freetype = freetypeSharedBuild;
+              freetype = freetype2Build;
               fontconfig = fontconfigBuild;
+              expat = expatBuild;
               mesa = mesaBuild;
             };
 
@@ -2544,7 +2550,7 @@
             libXi-shared = libXiSharedBuild;
             libXcursor-shared = libXcursorSharedBuild;
             libXrandr-shared = libXrandrSharedBuild;
-            freetype-shared = freetypeSharedBuild;
+            freetype-shared = freetype2Build;
           };
           arm64Packages = lib.optionalAttrs (!isDarwin) {
             zlib-arm64 = xvfbZlibArm64Build;

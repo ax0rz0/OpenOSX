@@ -57,9 +57,11 @@ let
     "-Wl,-force_load,${libXmu}/lib/libXmu.a"
     "-Wl,-force_load,${libXt}/lib/libXt.a"
     "-Wl,-force_load,${libXft}/lib/libXft.a"
-    "-Wl,-force_load,${fontconfig}/lib/libfontconfig.a"
+    # fontconfig is a dylib now, so it links normally rather than by force_load.
+    "-lfontconfig"
     "-Wl,-force_load,${expat}/lib/libexpat.a"
-    "-Wl,-force_load,${freetype2}/lib/libfreetype.a"
+    # freetype is a dylib now, so it links normally rather than by force_load.
+    "-lfreetype"
     "-Wl,-force_load,${libxkbfile}/lib/libxkbfile.a"
     "-Wl,-force_load,${libXrender}/lib/libXrender.a"
     # libXext's reallocarray.o duplicates the copy in libX11.a; trim it from a

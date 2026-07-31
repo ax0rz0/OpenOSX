@@ -159,7 +159,7 @@ EOF
   '';
 
   meta = with lib; {
-    description = "Real cctools ld64, built as a native ELF host tool for linking PureDarwin's xnu kernel (nixpkgs ld64.lld can't do -kernel/-static)";
+    description = "Apple's cctools ld64, built for linking PureDarwin (host and target)";
     platforms = platforms.linux;
   };
 }

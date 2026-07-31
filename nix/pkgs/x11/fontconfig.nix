@@ -13,6 +13,7 @@
 , fontconfig
 , freetype
 , expat
+, nativeMesonTools
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
 
@@ -64,7 +65,7 @@ pkg-config = '${pkg-config}/bin/pkg-config'
 
 [built-in options]
 c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}]
-c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-dylinker_install_name,/usr/lib/dyld', '-Wl,-platform_version,macos,11.0,11.5', '-lSystem']
+c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-lexpat', '-lSystem']
 
 [properties]
 needs_exe_wrapper = true
@@ -81,7 +82,7 @@ EOF
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
-      -Ddefault_library=static \
+      -Ddefault_library=shared \
       -Ddoc=disabled \
       -Ddoc-txt=disabled \
       -Ddoc-man=disabled \
@@ -106,6 +107,19 @@ EOF
   installPhase = ''
     runHook preInstall
     ninja -C build install
+    {
+      INT="${nativeMesonTools}/bin/install_name_tool"
+      for dylib in "$out"/lib/*.dylib; do
+        [ -L "$dylib" ] && continue
+        "$INT" -id "/usr/lib/$(basename "$dylib")" "$dylib"
+      done
+
+      mkdir -p "$out/usr/lib"
+      for dylib in "$out"/lib/*.dylib; do
+        [ -e "$dylib" ] || continue
+        ln -sf "../../lib/$(basename "$dylib")" "$out/usr/lib/$(basename "$dylib")"
+      done
+    }
 
     perl -0pi -e 's#<cachedir>.*?</cachedir>#<cachedir>/var/cache/fontconfig</cachedir>#' \
       "$out/etc/fonts/fonts.conf"
@@ -125,10 +139,11 @@ EOF
       ' "$file"
     }
 
-    patch_string "$out/lib/libfontconfig.a" "$out/etc/fonts/conf.d" "/etc/fonts/conf.d"
-    patch_string "$out/lib/libfontconfig.a" "$out/etc/fonts" "/etc/fonts"
-    patch_string "$out/lib/libfontconfig.a" "$out/share/fontconfig/conf.avail" "/usr/share/fontconfig/conf.avail"
-    patch_string "$out/lib/libfontconfig.a" "$out/var/cache/fontconfig" "/var/cache/fontconfig"
+    fclib="$out/lib/libfontconfig.1.dylib"
+    patch_string "$fclib" "$out/etc/fonts/conf.d" "/etc/fonts/conf.d"
+    patch_string "$fclib" "$out/etc/fonts" "/etc/fonts"
+    patch_string "$fclib" "$out/share/fontconfig/conf.avail" "/usr/share/fontconfig/conf.avail"
+    patch_string "$fclib" "$out/var/cache/fontconfig" "/var/cache/fontconfig"
 
     runHook postInstall
   '';

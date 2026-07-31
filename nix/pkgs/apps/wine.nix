@@ -26,6 +26,7 @@
 , xorgproto
 , freetype
 , fontconfig
+, expat
 , mesa
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
@@ -79,7 +80,10 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
     export PATH="${darwinCrossToolchain}/bin:$PATH"
-    export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" (map lib.getDev (xDeps ++ [ freetype fontconfig ]))}"
+    # expat is here only because fontconfig.pc lists it in Requires.private:
+    # PKG_CONFIG_LIBDIR pins the search path, so a missing transitive .pc makes
+    # the whole fontconfig query fail and configure decides fontconfig is absent.
+    export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" (map lib.getDev (xDeps ++ [ freetype fontconfig expat ]))}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
     export CC="${darwinCrossToolchain}/bin/${targetTriple}-clang"
     export CXX="${darwinCrossToolchain}/bin/${targetTriple}-clang++"
@@ -89,6 +93,14 @@ stdenv.mkDerivation {
     export CPPFLAGS="-I${mesa}/usr/include -I${libSystem}/usr/include ${lib.concatMapStringsSep " " (dep: "-I${lib.getDev dep}/include") xDeps}"
     export CFLAGS="-isysroot $DARWIN_SDK_ROOT -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector"
     export LDFLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -L${mesa}/usr/lib ${lib.concatMapStringsSep " " (dep: "-L${dep}/lib") xDeps} -Wl,-platform_version,macos,11.0,11.5 -lSystem"
+
+    # dlls/win32u/Makefile.in has an unconditional
+    # UNIX_LIBS = $(CORETEXT_LIBS) $(APPKIT_LIBS)
+    # Blank them.
+    sed -i -e 's|^CORETEXT_LIBS=.*|CORETEXT_LIBS=""|' \
+           -e 's|^APPKIT_LIBS=.*|APPKIT_LIBS=""|' \
+           -e 's|CORETEXT_LIBS="-framework CoreText"|CORETEXT_LIBS=""|' \
+           -e 's|APPKIT_LIBS="-framework AppKit"|APPKIT_LIBS=""|' configure
 
     sed -i 's| -ldylib1\.o| -fuse-ld=${nativeLd}/bin/ld -L${libSystem}/usr/lib -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-platform_version,macos,10.7,11.5 -lSystem|' configure
 
@@ -103,6 +115,7 @@ stdenv.mkDerivation {
       --disable-winemac.drv \
       --disable-winecoreaudio.drv \
       --with-mingw \
+      --with-fontconfig \
       --without-alsa \
       --without-capi \
       --without-cups \

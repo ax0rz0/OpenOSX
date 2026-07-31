@@ -865,19 +865,28 @@ ext4_ensure_block_alloc(struct ext4node *ep, uint32_t lblk, uint64_t *pblk_out,
 	uint64_t pblk = 0;
 	int error;
 
-	/* Only log when the in-core extent root looks wrong - the previous
-	 * unconditional per-block trace flooded the console during ordinary
-	 * file growth (e.g. i3's log writes). */
+	/* A file truncated to zero has its extent root zeroed by
+	 * ext4_inode_free_extents(). Growing via ftruncate re-creates the header,
+	 * but growing via a plain write() arrives straight here, and appending
+	 * into a zeroed header (eh_max == 0) cannot store the entry - the block
+	 * is allocated but never mapped, so the data reads back as zeroes.
+	 * Re-create the header instead. A non-zero but wrong magic is real
+	 * corruption and must stay loud. */
 	{
-		struct ext4_extent_header *dbg_eh =
+		struct ext4_extent_header *eh =
 		    (struct ext4_extent_header *)ep->e_raw.i_block;
 		if ((le32(ep->e_raw.i_flags) & EXT4_EXTENTS_FL) &&
-		    le16(dbg_eh->eh_magic) != EXT4_EXT_MAGIC) {
-			E4LOG("ensure_block ino=%llu lblk=%u size=%llu "
-			    "BAD magic=0x%x entries=%u",
-			    (unsigned long long)ep->e_ino, lblk,
-			    (unsigned long long)ep->e_size,
-			    le16(dbg_eh->eh_magic), le16(dbg_eh->eh_entries));
+		    le16(eh->eh_magic) != EXT4_EXT_MAGIC) {
+			if (le16(eh->eh_magic) == 0 && le16(eh->eh_entries) == 0) {
+				ext4_inode_init_extent_header(&ep->e_raw);
+			} else {
+				E4LOG("ensure_block ino=%llu lblk=%u size=%llu "
+				    "BAD magic=0x%x entries=%u",
+				    (unsigned long long)ep->e_ino, lblk,
+				    (unsigned long long)ep->e_size,
+				    le16(eh->eh_magic), le16(eh->eh_entries));
+				return EIO;
+			}
 		}
 		ep->e_dbg_last_lblk = lblk;
 	}

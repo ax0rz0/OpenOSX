@@ -4,6 +4,7 @@
 , llvmPackages_21
 , callPackage
 , hostOtool ? callPackage ./host-otool.nix { }
+, nativeLd ? null
 , target ? "x86_64-apple-darwin20.4"
 , clangTarget ? "x86_64-apple-macosx11.0"
 , defaultSdkRoot ? "/usr/local/osxcross/SDK/MacOSX11.3.sdk"
@@ -11,32 +12,16 @@
 
 let
   clang = llvmPackages_21.clang-unwrapped;
+  linkerArg = if nativeLd != null
+              then "-fuse-ld=${nativeLd}/bin/ld"
+              else "-fuse-ld=lld";
   lld = llvmPackages_21.lld;
   bintools = llvmPackages_21.bintools-unwrapped;
 
   compilerWrapper = name: realBin: writeShellScriptBin "${target}-${name}" ''
     SDK="''${DARWIN_SDK_ROOT:-${defaultSdkRoot}}"
     export PATH="${lld}/bin:$PATH"
-    # Default to lld, but only if the caller didn't already pass their own
-    # -fuse-ld (xnu's kernel Makefile does, pointed at the real cctools
-    # ld64 - see native-ld.nix): CMake's own internal "does this compiler
-    # work" sanity check (TryCompile, run at configure time, outside any
-    # of our CMakeLists) doesn't pass -fuse-ld at all, and without lld as
-    # a default there it falls back to plain "ld" (real ELF ld.bfd,
-    # "unrecognised emulation mode: llvm"). But passing -fuse-ld=lld
-    # AHEAD of a caller-supplied -fuse-ld=<real ld> on the same command
-    # line reliably segfaulted clang++ instead of the later flag cleanly
-    # overriding the earlier one.
-    #
-    # Also drop it for compile-only invocations. A linker choice is unused when
-    # the command never links, and clang says so with
-    # -Wunused-command-line-argument. Meson compiles its feature probes with
-    # -Werror=unused-command-line-argument, so the unused -fuse-ld=lld turned
-    # every cc.has_header()/has_header_symbol() check into a hard failure: Xorg
-    # silently mis-detected SCM_RIGHTS (no xtrans fd passing, so MIT-SHM capped
-    # at 1.1), PTHREAD_MUTEX_RECURSIVE and strndup, and every other meson port
-    # in the tree was probing blind the same way.
-    fuseld=(-fuse-ld=lld)
+    fuseld=(${linkerArg})
     for a in "$@"; do
       case "$a" in
         -fuse-ld=*) fuseld=() ;;
@@ -62,9 +47,13 @@ let
         *) args+=("$a") ;;
       esac
     done
+    ${if nativeLd != null then ''
+    exec ${nativeLd}/bin/ld "''${args[@]}"
+    '' else ''
     exec ${lld}/bin/ld64.lld \
       -platform_version macos 11.0 11.3 \
       "''${args[@]}"
+    ''}
   '';
 
   bareDsymutil = writeShellScriptBin "dsymutil" ''

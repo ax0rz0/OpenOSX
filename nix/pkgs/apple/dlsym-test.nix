@@ -65,6 +65,7 @@ stdenv.mkDerivation {
     ${cc} -isysroot "$DARWIN_SDK_ROOT" -I${libSystem}/usr/include \
       -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib \
       -Wl,-platform_version,macos,11.0,11.5 -Wl,-fixup_chains \
+      -Wl,-rpath,/usr/lib/wine/x86_64-unix \
       -lSystem -o dlsym-test dlsym-test.c
     runHook postBuild
   '';

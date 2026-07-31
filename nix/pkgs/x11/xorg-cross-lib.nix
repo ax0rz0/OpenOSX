@@ -67,8 +67,51 @@ stdenv.mkDerivation {
     export LD="${nativeLd}/bin/ld"
     # -dylinker_install_name is omitted when building dylibs
     export STRIP="${darwinCrossToolchain}/bin/${targetTriple}-strip"
+    # libtool filters flags it does not recognise out of both CFLAGS and LDFLAGS
+    # when it builds its CCLD command, so -fuse-ld cannot be passed as a flag
+    mkdir -p .pd-cc
+    cat > .pd-cc/cc <<PDCCEOF
+#!/bin/sh
+exec ${darwinCrossToolchain}/bin/${targetTriple}-clang \
+  -fuse-ld=${nativeLd}/bin/ld -Qunused-arguments "\$@"
+PDCCEOF
+    chmod +x .pd-cc/cc
+    export CC="$PWD/.pd-cc/cc"
+
     export CFLAGS="-isysroot $DARWIN_SDK_ROOT -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector -I${libSystem}/usr/include ${lib.concatMapStringsSep " " (dep: "-I${lib.getDev dep}/include") deps}"
-    export LDFLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib ${lib.concatMapStringsSep " " (dep: "-L${dep}/lib") deps} -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib${lib.optionalString (!shared) " -Wl,-dylinker_install_name,/usr/lib/dyld"} -Wl,-platform_version,macos,11.0,11.5 -lSystem"
+    pd_dylib_maps=""
+    rm -f .pd-dylib-maps
+    for pd_dep_lib in ${lib.concatMapStringsSep " " (dep: "${dep}/lib") deps}; do
+      [ -d "$pd_dep_lib" ] || continue
+      for pd_lib in "$pd_dep_lib"/*.dylib; do
+        [ -e "$pd_lib" ] || continue
+        [ -L "$pd_lib" ] && continue
+        pd_id=$(${darwinCrossToolchain}/bin/${targetTriple}-otool -D "$pd_lib" 2>/dev/null | tail -1)
+        case "$pd_id" in
+          /*) pd_dylib_maps="$pd_dylib_maps -Wl,-dylib_file,$pd_id:$pd_lib" ;;
+        esac
+        # ...and the guest paths that dylib itself records. These are transitive
+        # (librsvg -> fontconfig -> freetype): ld64 loads them to complete the
+        # link, so they need mapping too even though they are not direct deps.
+        ${darwinCrossToolchain}/bin/${targetTriple}-otool -L "$pd_lib" 2>/dev/null \
+          | tail -n +2 | awk '{print $1}' | while read -r pd_need; do
+            case "$pd_need" in
+              /lib/*|/usr/lib/*) ;;
+              *) continue ;;
+            esac
+            pd_base=$(basename "$pd_need")
+            for pd_search in ${lib.concatMapStringsSep " " (dep: "${dep}/lib") deps}; do
+              if [ -e "$pd_search/$pd_base" ]; then
+                echo " -Wl,-dylib_file,$pd_need:$pd_search/$pd_base"
+                break
+              fi
+            done
+          done >> .pd-dylib-maps
+      done
+    done
+    [ -e .pd-dylib-maps ] && pd_dylib_maps="$pd_dylib_maps $(tr -d '\n' < .pd-dylib-maps)"
+
+    export LDFLAGS="$pd_dylib_maps -isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib ${lib.concatMapStringsSep " " (dep: "-L${dep}/lib") deps} -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib${lib.optionalString (!shared) " -Wl,-dylinker_install_name,/usr/lib/dyld"} -Wl,-platform_version,macos,11.0,11.5 -lSystem"
 
     ${preConfigureExtra}
 
@@ -117,7 +160,13 @@ stdenv.mkDerivation {
       dylibs=$(find "$out/lib" -maxdepth 1 -name "*.dylib" -not -type l)
       for dylib in $dylibs; do
         base=$(basename "$dylib")
-        "$INSTALL_NAME_TOOL" -id "/lib/$base" "$dylib"
+        "$INSTALL_NAME_TOOL" -id "/usr/lib/$base" "$dylib"
+      done
+
+      mkdir -p "$out/usr/lib"
+      for dylib in "$out"/lib/*.dylib; do
+        [ -e "$dylib" ] || continue
+        ln -sf "../../lib/$(basename "$dylib")" "$out/usr/lib/$(basename "$dylib")"
       done
       allfiles=$(
         [ ! -d "$out/bin" ] || find "$out/bin" -type f
@@ -126,15 +175,15 @@ stdenv.mkDerivation {
       for f in $allfiles; do
         for dylib in $dylibs; do
           base=$(basename "$dylib")
-          "$INSTALL_NAME_TOOL" -change "@rpath/$base" "/lib/$base" "$f" 2>/dev/null || true
+          "$INSTALL_NAME_TOOL" -change "@rpath/$base" "/usr/lib/$base" "$f" 2>/dev/null || true
           # a sibling inside the same project can be recorded by absolute install
           # path rather than @rpath (libxfce4windowingui -> libxfce4windowing), which
           # the @rpath rewrite above never matches
-          "$INSTALL_NAME_TOOL" -change "$out/lib/$base" "/lib/$base" "$f" 2>/dev/null || true
+          "$INSTALL_NAME_TOOL" -change "$out/lib/$base" "/usr/lib/$base" "$f" 2>/dev/null || true
           # siblings inside one project can be recorded by absolute install path
           # rather than @rpath (libxfce4windowingui -> libxfce4windowing), which the
           # @rpath rewrite above never matches
-          "$INSTALL_NAME_TOOL" -change "$out/lib/$base" "/lib/$base" "$f" 2>/dev/null || true
+          "$INSTALL_NAME_TOOL" -change "$out/lib/$base" "/usr/lib/$base" "$f" 2>/dev/null || true
         done
       done
     ''}

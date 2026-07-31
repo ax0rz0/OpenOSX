@@ -9,8 +9,7 @@
 , libSystem
 , zlib
 , freetype
-, shared ? false
-, nativeMesonTools ? null
+, nativeMesonTools
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
 
@@ -53,10 +52,10 @@ stdenv.mkDerivation {
       -DCMAKE_C_FLAGS="-isysroot $DARWIN_SDK_ROOT -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -I${libSystem}/usr/include" \
       -DCMAKE_EXE_LINKER_FLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-dylinker_install_name,/usr/lib/dyld -Wl,-platform_version,macos,11.0,11.5 -lSystem" \
       -DCMAKE_INSTALL_PREFIX=$out \
-      -DBUILD_SHARED_LIBS=${if shared then "ON" else "OFF"} \
-${lib.optionalString shared ''      -DCMAKE_SHARED_LINKER_FLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-platform_version,macos,11.0,11.5 -lSystem" \
-      -DCMAKE_INSTALL_NAME_DIR=/lib \
-''}      -DCMAKE_BUILD_TYPE=Release \
+      -DBUILD_SHARED_LIBS=ON \
+      -DCMAKE_SHARED_LINKER_FLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-platform_version,macos,11.0,11.5 -lSystem" \
+      -DCMAKE_INSTALL_NAME_DIR=/usr/lib \
+      -DCMAKE_BUILD_TYPE=Release \
       -DFT_DISABLE_ZLIB=ON \
       -DFT_DISABLE_BZIP2=ON \
       -DFT_DISABLE_PNG=ON \
@@ -75,15 +74,21 @@ ${lib.optionalString shared ''      -DCMAKE_SHARED_LINKER_FLAGS="-isysroot $DARW
   installPhase = ''
     runHook preInstall
     ninja -C build install
-    ${lib.optionalString shared ''
+    {
       # CMake stamps @rpath into the install_name; guest binaries need the
       # absolute path they will be loaded from, as the xorg shared libs use.
       INT="${nativeMesonTools}/bin/install_name_tool"
       for dylib in "$out"/lib/*.dylib; do
         [ -L "$dylib" ] && continue
-        "$INT" -id "/lib/$(basename "$dylib")" "$dylib"
+        "$INT" -id "/usr/lib/$(basename "$dylib")" "$dylib"
       done
-    ''}
+
+      mkdir -p "$out/usr/lib"
+      for dylib in "$out"/lib/*.dylib; do
+        [ -e "$dylib" ] || continue
+        ln -sf "../../lib/$(basename "$dylib")" "$out/usr/lib/$(basename "$dylib")"
+      done
+    }
     runHook postInstall
   '';
 

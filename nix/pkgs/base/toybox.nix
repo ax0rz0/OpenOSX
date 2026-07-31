@@ -51,7 +51,8 @@ stdenv.mkDerivation {
       LS MKDIR MKNOD MORE MV NETCAT PATCH PRINTF PWD READLINK REALPATH \
       RESET RM RMDIR SED SEQ SH SLEEP SORT STAT \
       TAIL TAR TEST TOUCH TR TRUE \
-      TRUNCATE TTY UNAME UNIQ VI WC WHICH WHOAMI XARGS YES; do
+      TRUNCATE TTY UNAME UNIQ VI WC WHICH WHOAMI XARGS YES \
+      SHA1SUM SHA256SUM SHA512SUM; do
       if LC_ALL=C grep -q "^CONFIG_''${opt}=" .config 2>/dev/null; then
         sed -i "s/^CONFIG_''${opt}=.*/CONFIG_''${opt}=y/" .config
       elif LC_ALL=C grep -q "^# CONFIG_''${opt} is not set" .config 2>/dev/null; then
