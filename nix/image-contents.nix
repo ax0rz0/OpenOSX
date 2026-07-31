@@ -60,6 +60,7 @@
 , libSystemBuild
 , libXftBuild
 , libapfsrwBuild
+, libcrocoBuild
 , libcssBuild
 , libcurlDylibBuild
 , libcxxDylibBuild
@@ -79,6 +80,7 @@
 , libobjcBuild
 , libparserutilsBuild
 , libpngBuild
+, librsvgBuild
 , libutf8procBuild
 , libwapcapletBuild
 , libwnckBuild
@@ -179,7 +181,7 @@
 let
   fullBuild = mkPureDarwinBuild {
     pname = "puredarwin";
-    src = ./.;
+    src = ../.;
     buildTargets = [ "xnu" "kexts" "libsystem_kernel" "pcmplay" ];
     installUserland = false;
     installKernel = false;
@@ -280,6 +282,8 @@ let
     libXrandr = xvfbLibXrandrBuild;
     gtk3 = gtk3Build;
     libpng = libpngBuild;
+    libcroco = libcrocoBuild;
+    librsvg = librsvgBuild;
     libwapcaplet = libwapcapletBuild;
     libparserutils = libparserutilsBuild;
     libnsutils = libnsutilsBuild;

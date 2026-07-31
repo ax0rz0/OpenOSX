@@ -463,6 +463,8 @@ target_include_directories(libc_static PRIVATE
     # redirect (libmalloc's compat-include), stack_logging.h (libmalloc/private,
     # pulled transitively).
     ${CMAKE_CURRENT_SOURCE_DIR}/pd-compat-include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libmalloc/include         # malloc/_malloc.h (stdlib.h)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../XPC/notify             # real notify.h (utmpx.c)
     ${CMAKE_CURRENT_SOURCE_DIR}/../libmalloc/private
     ${CMAKE_CURRENT_SOURCE_DIR}/../libmalloc/compat-include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../CrashReporterClient/include  # os/pd_assumes.c

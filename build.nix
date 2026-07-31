@@ -8,6 +8,8 @@
 , nativeUnifdef ? null
 , nativeMigcom ? null
 , openssl
+, libxml2
+, m4
 , bison
 , flex
 , perl
@@ -68,6 +70,25 @@ let
         nix-store --add-fixed sha256 /path/to/MacOSX11.3.sdk.tar.xz
     '';
   };
+  # xar and ctfconvert are host tools, so they want the host's zlib/libxml2. The
+  # nix apple-sdk ships neither the headers nor the .tbd stubs, so the SDK paths
+  # only work for the Linux cross SDK tarball.
+  zlibInclude =
+    if isDarwinHost
+    then "${zlib.dev}/include"
+    else "$DARWIN_SDK_ROOT/usr/include";
+  zlibLibrary =
+    if isDarwinHost
+    then "${zlib.out}/lib/libz.dylib"
+    else "$DARWIN_SDK_ROOT/usr/lib/libz.tbd";
+  libxml2Include =
+    if isDarwinHost
+    then "${libxml2.dev}/include/libxml2"
+    else "$DARWIN_SDK_ROOT/usr/include/libxml2";
+  libxml2Library =
+    if isDarwinHost
+    then "${libxml2.out}/lib/libxml2.dylib"
+    else "$DARWIN_SDK_ROOT/usr/lib/libxml2.tbd";
   opensslCryptoLibrary =
     if isDarwinHost
     then "${openssl.out}/lib/libcrypto.dylib"
@@ -82,6 +103,8 @@ stdenv.mkDerivation ({
   version = "0.1";
 
   inherit src;
+
+  hardeningDisable = lib.optionals isDarwinHost [ "fortify" "fortify3" ];
 
   nativeBuildInputs = [
     cmake ninja bison flex perl bash ed unifdef tcsh
@@ -100,6 +123,15 @@ stdenv.mkDerivation ({
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
   '' + lib.optionalString isDarwinHost ''
     export DARWIN_SDK_ROOT="$(/usr/bin/xcrun --sdk macosx --show-sdk-path)"
+    # xnu's makefiles otherwise resolve these by shelling out to xcrun again,
+    # which fails in the nix sandbox and leaves its error text in $(PLATFORM).
+    export SDKROOT="$DARWIN_SDK_ROOT"
+    export SDKROOT_RESOLVED="$DARWIN_SDK_ROOT"
+    export HOST_SDKROOT_RESOLVED="$DARWIN_SDK_ROOT"
+    export PLATFORM=MacOSX
+    # xnu defaults HOST_GM4 to the system gm4, which aborts on CoreFoundation's
+    # fork-without-exec guard when flex forks it. Use nixpkgs m4, as Linux does.
+    export HOST_GM4=${m4}/bin/m4
   '' + ''
 
     if [ -e src/Kernel/xnu/Makefile ]; then
@@ -152,11 +184,11 @@ EOF
       -DOPENSSL_INCLUDE_DIR=${openssl.dev}/include \
       -DOPENSSL_CRYPTO_LIBRARY=${opensslCryptoLibrary} \
       -DOPENSSL_SSL_LIBRARY=${opensslSslLibrary} \
-      -DZLIB_INCLUDE_DIR="$DARWIN_SDK_ROOT/usr/include" \
-      -DZLIB_LIBRARY="$DARWIN_SDK_ROOT/usr/lib/libz.tbd" \
-      -DZLIB_LIBRARY_RELEASE="$DARWIN_SDK_ROOT/usr/lib/libz.tbd" \
-      -DLIBXML2_INCLUDE_DIR="$DARWIN_SDK_ROOT/usr/include/libxml2" \
-      -DLIBXML2_LIBRARY="$DARWIN_SDK_ROOT/usr/lib/libxml2.tbd" \
+      -DZLIB_INCLUDE_DIR=${zlibInclude} \
+      -DZLIB_LIBRARY=${zlibLibrary} \
+      -DZLIB_LIBRARY_RELEASE=${zlibLibrary} \
+      -DLIBXML2_INCLUDE_DIR=${libxml2Include} \
+      -DLIBXML2_LIBRARY=${libxml2Library} \
       -DPUREDARWIN_MACOSX_SDK="$DARWIN_SDK_ROOT" \
       -DPUREDARWIN_ARCH=${puredarwinArch} \
       -DPUREDARWIN_ENABLE_PROJECTS=${if enableProjects then "ON" else "OFF"} \

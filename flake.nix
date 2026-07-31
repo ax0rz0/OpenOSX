@@ -972,6 +972,68 @@
               zlib = xvfbZlibBuild;
               inherit (pkgs) libpng;
             };
+          libcrocoBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              nativeMesonTools = nativeMesonToolsDir;
+              guestPrefix = true;
+              shared = true;
+              pname = "puredarwin-libcroco";
+              version = "0.6.13";
+              src = pkgs.fetchurl {
+                url = "https://download.gnome.org/sources/libcroco/0.6/libcroco-0.6.13.tar.xz";
+                hash = "sha256-dn7CNK56poRpWzpzVUgiSIgTLgY/kttYV1m0IlcGIdQ=";
+              };
+              deps = [ glibBuild libxml2Build pcre2Build libffiBuild libiconvBuild xvfbZlibBuild ];
+              configureFlags = [ "--disable-Werror" "--disable-Bsymbolic" ];
+            };
+
+          librsvgBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              nativeMesonTools = nativeMesonToolsDir;
+              guestPrefix = true;
+              shared = true;
+              pname = "puredarwin-librsvg";
+              version = "2.40.21";
+              src = pkgs.fetchurl {
+                url = "https://download.gnome.org/sources/librsvg/2.40/librsvg-2.40.21.tar.xz";
+                hash = "sha256-92KJBfHK2oTofisUiD7VfYCU3KMoHVvLJOzkJ56akro=";
+              };
+              deps = [
+                glibBuild gdkPixbufBuild cairoBuild cairoGobjectBuild pangoBuild
+                libxml2Build libcrocoBuild libpngBuild freetype2Build fontconfigBuild
+                fribidiBuild harfbuzzBuild expatBuild pcre2Build libffiBuild
+                libiconvBuild xvfbZlibBuild xvfbPixmanBuild
+              ];
+              preConfigureExtra = ''
+                export CFLAGS="$CFLAGS -include libxml/parser.h"
+                export CFLAGS="$CFLAGS -Wno-incompatible-function-pointer-types"
+                export ac_cv_path_GDK_PIXBUF_QUERYLOADERS="$(command -v true)"
+              '';
+              configureFlags = [
+                "--disable-introspection"
+                "--disable-tools"
+                "--enable-pixbuf-loader"
+                "--disable-Bsymbolic"
+              ];
+              postInstallExtra = ''
+                nested=$(find "$out/nix" -type d -name loaders 2>/dev/null | head -1)
+                if [ -n "$nested" ]; then
+                  mkdir -p "$out/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+                  cp -a "$nested"/. "$out/lib/gdk-pixbuf-2.0/2.10.0/loaders/"
+                  rm -rf "$out/nix"
+                fi
+                for so in "$out"/lib/gdk-pixbuf-2.0/2.10.0/loaders/*.so; do
+                  [ -e "$so" ] || continue
+                  ${nativeMesonToolsDir}/bin/install_name_tool \
+                    -change //lib/librsvg-2.2.dylib /lib/librsvg-2.2.dylib "$so"
+                done
+              '';
+            };
+
           cairoGobjectBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/cairo-gobject.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -1572,6 +1634,98 @@
               expat = expatBuild;
               inherit (pkgs) xorgproto;
             };
+          mkSharedXorgLib = args: pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix ({
+            inherit darwinCrossToolchain nativeLd;
+            libSystem = libSystemBuild;
+            nativeMesonTools = nativeMesonToolsDir;
+            guestPrefix = true;
+            shared = true;
+          } // args);
+
+          libXauSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libXau";
+            inherit (pkgs.libXau) version src;
+            deps = [ pkgs.xorgproto ];
+          };
+          libXdmcpSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libXdmcp";
+            inherit (pkgs.libXdmcp) version src;
+            deps = [ pkgs.xorgproto ];
+          };
+          libxcbSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libxcb";
+            inherit (pkgs.libxcb) version src;
+            deps = [ pkgs.xorgproto libXauSharedBuild libXdmcpSharedBuild ];
+            nativeDeps = [ pkgs.python3 pkgs.xcb-proto ];
+            configureFlags = [ "--disable-devel-docs" ];
+            preConfigureExtra = ''
+              export PYTHONPATH="${pkgs.xcb-proto}/${pkgs.python3.sitePackages}:$PYTHONPATH"
+            '';
+          };
+          libX11SharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libX11";
+            inherit (pkgs.libX11) version src;
+            deps = [ pkgs.xorgproto pkgs.xtrans libxcbSharedBuild libXauSharedBuild libXdmcpSharedBuild ];
+            configureFlags = [ "--disable-specs" "--enable-xlocaledir" ];
+          };
+          libXextSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libXext";
+            inherit (pkgs.libXext) version src;
+            deps = [ pkgs.xorgproto libX11SharedBuild libXauSharedBuild ];
+          };
+          libXrenderSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libXrender";
+            inherit (pkgs.libXrender) version src;
+            deps = [ pkgs.xorgproto libX11SharedBuild ];
+          };
+          libXfixesSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libXfixes";
+            inherit (pkgs.libXfixes) version src;
+            deps = [ pkgs.xorgproto libX11SharedBuild libXextSharedBuild ];
+          };
+          libXiSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libXi";
+            inherit (pkgs.libXi) version src;
+            deps = [ pkgs.xorgproto libX11SharedBuild libXextSharedBuild libXfixesSharedBuild ];
+          };
+          libXrandrSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libXrandr";
+            inherit (pkgs.libXrandr) version src;
+            deps = [ pkgs.xorgproto libX11SharedBuild libXextSharedBuild libXrenderSharedBuild ];
+          };
+          libXcursorSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libXcursor";
+            inherit (pkgs.libXcursor) version src;
+            deps = [ pkgs.xorgproto libX11SharedBuild libXrenderSharedBuild libXfixesSharedBuild ];
+          };
+
+          wineToolsBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/wine-tools.nix {
+              inherit (pkgs) wine flex bison;
+            };
+
+          wineProbeBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/wine.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              wineTools = wineToolsBuild;
+              llvmBintools = pkgs.llvmPackages.bintools-unwrapped;
+              mingwGcc = pkgs.pkgsCross.mingwW64.buildPackages.gcc;
+              inherit (pkgs) wine xorgproto flex bison;
+              libX11 = libX11SharedBuild;
+              libxcb = libxcbSharedBuild;
+              libXau = libXauSharedBuild;
+              libXdmcp = libXdmcpSharedBuild;
+              libXext = libXextSharedBuild;
+              libXrender = libXrenderSharedBuild;
+              libXfixes = libXfixesSharedBuild;
+              libXi = libXiSharedBuild;
+              libXcursor = libXcursorSharedBuild;
+              libXrandr = libXrandrSharedBuild;
+              freetype = freetype2Build;
+              fontconfig = fontconfigBuild;
+            };
+
           dilloBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/dillo.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -2340,7 +2494,7 @@
               xvfbLibXdamageBuild xvfbLibXdmcpBuild xvfbLibXextBuild xvfbLibXfixesBuild
               xvfbLibXineramaBuild xvfbLibXkbfileBuild xvfbLibXpresentBuild xvfbLibXrandrBuild
               xvfbLibXrenderBuild xvfbLibXresBuild xvfbLibxcvtBuild xvfbZlibBuild xxdBuild xzBuild
-              yajlBuild zshArm64Build zshBuild
+              yajlBuild zshArm64Build zshBuild libcrocoBuild librsvgBuild
               ;
           };
           inherit (imageContents)
@@ -2353,6 +2507,21 @@
             linuxPackages
             linuxApps
             ;
+          # Investigative builds, not image contents.
+          probePackages = lib.optionalAttrs (!isDarwin) {
+            wine-probe = wineProbeBuild;
+            wine-tools = wineToolsBuild;
+            libX11-shared = libX11SharedBuild;
+            libxcb-shared = libxcbSharedBuild;
+            libXau-shared = libXauSharedBuild;
+            libXdmcp-shared = libXdmcpSharedBuild;
+            libXext-shared = libXextSharedBuild;
+            libXrender-shared = libXrenderSharedBuild;
+            libXfixes-shared = libXfixesSharedBuild;
+            libXi-shared = libXiSharedBuild;
+            libXcursor-shared = libXcursorSharedBuild;
+            libXrandr-shared = libXrandrSharedBuild;
+          };
           arm64Packages = lib.optionalAttrs (!isDarwin) {
             zlib-arm64 = xvfbZlibArm64Build;
             toybox-arm64 = toyboxArm64Build;
@@ -2522,7 +2691,7 @@
             '';
           });
         in {
-          packages = commonPackages // arm64Packages // lib.optionalAttrs (!isDarwin) linuxPackages;
+          packages = commonPackages // arm64Packages // probePackages // lib.optionalAttrs (!isDarwin) linuxPackages;
           apps = lib.optionalAttrs (!isDarwin) linuxApps;
           devShells = {
             kernel = devShell;

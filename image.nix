@@ -12,6 +12,7 @@
 , fakeroot
 , apfsprogs
 , iana-etc
+, glib
 , hfsprogs ? null
 , libdmg-hfsplus ? null
 , cacert
@@ -150,6 +151,35 @@ ${if rootFsType == "hfs" then ''
     # directories when populating the image
     touch "$staging/var/run/dbus/.keep"
 
+    schemaDir="$staging/share/glib-2.0/schemas"
+    mkdir -p "$schemaDir"
+    find "$staging/share/gsettings-schemas" -name '*.gschema.xml' -exec cp -t "$schemaDir" {} + 2>/dev/null || true
+    if [ -n "$(ls -A "$schemaDir" 2>/dev/null)" ]; then
+      ${glib.dev}/bin/glib-compile-schemas "$schemaDir"
+      echo "Compiled $(ls "$schemaDir"/*.gschema.xml 2>/dev/null | wc -l) GSettings schemas"
+    else
+      echo "warning: no GSettings schemas found to compile" >&2
+    fi
+
+    loaderDir="$staging/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+    if [ -e "$loaderDir/libpixbufloader-svg.so" ]; then
+      cat > "$staging/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache" <<'LOADERS'
+# GdkPixbuf Image Loader Modules file
+# Automatically generated file, do not edit
+#
+"/lib/gdk-pixbuf-2.0/2.10.0/loaders/libpixbufloader-svg.so"
+"svg" 6 "gdk-pixbuf" "Scalable Vector Graphics" "LGPL"
+"image/svg+xml" "image/svg" "image/svg-xml" "image/vnd.adobe.svg+xml" "text/xml-svg" "image/svg+xml-compressed" ""
+"svg" "svgz" "svg.gz" ""
+" <svg" "*    " 100
+" <!DOCTYPE svg" "*             " 100
+
+LOADERS
+      echo "Wrote gdk-pixbuf loaders.cache with the librsvg SVG loader"
+    else
+      echo "warning: SVG pixbuf loader not staged; symbolic icons will not render" >&2
+    fi
+
     for compat in libc libm libpthread libdl libinfo; do
       ln -sf libSystem.B.dylib "$staging/usr/lib/$compat.dylib"
     done
@@ -218,6 +248,9 @@ export FONTCONFIG_FILE=''${FONTCONFIG_FILE:-/etc/fonts/fonts.conf}
 export XDG_CONFIG_DIRS=''${XDG_CONFIG_DIRS:-/etc}
 export XDG_DATA_DIRS=''${XDG_DATA_DIRS:-/usr/share:/share}
 export XLOCALEDIR=''${XLOCALEDIR:-/usr/share/X11/locale}
+export NO_AT_BRIDGE=''${NO_AT_BRIDGE:-1}
+export GDK_PIXBUF_MODULE_FILE=''${GDK_PIXBUF_MODULE_FILE:-/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache}
+export GTK_A11Y=''${GTK_A11Y:-none}
 export PS1='# '
 EOF
     cat > $staging/etc/zshenv <<'EOF'
@@ -231,6 +264,9 @@ export FONTCONFIG_FILE=''${FONTCONFIG_FILE:-/etc/fonts/fonts.conf}
 export XDG_CONFIG_DIRS=''${XDG_CONFIG_DIRS:-/etc}
 export XDG_DATA_DIRS=''${XDG_DATA_DIRS:-/usr/share:/share}
 export XLOCALEDIR=''${XLOCALEDIR:-/usr/share/X11/locale}
+export NO_AT_BRIDGE=''${NO_AT_BRIDGE:-1}
+export GDK_PIXBUF_MODULE_FILE=''${GDK_PIXBUF_MODULE_FILE:-/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache}
+export GTK_A11Y=''${GTK_A11Y:-none}
 EOF
     cat > $staging/etc/zprofile <<'EOF'
 test -r /etc/profile && . /etc/profile

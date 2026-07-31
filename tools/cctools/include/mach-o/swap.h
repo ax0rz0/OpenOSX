@@ -191,6 +191,10 @@ extern void swap_source_version_command(
     struct source_version_command *sv,
     enum NXByteOrder target_byte_sex);
 
+extern void swap_fileset_entry_command(
+    struct fileset_entry_command *fse,
+    enum NXByteOrder target_byte_sex);
+
 extern void swap_note_command(
     struct note_command *nc,
     enum NXByteOrder target_byte_sex);

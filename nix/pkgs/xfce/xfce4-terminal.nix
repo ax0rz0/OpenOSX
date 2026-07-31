@@ -133,9 +133,13 @@ endian = '${targetInfo.mesonEndian}'
 needs_exe_wrapper = true
 EOF
 
+    # --prefix=/ with DESTDIR at install, not --prefix=$out: xfce4-terminal
+    # compiles its own datadir in, so a store prefix makes it look for
+    # $out/share/applications/xfce4-terminal.desktop, a path that does not exist
+    # in the guest ("Unable to open ..."). DESTDIR=$out keeps the staged layout.
     meson setup build \
       --cross-file puredarwin-cross.ini \
-      --prefix=$out \
+      --prefix=/ \
       --libdir=lib \
       --buildtype=release \
       -Ddefault_library=shared \
@@ -153,7 +157,7 @@ EOF
 
   installPhase = ''
     runHook preInstall
-    ninja -C build install
+    DESTDIR="$out" ninja -C build install
 
     INSTALL_NAME_TOOL="${nativeMesonTools}/bin/install_name_tool"
     # a terminal ships no libraries; guard the template's dylib fixup

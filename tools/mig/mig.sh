@@ -84,9 +84,17 @@ fi
 
 if [ -z "${MIGCC}" ]; then
 	if [ -x "${xcrunPath}" ]; then
-		MIGCC=`"${xcrunPath}" -sdk "$sdkRoot" -find cc`
-	else
-		MIGCC=$(realpath "${scriptRoot}/cc")
+		MIGCC=`"${xcrunPath}" -sdk "$sdkRoot" -find cc 2>/dev/null`
+	fi
+	# xcrun exists on a macOS host but has no usable developer dir inside a
+	# Nix build, so it prints nothing and leaves MIGCC empty - the invocation
+	# below then fails as `: command not found`. Fall back to the compiler
+	# beside this script, and finally to whichever cc is on PATH.
+	if [ ! -x "${MIGCC}" ]; then
+		MIGCC=$(realpath "${scriptRoot}/cc" 2>/dev/null)
+	fi
+	if [ ! -x "${MIGCC}" ]; then
+		MIGCC=$(command -v cc)
 	fi
 fi
 

@@ -3931,6 +3931,7 @@ struct ofile *ofile)
     struct entry_point_command *ep;
     struct source_version_command *sv;
     struct note_command *nc;
+    struct fileset_entry_command *fsentry;
     uint32_t flavor, count, nflavor;
     char *p, *state;
     uint32_t sizeof_nlist, sizeof_dylib_module;
@@ -6729,6 +6730,30 @@ check_dylinker_command:
 				 "LC_NOTE command %u offset field "
 				 "plus size field extends past the end of "
 				 "the file)", i);
+		    goto return_bad;
+		}
+		break;
+
+	    case LC_FILESET_ENTRY:
+		if(l.cmdsize < sizeof(struct fileset_entry_command)){
+		    Mach_O_error(ofile, "malformed object (LC_FILESET_ENTRY: "
+				 "cmdsize too small) in command %u", i);
+		    goto return_bad;
+		}
+		fsentry = (struct fileset_entry_command *)lc;
+		if(swapped)
+		    swap_fileset_entry_command(fsentry, host_byte_sex);
+		if(fsentry->cmdsize < sizeof(struct fileset_entry_command)){
+		    Mach_O_error(ofile, "malformed object (LC_FILESET_ENTRY "
+				 "command %u has too small cmdsize field)",
+				 i);
+		    goto return_bad;
+		}
+		if(fsentry->entry_id.offset >= fsentry->cmdsize){
+		    Mach_O_error(ofile, "truncated or malformed object "
+				 "(entry_id.offset field of LC_FILESET_ENTRY "
+				 "command %u extends past the end of the file)",
+				 i);
 		    goto return_bad;
 		}
 		break;

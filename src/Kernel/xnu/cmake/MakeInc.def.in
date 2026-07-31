@@ -316,11 +316,9 @@ CFLAGS_COMMON = \
 
 CFLAGS_LINUX =
 CFLAGS_DARWIN =
-CFLAGS_CLANG_EXTRA =
 
-ifeq ($(UNAME_S),Darwin)
-CFLAGS_CLANG_EXTRA = -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang
-endif
+TRIVIAL_AUTO_VAR_INIT_EXTRA := -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang
+CFLAGS_CLANG_EXTRA := $(shell $(CC) $(TRIVIAL_AUTO_VAR_INIT_EXTRA) -xc -c /dev/null -o /dev/null >/dev/null 2>&1 && echo $(TRIVIAL_AUTO_VAR_INIT_EXTRA))
 
 CFLAGS_GEN = $(CFLAGS_COMMON) $(CFLAGS_LINUX) $(CFLAGS_DARWIN) $(CFLAGS_CLANG_EXTRA)
 
@@ -882,16 +880,18 @@ UNAME_S := $(shell uname -s)
 #
 # install flags for header files
 #
-ifeq ($(UNAME_S),Linux)
-	INSTALL_FLAGS = -m 0444
-	DATA_INSTALL_FLAGS = -m 0644
-	DATA_INSTALL_FLAGS_RO = -m 0444
-	EXEC_INSTALL_FLAGS = -m 0755
-else
+INSTALL_IS_GNU := $(shell install --version 2>/dev/null | grep -c GNU)
+
+ifeq ($(INSTALL_IS_GNU),0)
 	INSTALL_FLAGS = -c -S -m 0444
 	DATA_INSTALL_FLAGS = -c -S -m 0644
 	DATA_INSTALL_FLAGS_RO = -c -S -m 0444
 	EXEC_INSTALL_FLAGS = -c -S -m 0755
+else
+	INSTALL_FLAGS = -m 0444
+	DATA_INSTALL_FLAGS = -m 0644
+	DATA_INSTALL_FLAGS_RO = -m 0444
+	EXEC_INSTALL_FLAGS = -m 0755
 endif
 
 #

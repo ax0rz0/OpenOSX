@@ -71,13 +71,10 @@ function(mig filename)
     elseif(DEFINED ENV{NIX_MIGCOM_PATH})
         set(MIGCOM_ENV_PREFIX ${CMAKE_COMMAND} -E env "MIGCOM=$ENV{NIX_MIGCOM_PATH}")
         set(MIGCOM_DEPENDS)
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND PUREDARWIN_ENABLE_TOOLS)
+        set(MIGCOM_ENV_PREFIX ${CMAKE_COMMAND} -E env "MIGCOM=$<TARGET_FILE:migcom>")
+        set(MIGCOM_DEPENDS migcom)
     elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
-        # Native macOS build: no cross-compiled migcom target and no Nix
-        # host-tool path to give it - tools/mig/mig.sh finds Xcode's own
-        # migcom itself (xcrun -sdk <sdk> -find migcom) when MIGCOM isn't
-        # set, same as it does for MIGCC. Leaving MIGCOM unset (not merely
-        # empty - mig.sh's ${MIGCOM-default} only falls back on unset,
-        # not on empty string) lets that fallback fire.
         set(MIGCOM_DEPENDS)
     else()
         message(SEND_ERROR "mig() requires the migcom target or NIX_MIGCOM_PATH")

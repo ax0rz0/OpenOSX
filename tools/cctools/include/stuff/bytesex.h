@@ -387,6 +387,9 @@ __private_extern__ void swap_source_version_command(
     struct source_version_command *sv,
     enum byte_sex target_byte_sex);
 
+__private_extern__ void swap_fileset_entry_command(
+    struct fileset_entry_command *lc,
+    enum byte_sex target_byte_sex);
 __private_extern__ void swap_note_command(
     struct note_command *nc,
     enum byte_sex target_byte_sex);
