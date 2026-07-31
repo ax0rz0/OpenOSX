@@ -46,6 +46,19 @@
 , coreServicesBuild
 , dlsymTestBuild
 , wineBuild
+, libX11SharedBuild
+, libxcbSharedBuild
+, libXauSharedBuild
+, libXdmcpSharedBuild
+, libXextSharedBuild
+, libXrenderSharedBuild
+, libXfixesSharedBuild
+, libXiSharedBuild
+, libXcursorSharedBuild
+, libXrandrSharedBuild
+, nettleSharedBuild
+, gnutlsSharedBuild
+, glibNetworkingBuild
 , iomediacheckBuild
 , ioregBuild
 , isDarwin
@@ -267,6 +280,19 @@ let
 
   imageExtraPackageSet = lib.optionalAttrs (!isDarwin) {
     wine = wineBuild;
+    libX11-shared = libX11SharedBuild;
+    libxcb-shared = libxcbSharedBuild;
+    libXau-shared = libXauSharedBuild;
+    libXdmcp-shared = libXdmcpSharedBuild;
+    libXext-shared = libXextSharedBuild;
+    libXrender-shared = libXrenderSharedBuild;
+    libXfixes-shared = libXfixesSharedBuild;
+    libXi-shared = libXiSharedBuild;
+    libXcursor-shared = libXcursorSharedBuild;
+    libXrandr-shared = libXrandrSharedBuild;
+    nettle = nettleSharedBuild;
+    gnutls = gnutlsSharedBuild;
+    glib-networking = glibNetworkingBuild;
     dlsym-test = dlsymTestBuild;
     xvfb = xvfbBuild;
     xorg = xorgBuild;

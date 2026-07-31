@@ -12,6 +12,8 @@
 , wineTools
 , mingwGcc
 , mingwBintools
+, mingwGcc32
+, mingwBintools32
 , python3
 , libX11
 , libxcb
@@ -27,6 +29,7 @@
 , freetype
 , fontconfig
 , expat
+, gnutls
 , mesa
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
@@ -70,7 +73,7 @@ stdenv.mkDerivation {
 
   # mingwGcc builds Wine's PE-format modules. Like winebuild it runs on the
   # build host and emits Windows binaries, so it never touches PureDarwin.
-  nativeBuildInputs = [ pkg-config gnumake flex bison mingwGcc python3 ];
+  nativeBuildInputs = [ pkg-config gnumake flex bison mingwGcc mingwGcc32 python3 ];
   buildInputs = xDeps ++ [ freetype fontconfig ];
 
   configurePhase = ''
@@ -83,7 +86,7 @@ stdenv.mkDerivation {
     # expat is here only because fontconfig.pc lists it in Requires.private:
     # PKG_CONFIG_LIBDIR pins the search path, so a missing transitive .pc makes
     # the whole fontconfig query fail and configure decides fontconfig is absent.
-    export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" (map lib.getDev (xDeps ++ [ freetype fontconfig expat ]))}"
+    export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" (map lib.getDev (xDeps ++ [ freetype fontconfig expat gnutls ]))}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
     export CC="${darwinCrossToolchain}/bin/${targetTriple}-clang"
     export CXX="${darwinCrossToolchain}/bin/${targetTriple}-clang++"
@@ -115,12 +118,13 @@ stdenv.mkDerivation {
       --disable-winemac.drv \
       --disable-winecoreaudio.drv \
       --with-mingw \
+      --enable-archs=i386,x86_64 \
       --with-fontconfig \
       --without-alsa \
       --without-capi \
       --without-cups \
       --without-dbus \
-      --without-gnutls \
+      --with-gnutls \
       --without-gssapi \
       --without-gstreamer \
       --without-krb5 \
@@ -172,6 +176,10 @@ stdenv.mkDerivation {
     # it, ~765MB across the tree.
     find "$out/usr/lib/wine/x86_64-windows" \( -name '*.dll' -o -name '*.exe' \) -print0 \
       | xargs -0 -r -n1 ${mingwBintools}/bin/x86_64-w64-mingw32-strip --strip-debug 2>/dev/null || true
+    if [ -d "$out/usr/lib/wine/i386-windows" ]; then
+      find "$out/usr/lib/wine/i386-windows" \( -name '*.dll' -o -name '*.exe' \) -print0 \
+        | xargs -0 -r -n1 ${mingwBintools32}/bin/i686-w64-mingw32-strip --strip-debug 2>/dev/null || true
+    fi
 
     # Build logs live under usr/share, not $out root: image.nix copies each
     # package's tree verbatim into the image root, so anything at the top level

@@ -23,6 +23,7 @@
 , pixman
 , pango
 , fribidi
+, gnutls
 , harfbuzz
 , freetype2
 , fontconfig
@@ -54,7 +55,7 @@ let
   deps = [
     glib pcre2 libffi zlib libiconv
     cairo cairoGobject pixman
-    pango fribidi harfbuzz freetype2 fontconfig expat
+    pango fribidi harfbuzz freetype2 fontconfig expat gnutls
     gdkPixbuf
     libepoxy
     atspi2Core
@@ -141,7 +142,7 @@ EOF
       -Ddocs=false \
       -Da11y=true \
       -Dfribidi=true \
-      -Dgnutls=false \
+      -Dgnutls=true \
       -Dicu=false \
       -D_systemd=false
 

@@ -1334,6 +1334,16 @@
               libSystem = libSystemBuild;
               inherit (pkgs) libdisplay-info hwdata;
             };
+          glibNetworkingBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/glib-networking.nix {
+              nativeMesonTools = nativeMesonToolsDir;
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              glibNetworking = pkgs.glib-networking;
+              glib = glibBuild;
+              gnutls = gnutlsSharedBuild;
+            };
+
           vteBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/vte.nix {
               nativeMesonTools = nativeMesonToolsDir;
@@ -1351,6 +1361,7 @@
               pixman = xvfbPixmanBuild;
               pango = pangoBuild;
               fribidi = fribidiBuild;
+              gnutls = gnutlsSharedBuild;
               harfbuzz = harfbuzzBuild;
               freetype2 = freetype2Build;
               fontconfig = fontconfigBuild;
@@ -1713,6 +1724,43 @@
             deps = [ pkgs.xorgproto libX11SharedBuild libXrenderSharedBuild libXfixesSharedBuild ];
           };
 
+          # Wine's schannel/bcrypt TLS backend is GnuTLS-only
+          nettleSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-nettle";
+            inherit (pkgs.nettle) version src;
+            configureFlags = [
+              "--enable-mini-gmp"
+              "--disable-documentation"
+              "--disable-assembler"
+              "--disable-openssl"
+            ];
+          };
+          gnutlsSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-gnutls";
+            inherit (pkgs.gnutls) version src;
+            deps = [ nettleSharedBuild ];
+            configureFlags = [
+              "--with-nettle-mini"
+              "--with-included-libtasn1"
+              "--with-included-unistring"
+              "--without-p11-kit"
+              "--without-idn"
+              "--without-tpm"
+              "--without-tpm2"
+              "--without-brotli"
+              "--without-zstd"
+              "--without-zlib"
+              "--disable-doc"
+              "--disable-tools"
+              "--disable-tests"
+              "--disable-cxx"
+              "--disable-nls"
+              "--disable-libdane"
+              "--disable-guile"
+              "--disable-hardware-acceleration"
+            ];
+          };
+
           wineToolsBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/wine-tools.nix {
               inherit (pkgs) wine flex bison freetype;
@@ -1725,6 +1773,8 @@
               wineTools = wineToolsBuild;
               mingwGcc = pkgs.pkgsCross.mingwW64.buildPackages.gcc;
               mingwBintools = pkgs.pkgsCross.mingwW64.buildPackages.bintools;
+              mingwGcc32 = pkgs.pkgsCross.mingw32.buildPackages.gcc;
+              mingwBintools32 = pkgs.pkgsCross.mingw32.buildPackages.bintools;
               inherit (pkgs) python3;
               inherit (pkgs) wine xorgproto flex bison;
               libX11 = libX11SharedBuild;
@@ -1740,6 +1790,7 @@
               freetype = freetype2Build;
               fontconfig = fontconfigBuild;
               expat = expatBuild;
+              gnutls = gnutlsSharedBuild;
               mesa = mesaBuild;
             };
 
@@ -2495,6 +2546,9 @@
               atspi2CoreBuild autoconfBuild automakeBuild bisonBuild bmakeBuild cairoBuild
               cairoGobjectBuild cctoolsBuild coreFoundationBuild curlBuild darwinCrossToolchain
               coreServicesBuild dbusBuild dilloBuild diskArbitrationBuild wineBuild dlsymTestBuild dmenuBuild exoBuild expatBuild fastfetchBuild
+              libX11SharedBuild libxcbSharedBuild libXauSharedBuild libXdmcpSharedBuild
+              libXextSharedBuild libXrenderSharedBuild libXfixesSharedBuild libXiSharedBuild
+              libXcursorSharedBuild libXrandrSharedBuild nettleSharedBuild gnutlsSharedBuild glibNetworkingBuild
               fbdoomBuild fbdoomExternalSrc fileBuild flexBuild fontconfigBuild foundationBuild
               freetype2Build fribidiBuild garconBuild gdkPixbufBuild gitBuild glibBuild gnum4Build
               gnumakeBuild gtk3Build harfbuzzBuild i3Build i3statusShimBuild iceauthBuild
@@ -2550,6 +2604,9 @@
             libXi-shared = libXiSharedBuild;
             libXcursor-shared = libXcursorSharedBuild;
             libXrandr-shared = libXrandrSharedBuild;
+            nettle-shared = nettleSharedBuild;
+            gnutls-shared = gnutlsSharedBuild;
+            glib-networking = glibNetworkingBuild;
             freetype-shared = freetype2Build;
           };
           arm64Packages = lib.optionalAttrs (!isDarwin) {

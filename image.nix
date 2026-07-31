@@ -147,6 +147,12 @@ ${if rootFsType == "hfs" then ''
       mkdir -p "$staging/$dir"
     done
 
+    for dylib in "$staging"/lib/*.dylib; do
+      [ -e "$dylib" ] || continue
+      base=$(basename "$dylib")
+      [ -e "$staging/usr/lib/$base" ] || ln -s "../../lib/$base" "$staging/usr/lib/$base"
+    done
+
     # mke2fs -d (below, ext4 variant) silently drops genuinely-empty
     # directories when populating the image
     touch "$staging/var/run/dbus/.keep"
