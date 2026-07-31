@@ -295,6 +295,9 @@ add_framework(CoreFoundation
                 Collections.subproj/CFArray.c
                 Collections.subproj/CFBag.c
                 Collections.subproj/CFBasicHash.c
+                # AppServices
+                AppServices.subproj/CFNotificationCenter_PureDarwin.c
+                # Collections
                 Collections.subproj/CFBinaryHeap.c
                 Collections.subproj/CFBitVector.c
                 Collections.subproj/CFData.c

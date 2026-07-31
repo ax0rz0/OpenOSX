@@ -1,5 +1,5 @@
 /*
- * These six legacy constant names are declared CF_EXPORT in the public
+ * These legacy constant names are declared CF_EXPORT in the public
  * CFLocale.h/CFDateFormatter.h headers in this same vendored source tree,
  * but are never actually defined anywhere in the vendored .c files -
  * apparently dropped in this swift-corelibs-foundation port while the
@@ -33,6 +33,7 @@
 
 PD_WRITABLE_CONST const CFLocaleKey kCFLocaleCalendar;
 PD_WRITABLE_CONST const CFLocaleKey kCFLocaleLanguageCode;
+PD_WRITABLE_CONST const CFLocaleKey kCFLocaleCountryCode;
 PD_WRITABLE_CONST const CFLocaleKey kCFLocaleScriptCode;
 PD_WRITABLE_CONST const CFDateFormatterKey kCFDateFormatterCalendar;
 PD_WRITABLE_CONST const CFDateFormatterKey kCFDateFormatterTimeZone;
@@ -42,6 +43,7 @@ __attribute__((constructor))
 static void __CFLocalePureDarwinLegacyAliasesInit(void) {
     *(CFStringRef *)&kCFLocaleCalendar = kCFLocaleCalendarKey;
     *(CFStringRef *)&kCFLocaleLanguageCode = kCFLocaleLanguageCodeKey;
+    *(CFStringRef *)&kCFLocaleCountryCode = kCFLocaleCountryCodeKey;
     *(CFStringRef *)&kCFLocaleScriptCode = kCFLocaleScriptCodeKey;
     *(CFStringRef *)&kCFDateFormatterCalendar = kCFDateFormatterCalendarKey;
     *(CFStringRef *)&kCFDateFormatterTimeZone = kCFDateFormatterTimeZoneKey;

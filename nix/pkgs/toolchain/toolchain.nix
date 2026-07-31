@@ -2,6 +2,8 @@
 , writeShellScriptBin
 , symlinkJoin
 , llvmPackages_21
+, callPackage
+, hostOtool ? callPackage ./host-otool.nix { }
 , target ? "x86_64-apple-darwin20.4"
 , clangTarget ? "x86_64-apple-macosx11.0"
 , defaultSdkRoot ? "/usr/local/osxcross/SDK/MacOSX11.3.sdk"
@@ -120,6 +122,7 @@ let
     (simpleWrapper "strip" "${bintools}/bin/llvm-strip")
     (simpleWrapper "nm" "${bintools}/bin/llvm-nm")
     (simpleWrapper "objdump" "${bintools}/bin/llvm-objdump")
+    (simpleWrapper "otool" "${hostOtool}/bin/otool")
     (simpleWrapper "dsymutil" "${bintools}/bin/dsymutil")
     (simpleWrapper "install_name_tool" "${bintools}/bin/llvm-install-name-tool")
     (simpleWrapper "lipo" "${bintools}/bin/llvm-lipo")

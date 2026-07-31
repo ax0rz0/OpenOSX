@@ -5,6 +5,7 @@
 , flex
 , bison
 , wine
+, freetype
 }:
 
 stdenv.mkDerivation {
@@ -13,6 +14,9 @@ stdenv.mkDerivation {
   src = wine.src;
 
   nativeBuildInputs = [ pkg-config gnumake flex bison ];
+  # sfnt2fon converts the bundled TTFs to .fon bitmaps and needs real freetype;
+  # this is the build host's, since these tools only ever run here.
+  buildInputs = [ freetype ];
 
   configurePhase = ''
     runHook preConfigure
@@ -21,7 +25,6 @@ stdenv.mkDerivation {
       --prefix="$out" \
       --enable-win64 \
       --without-x \
-      --without-freetype \
       --without-mingw \
       --without-alsa \
       --without-capi \

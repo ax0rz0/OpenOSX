@@ -136,7 +136,7 @@ CMakeCache.txt
 *.wav
 
 # Nix files
-result*
+*result*
 */output.txt
 output.txt
 .puredarwin-*

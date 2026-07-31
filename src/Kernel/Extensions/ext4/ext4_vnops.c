@@ -20,6 +20,8 @@ int (**ext4_vnodeop_p)(void *);
 
 static int ext4_ensure_block(struct ext4node *ep, uint32_t lblk,
     uint64_t *pblk_out);
+static int ext4_ensure_block_alloc(struct ext4node *ep, uint32_t lblk,
+    uint64_t *pblk_out, bool *allocated);
 
 /*
  * Create (or return) a vnode for inode `ino`.  Backed by a per-mount inode
@@ -832,11 +834,32 @@ ext4_drop_inode_ino(struct ext4mount *emp, ino_t ino)
 	error = ext4_write_inode(emp, ino, &raw);
 	if (error)
 		return error;
-	return ext4_free_inode(emp, ino, vtype);
+	error = ext4_free_inode(emp, ino, vtype);
+	if (error)
+		return error;
+
+	{
+		struct ext4_node_bucket *bucket =
+		    &emp->em_node_hash[EXT4_NODE_HASH(ino)];
+		IOLock *hlock = (IOLock *)emp->em_hash_lock;
+		struct ext4node *ep;
+
+		IOLockLock(hlock);
+		LIST_FOREACH(ep, bucket, e_hash) {
+			if (ep->e_ino == ino && !ep->e_unhashed) {
+				LIST_REMOVE(ep, e_hash);
+				ep->e_unhashed = 1;
+				break;
+			}
+		}
+		IOLockUnlock(hlock);
+	}
+	return 0;
 }
 
 static int
-ext4_ensure_block(struct ext4node *ep, uint32_t lblk, uint64_t *pblk_out)
+ext4_ensure_block_alloc(struct ext4node *ep, uint32_t lblk, uint64_t *pblk_out,
+    bool *allocated)
 {
 	struct ext4mount *emp = ep->e_mount;
 	uint64_t pblk = 0;
@@ -864,6 +887,8 @@ ext4_ensure_block(struct ext4node *ep, uint32_t lblk, uint64_t *pblk_out)
 		return error;
 	if (pblk != 0) {
 		*pblk_out = pblk;
+		if (allocated != NULL)
+			*allocated = false;
 		return 0;
 	}
 
@@ -878,7 +903,15 @@ ext4_ensure_block(struct ext4node *ep, uint32_t lblk, uint64_t *pblk_out)
 	ep->e_raw.i_blocks_lo = le32(le32(ep->e_raw.i_blocks_lo) +
 	    (emp->em_blocksize / 512));
 	*pblk_out = pblk;
+	if (allocated != NULL)
+		*allocated = true;
 	return 0;
+}
+
+static int
+ext4_ensure_block(struct ext4node *ep, uint32_t lblk, uint64_t *pblk_out)
+{
+	return ext4_ensure_block_alloc(ep, lblk, pblk_out, NULL);
 }
 
 /* Write [off, off+len) of the file from a kernel buffer `src` (len<=bs),
@@ -933,20 +966,20 @@ ext4_vnop_write_impl(struct vnop_write_args *ap)
 		size_t want = bs - boff;
 		uint64_t pblk = 0;
 		buf_t bp = NULL;
+		bool fresh = false;
 
 		if (want > (size_t)uio_resid(uio))
 			want = (size_t)uio_resid(uio);
 
-		if (foff > (off_t)ep->e_size) {
-			error = EFBIG;   /* no sparse file creation yet */
-			break;
-		}
-		error = ext4_ensure_block(ep, lblk, &pblk);
+		error = ext4_ensure_block_alloc(ep, lblk, &pblk, &fresh);
 		if (error)
 			break;
 		error = ext4_blkread(emp, pblk, &bp);   /* read-modify-write */
 		if (error)
 			break;
+
+		if (fresh)
+			memset((char *)buf_dataptr(bp), 0, bs);
 		error = uiomove((char *)buf_dataptr(bp) + boff, (int)want, uio);
 		if (error) {
 			buf_brelse(bp);
@@ -1046,16 +1079,22 @@ ext4_resize_file(struct ext4node *ep, uint64_t new_size)
 		error = ext4_inode_truncate_extents(emp, &ep->e_raw, new_blocks);
 		if (error)
 			return error;
-	} else {
-		for (i = old_blocks; i < new_blocks; i++) {
-			uint64_t pblk;
-			error = ext4_ensure_block(ep, (uint32_t)i, &pblk);
-			if (error)
-				return error;
+	} else if (new_blocks > old_blocks || new_size > old_size) {
+		/* Growing allocates nothing, so nothing else will re-create the
+		 * extent header that ext4_inode_free_extents() zeroes when a file
+		 * is truncated to zero and then grown again. */
+		ext4_inode_init_extent_header(&ep->e_raw);
+
+		if ((old_size % bs) != 0) {
+			uint64_t tail_end = ((old_size + bs - 1) / bs) * bs;
+			if (tail_end > new_size)
+				tail_end = new_size;
+			if (tail_end > old_size) {
+				error = ext4_zero_range(ep, old_size, tail_end);
+				if (error)
+					return error;
+			}
 		}
-		error = ext4_zero_range(ep, old_size, new_size);
-		if (error)
-			return error;
 	}
 	ep->e_size = new_size;
 	ep->e_raw.i_size_lo = le32((uint32_t)new_size);

@@ -39,6 +39,7 @@
             fbdoomSource
             cctoolsSource
             coreFoundationSource
+            coreServicesSource
             securitySource
             systemConfigurationSource
             iokitCFSource
@@ -238,6 +239,14 @@
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               inherit (pkgs) zlib freetype;
+            };
+          freetypeSharedBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-freetype.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) zlib freetype;
+              nativeMesonTools = nativeMesonToolsDir;
+              shared = true;
             };
           libfontencBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
@@ -1701,16 +1710,17 @@
 
           wineToolsBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/wine-tools.nix {
-              inherit (pkgs) wine flex bison;
+              inherit (pkgs) wine flex bison freetype;
             };
 
-          wineProbeBuild =
+          wineBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/wine.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               wineTools = wineToolsBuild;
-              llvmBintools = pkgs.llvmPackages.bintools-unwrapped;
               mingwGcc = pkgs.pkgsCross.mingwW64.buildPackages.gcc;
+              mingwBintools = pkgs.pkgsCross.mingwW64.buildPackages.bintools;
+              inherit (pkgs) python3;
               inherit (pkgs) wine xorgproto flex bison;
               libX11 = libX11SharedBuild;
               libxcb = libxcbSharedBuild;
@@ -1722,8 +1732,9 @@
               libXi = libXiSharedBuild;
               libXcursor = libXcursorSharedBuild;
               libXrandr = libXrandrSharedBuild;
-              freetype = freetype2Build;
+              freetype = freetypeSharedBuild;
               fontconfig = fontconfigBuild;
+              mesa = mesaBuild;
             };
 
           dilloBuild =
@@ -1990,6 +2001,11 @@
               libcxxabiDylib = libcxxabiDylibBuild;
               src = objcSource;
             };
+          dlsymTestBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/dlsym-test.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+            };
           objcTestBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/objc-test.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -2010,6 +2026,12 @@
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
               iokitCFStatic = iokitCFStaticBuild;
+            };
+          coreServicesBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/coreservices.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              src = coreServicesSource;
             };
           openglFrameworkBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/opengl-framework.nix {
@@ -2466,7 +2488,7 @@
             inherit
               atspi2CoreBuild autoconfBuild automakeBuild bisonBuild bmakeBuild cairoBuild
               cairoGobjectBuild cctoolsBuild coreFoundationBuild curlBuild darwinCrossToolchain
-              dbusBuild dilloBuild diskArbitrationBuild dmenuBuild exoBuild expatBuild fastfetchBuild
+              coreServicesBuild dbusBuild dilloBuild diskArbitrationBuild wineBuild dlsymTestBuild dmenuBuild exoBuild expatBuild fastfetchBuild
               fbdoomBuild fbdoomExternalSrc fileBuild flexBuild fontconfigBuild foundationBuild
               freetype2Build fribidiBuild garconBuild gdkPixbufBuild gitBuild glibBuild gnum4Build
               gnumakeBuild gtk3Build harfbuzzBuild i3Build i3statusShimBuild iceauthBuild
@@ -2509,8 +2531,9 @@
             ;
           # Investigative builds, not image contents.
           probePackages = lib.optionalAttrs (!isDarwin) {
-            wine-probe = wineProbeBuild;
+            coreservices = coreServicesBuild;
             wine-tools = wineToolsBuild;
+            dlsym-test = dlsymTestBuild;
             libX11-shared = libX11SharedBuild;
             libxcb-shared = libxcbSharedBuild;
             libXau-shared = libXauSharedBuild;
@@ -2521,6 +2544,7 @@
             libXi-shared = libXiSharedBuild;
             libXcursor-shared = libXcursorSharedBuild;
             libXrandr-shared = libXrandrSharedBuild;
+            freetype-shared = freetypeSharedBuild;
           };
           arm64Packages = lib.optionalAttrs (!isDarwin) {
             zlib-arm64 = xvfbZlibArm64Build;

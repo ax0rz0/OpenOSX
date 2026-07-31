@@ -291,7 +291,9 @@ static void _setCachedCurrentLocale(CFLocaleRef newLocale) {
 
 
 #if TARGET_OS_OSX && !DEPLOYMENT_RUNTIME_SWIFT
-#define FALLBACK_LOCALE_NAME CFSTR("")
+// The empty identifier is only safe when the AppleLocale preference lookup in
+// _CFLocaleCopyCurrentGuts() supplies a real name
+#define FALLBACK_LOCALE_NAME CFSTR("en_US")
 #elif TARGET_OS_IPHONE
 #define FALLBACK_LOCALE_NAME CFSTR("en_US")
 #elif TARGET_OS_WINDOWS || TARGET_OS_LINUX || TARGET_OS_BSD || DEPLOYMENT_RUNTIME_SWIFT

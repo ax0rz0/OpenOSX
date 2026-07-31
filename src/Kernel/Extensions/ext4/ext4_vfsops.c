@@ -146,6 +146,8 @@ ext4_mount(struct mount *mp, vnode_t devvp, __unused user_addr_t data,
 	vfs_setflags(mp, MNT_LOCAL);
 	vfs_clearflags(mp, MNT_RDONLY);
 
+	vfs_setlocklocal(mp);
+
 	/* fill in statfs */
 	sfs = vfs_statfs(mp);
 	sfs->f_bsize  = emp->em_blocksize;

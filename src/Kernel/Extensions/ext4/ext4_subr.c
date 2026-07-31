@@ -1149,6 +1149,34 @@ ext4_ext_grow_root(struct ext4mount *emp, struct ext4_inode *inode,
 	return 0;
 }
 
+/*
+ * Give an extents inode a valid, empty extent tree.
+ *
+ * ext4_inode_free_extents() deliberately zeroes i_block when it releases the
+ * last extent, and ext4_inode_append_extent() re-initialises the header on its
+ * next call - so any path that grows a file *without* allocating a block (a
+ * sparse ftruncate) has to do it itself, or the inode is left with a zeroed
+ * header that ext4_bmap() rightly refuses ("bad extent magic 0x0").
+ */
+void
+ext4_inode_init_extent_header(struct ext4_inode *inode)
+{
+	struct ext4_extent_header *eh =
+	    (struct ext4_extent_header *)inode->i_block;
+
+	if ((le32(inode->i_flags) & EXT4_EXTENTS_FL) != 0 &&
+	    le16(eh->eh_magic) == EXT4_EXT_MAGIC)
+		return;
+
+	memset(inode->i_block, 0, sizeof(inode->i_block));
+	inode->i_flags = le32(le32(inode->i_flags) | EXT4_EXTENTS_FL);
+	eh->eh_magic = le16(EXT4_EXT_MAGIC);
+	eh->eh_entries = 0;
+	eh->eh_max = le16(ext4_ext_root_max());
+	eh->eh_depth = 0;
+	eh->eh_generation = 0;
+}
+
 int
 ext4_inode_append_extent(struct ext4mount *emp, struct ext4_inode *inode,
     uint32_t lblk, uint64_t pblk)
@@ -1499,6 +1527,18 @@ ext4_extent_lookup(struct ext4mount *emp, ino_t ino, char *node, uint32_t lblk,
 	struct ext4_extent_header *eh = (struct ext4_extent_header *)node;
 	uint16_t entries, depth, i;
 
+	/*
+	 * A fully zeroed header is an empty tree, not corruption:
+	 * ext4_inode_free_extents() leaves i_block that way after releasing the
+	 * last extent, so a file truncated to zero legitimately looks like this
+	 * until something allocates again. Every block is a hole - which is the
+	 * right answer for a file that has no extents. Only a header that is
+	 * non-zero but not ours is real damage.
+	 */
+	if (le16(eh->eh_magic) == 0 && le16(eh->eh_entries) == 0) {
+		*pblk_out = 0;
+		return 0;
+	}
 	if (le16(eh->eh_magic) != EXT4_EXT_MAGIC) {
 		E4LOG("bad extent magic 0x%x ino=%llu lblk=%u",
 		    le16(eh->eh_magic), (unsigned long long)ino, lblk);

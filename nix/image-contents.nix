@@ -43,6 +43,9 @@
 , imageExtraPackagesArm64
 , iographicsBuild
 , iokitBuild
+, coreServicesBuild
+, dlsymTestBuild
+, wineBuild
 , iomediacheckBuild
 , ioregBuild
 , isDarwin
@@ -263,6 +266,8 @@ let
   '';
 
   imageExtraPackageSet = lib.optionalAttrs (!isDarwin) {
+    wine = wineBuild;
+    dlsym-test = dlsymTestBuild;
     xvfb = xvfbBuild;
     xorg = xorgBuild;
     libxcvt = xvfbLibxcvtBuild;
@@ -337,6 +342,7 @@ let
     libobjc = libobjcBuild;
     foundation = foundationBuild;
     iokit = iokitBuild;
+    coreServices = coreServicesBuild;
     security = securityBuild;
     systemConfiguration = systemConfigurationBuild;
     diskArbitration = diskArbitrationBuild;
@@ -567,7 +573,7 @@ let
         imageFileName = "puredarwin-arm64-virt-minimal-release.img";
         bootArgs = "serial=3 -noprogress ahci_debug=1 kext=0xffff io=0xffff";
       };
-      strippedExtraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild mesaBuild pdVirglShimBuild osmesaTriBuild osmesaFbBuild mesaDemosBuild ];
+      strippedExtraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild mesaBuild pdVirglShimBuild osmesaTriBuild osmesaFbBuild mesaDemosBuild ];
       imageStrippedBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystemStripped;
         extraPackages = strippedExtraPackages;
@@ -849,6 +855,7 @@ let
       autoconf = autoconfBuild;
       automake = automakeBuild;
       iokit = iokitBuild;
+      coreServices = coreServicesBuild;
       security = securityBuild;
       systemstarter = systemStarterBuild;
       launchd = launchdBuild;

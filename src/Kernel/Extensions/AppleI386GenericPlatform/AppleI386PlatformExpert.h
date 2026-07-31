@@ -43,6 +43,7 @@ public:
 	virtual bool init(OSDictionary *properties) APPLE_KEXT_OVERRIDE;
 	virtual IOService *probe(IOService *provider, SInt32 *score) APPLE_KEXT_OVERRIDE;
 	virtual bool start(IOService *provider) APPLE_KEXT_OVERRIDE;
+	void publishPlatformUUIDFromDeviceTree(void);
 	virtual bool configure(IOService *provider) APPLE_KEXT_OVERRIDE;
 	virtual bool matchNubWithPropertyTable(IOService *nub, OSDictionary *table);
 	virtual IOService *createNub(OSDictionary *from) APPLE_KEXT_OVERRIDE;

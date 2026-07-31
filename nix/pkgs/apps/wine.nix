@@ -10,8 +10,9 @@
 , libSystem
 , wine
 , wineTools
-, llvmBintools
 , mingwGcc
+, mingwBintools
+, python3
 , libX11
 , libxcb
 , libXau
@@ -25,6 +26,7 @@
 , xorgproto
 , freetype
 , fontconfig
+, mesa
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
 
@@ -61,13 +63,13 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-wine-configure-probe";
+  pname = "puredarwin-wine";
   inherit (wine) version;
   src = wine.src;
 
   # mingwGcc builds Wine's PE-format modules. Like winebuild it runs on the
   # build host and emits Windows binaries, so it never touches PureDarwin.
-  nativeBuildInputs = [ pkg-config gnumake flex bison mingwGcc ];
+  nativeBuildInputs = [ pkg-config gnumake flex bison mingwGcc python3 ];
   buildInputs = xDeps ++ [ freetype fontconfig ];
 
   configurePhase = ''
@@ -76,13 +78,7 @@ stdenv.mkDerivation {
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
-    # Wine probes for target libraries by running otool -L on them, so without
-    # otool on PATH every single -l<lib> check reports "not found" even when the
-    # library is present. It has to be a build-host binary that can read Mach-O:
-    # PureDarwin's own cctools otool is itself Mach-O and will not execute here.
-    mkdir -p host-tools
-    ln -sf ${llvmBintools}/bin/llvm-otool host-tools/otool
-    export PATH="$PWD/host-tools:${darwinCrossToolchain}/bin:$PATH"
+    export PATH="${darwinCrossToolchain}/bin:$PATH"
     export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" (map lib.getDev (xDeps ++ [ freetype fontconfig ]))}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
     export CC="${darwinCrossToolchain}/bin/${targetTriple}-clang"
@@ -90,24 +86,23 @@ stdenv.mkDerivation {
     export AR="${darwinCrossToolchain}/bin/${targetTriple}-ar"
     export RANLIB="${darwinCrossToolchain}/bin/${targetTriple}-ranlib"
     export STRIP="${darwinCrossToolchain}/bin/${targetTriple}-strip"
-    export CPPFLAGS="-I${libSystem}/usr/include ${lib.concatMapStringsSep " " (dep: "-I${lib.getDev dep}/include") xDeps}"
+    export CPPFLAGS="-I${mesa}/usr/include -I${libSystem}/usr/include ${lib.concatMapStringsSep " " (dep: "-I${lib.getDev dep}/include") xDeps}"
     export CFLAGS="-isysroot $DARWIN_SDK_ROOT -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector"
-    export LDFLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib ${lib.concatMapStringsSep " " (dep: "-L${dep}/lib") xDeps} -Wl,-dylinker_install_name,/usr/lib/dyld -Wl,-platform_version,macos,11.0,11.5 -lSystem"
+    export LDFLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -L${mesa}/usr/lib ${lib.concatMapStringsSep " " (dep: "-L${dep}/lib") xDeps} -Wl,-platform_version,macos,11.0,11.5 -lSystem"
 
-    # --without-freetype is temporary: freetype is still a static-only build, and
-    # Wine's check needs a dylib. Skipping it keeps the probe moving so the rest
-    # of configure still gets exercised; drop the flag once freetype ships one.
-    # Keep going past a configure failure: the log is the deliverable.
+    sed -i 's| -ldylib1\.o| -fuse-ld=${nativeLd}/bin/ld -L${libSystem}/usr/lib -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-platform_version,macos,10.7,11.5 -lSystem|' configure
+
     set +e
     env ${macFrameworkOverrides} ./configure \
       --host=${targetTriple} \
       --build=$(cc -dumpmachine) \
-      --prefix=/ \
+      --prefix=/usr \
       --with-wine-tools=${wineTools} \
       --enable-win64 \
       --with-x \
+      --disable-winemac.drv \
+      --disable-winecoreaudio.drv \
       --with-mingw \
-      --without-freetype \
       --without-alsa \
       --without-capi \
       --without-cups \
@@ -139,8 +134,10 @@ stdenv.mkDerivation {
   buildPhase = ''
     runHook preBuild
     set +e
-    make -j$NIX_BUILD_CORES dlls/ntdll/ntdll.so 2>&1 | tail -n 400 > ntdll-build.log
-    echo "ntdll make exit status: ''${PIPESTATUS[0]}" >> ntdll-build.log
+    make -j$NIX_BUILD_CORES > build-all.log 2>&1
+    echo "make exit status: $?" | tee build-status.txt
+    tail -n 200 build-all.log > build-tail.log
+
     set -e
     runHook postBuild
   '';
@@ -148,10 +145,31 @@ stdenv.mkDerivation {
   installPhase = ''
     runHook preInstall
     mkdir -p "$out"
-    cp configure-output.log "$out/" || true
-    cp ntdll-build.log "$out/" || true
-    cp config.log "$out/" || true
-    cp include/config.h "$out/config.h" || true
+
+    # DESTDIR install so binaries record guest paths (--prefix=/usr above).
+    make install DESTDIR="$out" >> install.log 2>&1 || true
+
+    # make install puts the loader only in lib/wine/<arch>-unix, but every app
+    # in bin/ is a symlink to a bin/wine that nothing creates. Supply it.
+    if [ ! -e "$out/usr/bin/wine" ] && [ -e "$out/usr/lib/wine/x86_64-unix/wine" ]; then
+      ln -s ../lib/wine/x86_64-unix/wine "$out/usr/bin/wine"
+    fi
+
+    # The PE modules carry mingw DWARF debug info - mshtml.dll alone is 30MB of
+    # it, ~765MB across the tree.
+    find "$out/usr/lib/wine/x86_64-windows" \( -name '*.dll' -o -name '*.exe' \) -print0 \
+      | xargs -0 -r -n1 ${mingwBintools}/bin/x86_64-w64-mingw32-strip --strip-debug 2>/dev/null || true
+
+    # Build logs live under usr/share, not $out root: image.nix copies each
+    # package's tree verbatim into the image root, so anything at the top level
+    # here would land in / on the running system.
+    logdir="$out/usr/share/wine-build"
+    mkdir -p "$logdir"
+    for f in configure-output.log build-status.txt build-tail.log config.log install.log; do
+      cp "$f" "$logdir/" 2>/dev/null || true
+    done
+    cp include/config.h "$logdir/config.h" 2>/dev/null || true
+
     runHook postInstall
   '';
 

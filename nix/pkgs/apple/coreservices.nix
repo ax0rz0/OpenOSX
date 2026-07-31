@@ -5,9 +5,11 @@
 , targetTriple ? "x86_64-apple-darwin20.4"
 , nativeLd
 , libSystem
-, corefoundation
-, iokitCFStatic
+, src
 }:
+
+# CoreServices umbrella. Only the CarbonCore Multiprocessing entry points are
+# implemented so far - see src/Libraries/CoreServices
 
 let
   sdkTarball = requireFile {
@@ -21,10 +23,10 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-iokit";
+  pname = "puredarwin-coreservices";
   version = "0.1";
 
-  dontUnpack = true;
+  inherit src;
 
   buildPhase = ''
     runHook preBuild
@@ -33,33 +35,27 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
-    # -Wl,-fixup_chains: same eager-bind fix as corefoundation.nix - PD's
-    # dyld lazy-binding path is fragile and this dylib's own internal calls
-    # need to not go through it.
     ${darwinCrossToolchain}/bin/${targetTriple}-clang \
       -isysroot "$DARWIN_SDK_ROOT" -dynamiclib \
       -fuse-ld=${nativeLd}/bin/ld -nostdlib \
-      -L${libSystem}/usr/lib -L${corefoundation}/usr/lib \
+      -L${libSystem}/usr/lib \
       -Wl,-platform_version,macos,11.0,11.5 \
-      -Wl,-install_name,/usr/lib/libIOKitCF.dylib \
-      -Wl,-force_load,${iokitCFStatic}/usr/lib/system/libIOKitCF.a \
+      -Wl,-install_name,/System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices \
       -Wl,-fixup_chains \
-      -lCoreFoundation -lSystem \
-      -o libIOKitCF.dylib
+      src/Libraries/CoreServices/MultiprocessingCompat.c \
+      -lSystem \
+      -o CoreServices
 
     runHook postBuild
   '';
 
   installPhase = ''
     runHook preInstall
-    mkdir -p $out/usr/lib
-    cp libIOKitCF.dylib $out/usr/lib/
-
-    fwdir=$out/System/Library/Frameworks/IOKit.framework
+    fwdir=$out/System/Library/Frameworks/CoreServices.framework
     mkdir -p "$fwdir/Versions/A/Resources"
-    ln -s ../../../../../../usr/lib/libIOKitCF.dylib "$fwdir/Versions/A/IOKit"
+    cp CoreServices "$fwdir/Versions/A/CoreServices"
     ln -sf A "$fwdir/Versions/Current"
-    ln -sf Versions/Current/IOKit "$fwdir/IOKit"
+    ln -sf Versions/Current/CoreServices "$fwdir/CoreServices"
     ln -sf Versions/Current/Resources "$fwdir/Resources"
     runHook postInstall
   '';
@@ -67,7 +63,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "Real CF-shaped IOKitLib (IOServiceGetMatchingService, IORegistryEntryCreateCFProperty, etc), linked against real CoreFoundation";
+    description = "CoreServices umbrella framework (CarbonCore Multiprocessing entry points)";
     platforms = platforms.linux;
   };
 }

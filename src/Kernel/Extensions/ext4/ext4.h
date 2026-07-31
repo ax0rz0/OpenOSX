@@ -358,6 +358,7 @@ int  ext4_alloc_inode(struct ext4mount *emp, enum vtype type, ino_t *ino_out);
 int  ext4_free_inode(struct ext4mount *emp, ino_t ino, enum vtype type);
 int  ext4_alloc_block(struct ext4mount *emp, uint64_t goal, uint64_t *pblk_out);
 int  ext4_free_block(struct ext4mount *emp, uint64_t pblk);
+void ext4_inode_init_extent_header(struct ext4_inode *inode);
 int  ext4_inode_append_extent(struct ext4mount *emp, struct ext4_inode *inode,
                uint32_t lblk, uint64_t pblk);
 int  ext4_inode_free_extents(struct ext4mount *emp, struct ext4_inode *inode);

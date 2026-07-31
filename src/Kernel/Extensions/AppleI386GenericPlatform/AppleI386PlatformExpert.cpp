@@ -26,6 +26,7 @@
 #include <IOKit/system.h>
 #include <IOKit/IORegistryEntry.h>
 #include <IOKit/IODeviceTreeSupport.h>   // gIODTPlane
+#include <IOKit/IOKitKeys.h>             // kIOPlatformUUIDKey
 #include <IOKit/platform/ApplePlatformExpert.h>
 #include <libkern/c++/OSContainers.h>
 #include <libkern/c++/OSUnserialize.h>
@@ -95,6 +96,51 @@ bool AppleI386PlatformExpert::init(OSDictionary *properties) {\
 	return true;
 }
 
+/*
+ * Publish IOPlatformUUID.
+ *
+ * IOBSDGetPlatformUUID() answers gethostuuid() by doing
+ * waitForService(resourceMatching(kIOPlatformUUIDKey)), and CFPreferences asks
+ * with an infinite timeout - so until that resource exists, anything touching
+ * preferences (or hw.uuid) blocks forever at 0% CPU rather than failing.
+ *
+ * On x86_64 stock XNU only publishes it from
+ * IOPlatformExpert::registerNVRAMController(), because on a real Mac the UUID
+ * comes out of NVRAM. PureDarwin has no IONVRAMController, so that path never
+ * runs; xnu-loader instead puts the 16-byte "platform-uuid" property (from
+ * SMBIOS, falling back to the boot volume UUID) on the device-tree /options
+ * node, and we publish it here.
+ */
+void AppleI386PlatformExpert::publishPlatformUUIDFromDeviceTree(void) {
+	IORegistryEntry *options = IORegistryEntry::fromPath("/options", gIODTPlane);
+	if (options == 0) {
+		IOLog("AppleI386PlatformExpert: no /options node, IOPlatformUUID unavailable\n");
+		return;
+	}
+
+	OSData *data = OSDynamicCast(OSData, options->getProperty("platform-uuid"));
+	if (data == 0 || data->getLength() != sizeof(uuid_t)) {
+		IOLog("AppleI386PlatformExpert: /options has no usable platform-uuid, "
+		      "IOPlatformUUID unavailable\n");
+		options->release();
+		return;
+	}
+
+	uuid_string_t uuid;
+	uuid_unparse((const unsigned char *)data->getBytesNoCopy(), uuid);
+	options->release();
+
+	OSString *string = OSString::withCString(uuid);
+	if (string == 0) return;
+
+	/* Both are needed: the property answers IOKit lookups and the sysctl, the
+	 * resource is what waitForService() in IOBSDGetPlatformUUID() blocks on. */
+	setProperty(kIOPlatformUUIDKey, string);
+	publishResource(kIOPlatformUUIDKey, string);
+	IOLog("AppleI386PlatformExpert: published IOPlatformUUID %s\n", uuid);
+	string->release();
+}
+
 bool AppleI386PlatformExpert::start(IOService *provider) {
 	setBootROMType(kBootROMTypeNewWorld);
 
@@ -102,6 +148,8 @@ bool AppleI386PlatformExpert::start(IOService *provider) {
 	if (!superOK) return false;
 	PE_halt_restart = handlePEHaltRestart;
 	registerService();
+
+	publishPlatformUUIDFromDeviceTree();
 
 	// Hack: Initialize AppleI386CPU ourself because no one else will.
 	bootCPU = new AppleI386CPU;

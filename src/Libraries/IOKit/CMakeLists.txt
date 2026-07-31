@@ -45,6 +45,7 @@ target_sources(IOKitCF PRIVATE
     iokituser/IOTrap.s
     iokituser/IOCFSerialize.c
     iokituser/IOCFUnserialize.tab.c
+    iokituser/IOPowerSources.c
     ${CMAKE_CURRENT_BINARY_DIR}/device_user.c
 )
 

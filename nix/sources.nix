@@ -121,6 +121,9 @@ let
     "src/Libraries/CoreFoundation"
     "src/Libraries/libSystem/libc/pd-compat-include"
   ];
+  coreServicesSource = sourceWith "puredarwin-coreservices-source" [
+    "src/Libraries/CoreServices"
+  ];
   securitySource = sourceWith "puredarwin-security-source" [
     "src/Libraries/Security"
   ];
@@ -248,6 +251,7 @@ in {
     fbdoomSource
     cctoolsSource
     coreFoundationSource
+    coreServicesSource
     securitySource
     systemConfigurationSource
     iokitCFSource

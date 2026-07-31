@@ -100,7 +100,7 @@ let
       nativeMesonTools = nativeMesonToolsDir;
       inherit darwinCrossToolchain nativeLd;
       libSystem = libSystemBuild;
-      inherit (pkgs.xfce) libxfce4util;
+      inherit (pkgs) libxfce4util;
       glib = glibBuild;
       pcre2 = pcre2Build;
       libffi = libffiBuild;
@@ -349,7 +349,11 @@ let
         "--disable-gtk-doc"
         "--without-html-dir"
         "--disable-linker-opts"
-        "--with-xsession-prefix=${placeholder "out"}"
+        # Must be a guest path, not the store path: this package installs with
+        # --prefix=/ and DESTDIR=$out, so ${placeholder "out"} here put
+        # xfce.desktop under $out/nix/store/... and image.nix then copied that
+        # straight to /nix/store on the running system.
+        "--with-xsession-prefix="
       ];
     };
   xfce4PanelBuild =
