@@ -3,27 +3,14 @@
 
 #include <Security/SecBase.h>
 #include <CoreFoundation/CoreFoundation.h>
+#include <Security/SecKeychain.h>
 
-typedef struct OpaqueSecCertificateRef        *SecCertificateRef;
 typedef struct OpaqueSecTrustedApplicationRef *SecTrustedApplicationRef;
 
-typedef uint32_t SecItemClass;
-typedef uint32_t SecKeychainAttrType;
 typedef uint32_t SecPreferencesDomain;
 typedef uint32_t SecAccessOwnerType;
 
-typedef struct {
-	SecKeychainAttrType  tag;
-	uint32_t             length;
-	void                *data;
-} SecKeychainAttribute;
-
 typedef SecKeychainAttribute *SecKeychainAttributePtr;
-
-typedef struct {
-	uint32_t              count;
-	SecKeychainAttribute *attr;
-} SecKeychainAttributeList;
 
 enum {
 	kSecGenericPasswordItemClass  = 'genp',

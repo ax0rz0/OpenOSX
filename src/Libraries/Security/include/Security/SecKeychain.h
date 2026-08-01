@@ -7,8 +7,8 @@
 typedef struct OpaqueSecKeychainSearchRef *SecKeychainSearchRef;
 typedef struct OpaqueSecCertificateRef    *SecCertificateRef;
 
-typedef FourCharCode SecItemClass;
-typedef FourCharCode SecKeychainAttrType;
+typedef uint32_t SecItemClass;
+typedef uint32_t SecKeychainAttrType;
 
 typedef struct SecKeychainAttribute {
     SecKeychainAttrType tag;
