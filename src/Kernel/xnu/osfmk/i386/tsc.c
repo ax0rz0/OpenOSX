@@ -469,16 +469,6 @@ tsc_init(void)
 								tscGranularity = 1;
 						}
 				} else if (cpuid_vmm_family() == CPUID_VMM_FAMILY_QEMU_TCG) {
-						/*
-						* QEMU TCG does not emulate MSR_PLATFORM_INFO or
-						* MSR_FLEX_RATIO — reads return 0, writes are dropped.
-						* Never touch the MSRs; no DT property gives the real
-						* TSC rate either, so measure it directly against the
-						* PIT (see pit_measure_tsc_freq() above), and set
-						* busFreq to the same value with tscGranularity=1 so
-						* the ratio math below is a no-op and tscFreq comes
-						* out equal to the measured rate.
-						*/
 						uint64_t measured = pit_measure_tsc_freq();
 						if (measured != 0) {
 								busFreq = measured;
@@ -493,7 +483,7 @@ tsc_init(void)
 		msr_platform_info = rdmsr64(MSR_PLATFORM_INFO);
 		flex_ratio_min = (uint32_t)bitfield(msr_platform_info, 47, 40);
 		flex_ratio_max = (uint32_t)bitfield(msr_platform_info, 15, 8);
-						/* No BIOS-programmed flex ratio. Use hardware max as default */
+		/* No BIOS-programmed flex ratio. Use hardware max as default */
 		tscGranularity = flex_ratio_max;
 		if (msr_flex_ratio & bit(16)) {
 			/* Flex Enabled: Use this MSR if less than max */

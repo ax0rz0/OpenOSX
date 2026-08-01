@@ -1045,30 +1045,18 @@ readfile(const char *what, struct load_unload_state *lus)
 
 	gethostname(ourhostname, sizeof(ourhostname));
 
-	{ char m[512]; int n = snprintf(m, sizeof(m), "PD-DIAG readfile: enter what=%s\n", what);
-	  write(2, m, n > 0 ? (size_t)n : 0); }
-
 	if (NULL == (thejob = read_plist_file(what, lus->editondisk, lus->load))) {
-		char m[512]; int n = snprintf(m, sizeof(m), "PD-DIAG readfile: DROP read_plist_file NULL what=%s\n", what);
-		write(2, m, n > 0 ? (size_t)n : 0);
 		launchctl_log(LOG_ERR, "%s: no plist was returned for: %s", getprogname(), what);
 		return;
 	}
 
-	{ char m[512]; int n = snprintf(m, sizeof(m), "PD-DIAG readfile: thejob type=%d what=%s\n", launch_data_get_type(thejob), what);
-	  write(2, m, n > 0 ? (size_t)n : 0); }
-
 	if (NULL == launch_data_dict_lookup(thejob, LAUNCH_JOBKEY_LABEL)) {
-		char m[512]; int n = snprintf(m, sizeof(m), "PD-DIAG readfile: DROP missing Label what=%s\n", what);
-		write(2, m, n > 0 ? (size_t)n : 0);
 		launchctl_log(LOG_ERR, "%s: missing the Label key: %s", getprogname(), what);
 		goto out_bad;
 	}
 
 	if ((launch_data_dict_lookup(thejob, LAUNCH_JOBKEY_PROGRAM) == NULL) &&
 		(launch_data_dict_lookup(thejob, LAUNCH_JOBKEY_PROGRAMARGUMENTS) == NULL)) {
-		char m[512]; int n = snprintf(m, sizeof(m), "PD-DIAG readfile: DROP no Program/ProgramArguments what=%s\n", what);
-		write(2, m, n > 0 ? (size_t)n : 0);
 		launchctl_log(LOG_ERR, "%s: neither a Program nor a ProgramArguments key was specified: %s", getprogname(), what);
 		goto out_bad;
 	}
@@ -1193,8 +1181,6 @@ readfile(const char *what, struct load_unload_state *lus)
 		}
 
 		if (skipjob) {
-			char m[512]; int n = snprintf(m, sizeof(m), "PD-DIAG readfile: DROP LimitLoadToSessionType skip what=%s\n", what);
-			write(2, m, n > 0 ? (size_t)n : 0);
 			goto out_bad;
 		}
 	}
@@ -1208,8 +1194,6 @@ readfile(const char *what, struct load_unload_state *lus)
 	}
 
 	if (job_disabled && lus->load) {
-		char m[512]; int n = snprintf(m, sizeof(m), "PD-DIAG readfile: DROP disabled what=%s\n", what);
-		write(2, m, n > 0 ? (size_t)n : 0);
 		goto out_bad;
 	}
 
@@ -1221,8 +1205,6 @@ readfile(const char *what, struct load_unload_state *lus)
 		launch_data_dict_insert(thejob, lduuid, LAUNCH_JOBKEY_SECURITYSESSIONUUID);
 	}
 
-	{ char m[512]; int n = snprintf(m, sizeof(m), "PD-DIAG readfile: APPEND ok what=%s newcount=%u\n", what, (unsigned)(launch_data_array_get_count(lus->pass1) + 1));
-	  write(2, m, n > 0 ? (size_t)n : 0); }
 	launch_data_array_append(lus->pass1, thejob);
 
 	if (_launchctl_verbose) {
@@ -1845,15 +1827,11 @@ CreateMyPropertyListFromFile(const char *posixfile)
 	CFURLRef          fileURL;
 
 	fileURL = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (const UInt8 *)posixfile, strlen(posixfile), false);
-	{ char m[256]; int n = snprintf(m, sizeof(m), "PD-DIAG CreateMyPLFromFile: fileURL=%p file=%s\n", (void *)fileURL, posixfile);
-	  write(2, m, n > 0 ? (size_t)n : 0); }
 	if (!fileURL) {
 		launchctl_log(LOG_ERR, "%s: CFURLCreateFromFileSystemRepresentation(%s) failed", getprogname(), posixfile);
 	}
 	resourceData = NULL; errorCode = 0;
 	Boolean durok = CFURLCreateDataAndPropertiesFromResource(kCFAllocatorDefault, fileURL, &resourceData, NULL, NULL, &errorCode);
-	{ char m[256]; int n = snprintf(m, sizeof(m), "PD-DIAG CreateMyPLFromFile: DataAndProps ok=%d errorCode=%d resourceData=%p\n", (int)durok, (int)errorCode, (void *)resourceData);
-	  write(2, m, n > 0 ? (size_t)n : 0); }
 	if (!durok) {
 		launchctl_log(LOG_ERR, "%s: CFURLCreateDataAndPropertiesFromResource(%s) failed: %d", getprogname(), posixfile, (int)errorCode);
         CFRelease(fileURL);
@@ -1861,8 +1839,6 @@ CreateMyPropertyListFromFile(const char *posixfile)
 	}
     error = NULL;
     propertyList = CFPropertyListCreateWithData(kCFAllocatorDefault, resourceData, kCFPropertyListMutableContainersAndLeaves, NULL, &error);
-	{ char m[256]; int n = snprintf(m, sizeof(m), "PD-DIAG CreateMyPLFromFile: propertyList=%p type=%ld\n", (void *)propertyList, propertyList ? (long)CFGetTypeID(propertyList) : -1L);
-	  write(2, m, n > 0 ? (size_t)n : 0); }
     
 	if (fileURL) {
 		CFRelease(fileURL);

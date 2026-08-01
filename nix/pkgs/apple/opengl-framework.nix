@@ -6,6 +6,12 @@
 , targetTriple ? "x86_64-apple-darwin20.4"
 , libSystem
 , mesa
+, libX11
+, xorgproto
+, libXext
+, libxcb
+, libXau
+, libXdmcp
 , src
 }:
 
@@ -37,15 +43,17 @@ stdenv.mkDerivation {
 
     ${darwinCrossToolchain}/bin/${targetTriple}-clang \
       -isysroot "$DARWIN_SDK_ROOT" -dynamiclib \
-      -I${src}/include -I${mesa}/usr/include \
+      -I${src}/include -I${mesa}/usr/include -I${libX11}/include -I${xorgproto}/include \
       -I${libSystem}/usr/include \
       -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 \
       -fuse-ld=${nativeLd}/bin/ld -nostdlib \
       -L${libSystem}/usr/lib -L${mesa}/usr/lib \
+      -L${libX11}/lib -L${libXext}/lib -L${libxcb}/lib -L${libXau}/lib -L${libXdmcp}/lib \
       -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib \
       -Wl,-platform_version,macos,11.0,11.5 \
       -Wl,-install_name,${installName} \
-      -Wl,-reexport-lOSMesa \
+      -Wl,-reexport-lGL \
+      -lX11 -lXext -lxcb -lXau -lXdmcp \
       -lSystem \
       ${src}/CGL.c \
       -o OpenGL
@@ -78,7 +86,7 @@ stdenv.mkDerivation {
   dontStrip = true;
 
   meta = with lib; {
-    description = "PureDarwin OpenGL.framework: CGL over Mesa OSMesa, re-exporting the GL API";
+    description = "PureDarwin OpenGL.framework: CGL over GLX pbuffers, re-exporting the GL API";
     platforms = platforms.linux;
   };
 }

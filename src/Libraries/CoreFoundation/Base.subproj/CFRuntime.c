@@ -618,6 +618,15 @@ CF_PRIVATE void _CFRuntimeSetInstanceTypeIDAndIsa(CFTypeRef cf, CFTypeID newType
     if (((CFRuntimeBase *)cf)->_cfisa != __CFISAForTypeID(newTypeID)) {
         ((CFSwiftRef)cf)->isa = (uintptr_t)__CFISAForTypeID(newTypeID);
     }
+#elif DEPLOYMENT_RUNTIME_OBJC
+    // Collections are built as a CFBasicHash and only then re-typed to
+    // CFDictionary/CFSet, so the isa object_setClass() stamped at creation is
+    // still CFBasicHash's bridge class. Without this the retyped object keeps
+    // the generic __NSCFType and every bridged Foundation selector - e.g.
+    // -objectForKeyedSubscript: - fails as unrecognized.
+    if ((uintptr_t)object_getClass((id)cf) != __CFISAForTypeID(newTypeID)) {
+        object_setClass((id)cf, (Class)__CFISAForTypeID(newTypeID));
+    }
 #endif
 }
 

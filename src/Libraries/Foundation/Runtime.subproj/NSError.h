@@ -6,16 +6,22 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
-#if !defined(__FOUNDATION_FOUNDATION__)
-#define __FOUNDATION_FOUNDATION__ 1
+#ifndef NSError_h
+#define NSError_h
 
+#import <Foundation/NSObject.h>
 #import <Foundation/NSObjCRuntime.h>
-#import <Foundation/FoundationErrors.h>
-#import <Foundation/NSError.h>
-#import <Foundation/NSArray.h>
-#import <Foundation/NSDictionary.h>
-#import <Foundation/NSURL.h>
 
-#endif /* ! __FOUNDATION_FOUNDATION__ */
+@class NSString;
 
+@interface NSError : NSObject
 
++ (instancetype)errorWithDomain:(NSString *)domain code:(NSInteger)code;
+
+- (NSInteger)code;
+- (NSString *)domain;
+- (NSString *)localizedDescription;
+
+@end
+
+#endif /* NSError_h */

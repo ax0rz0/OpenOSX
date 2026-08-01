@@ -69,6 +69,10 @@ add_dependencies(libSystem_B_stub
     libsystem_trace_static libdarwin_static libSystemConfiguration_static
     XPC_libxpc_static XPC_libnv_static XPC_launchd_mig_static)
 target_link_options(libSystem_B_stub PRIVATE
+    # Without this only the archive members something already references get
+    # pulled in, so most of libm (cosh, sinh, the erf/gamma family, ...) never
+    # reaches the dylib however the export list is written.
+    -Wl,-force_load,$<TARGET_FILE:openlibm_static>
     -Wl,-force_load,$<TARGET_FILE:XPC_notify_client_static>
     # libdns_sd is part of libSystem on Darwin (libsystem_dnssd.dylib).
     -Wl,-force_load,$<TARGET_FILE:mDNSResponder_dnssd_static>

@@ -10,9 +10,16 @@
 , ninja
 , pkg-config
 , corefoundation
+, foundation
+, libobjc
 , iokit
 , openglFramework
 , mesa
+, libX11
+, libXext
+, libxcb
+, libXau
+, libXdmcp
 }:
 
 let
@@ -97,13 +104,6 @@ const char* ffDetectSound(FF_A_UNUSED FFSoundOptions* options, FF_A_UNUSED FFlis
 SNDEOF
     sed -i 's#src/detection/sound/sound_apple\.[mc]#src/detection/sound/sound_nosupport.c#' CMakeLists.txt
 
-    # Upstream's opengl_apple.c is used as-is: PureDarwin has a real
-    # OpenGL.framework (CGL over Mesa's OSMesa), so CGLChoosePixelFormat/
-    # CGLCreateContext/glGetString all resolve and fastfetch reports Mesa's
-    # actual GL version and renderer. The -framework OpenGL link line upstream
-    # already emits sits inside the Apple framework block that the awk pass
-    # below strips wholesale, so it is re-added to LDFLAGS instead.
-
     sed -i 's#src/detection/dns/dns_apple\.c#src/detection/dns/dns_linux.c#' CMakeLists.txt
 
     cat > src/detection/displayserver/displayserver_nosupport.c <<'DSEOF'
@@ -167,26 +167,38 @@ bool ffGetAppNameAndVersion(const char* exePath, FFstrbuf* retName, FFstrbuf* re
 }
 VEREOF
 
-    # os_apple.m uses NSProcessInfo/Foundation for OS name+version and has no
-    # upstream _nosupport.c - unlike the peripheral modules above, OS
-    # identification is core to what fastfetch is for, so don't just stub it
-    # to nothing. FFPlatform_unix.c (already compiled unconditionally here)
-    # populates instance.state.platform.sysinfo via uname() for every
-    # platform - reuse that instead of Foundation, same pattern os_obsd.c
-    # already uses for OpenBSD.
-    cat > src/detection/os/os_nosupport.c <<'OSEOF'
-#include "os.h"
+    # os_apple.m reads /System/Library/CoreServices/SystemVersion.plist through
+    # NSDictionary - which we now have, bridged over CFPropertyList - and we ship
+    # that plist, so use the real implementation instead of a hardcoded name. It
+    # assumes the product is always macOS in two places; the plist supplies the
+    # real name, and the id should match it.
+    sed -i \
+      -e 's/ffStrbufSetStatic(&os->id, "macos");/ffStrbufSetStatic(\&os->id, "puredarwin");/' \
+      -e 's/ffStrbufSetStatic(&os->name, "macOS");/ffStrbufSetStatic(\&os->name, "PureDarwin");/' \
+      src/detection/os/os_apple.m
 
-void ffDetectOSImpl(FFOSResult* os)
-{
-    ffStrbufSetStatic(&os->name, "PureDarwin");
-    ffStrbufSetStatic(&os->prettyName, "PureDarwin");
-    ffStrbufSet(&os->version, &instance.state.platform.sysinfo.release);
-    ffStrbufSet(&os->versionID, &instance.state.platform.sysinfo.release);
-    ffStrbufSetStatic(&os->id, "puredarwin");
-}
-OSEOF
-    sed -i 's#src/detection/os/os_apple\.m#src/detection/os/os_nosupport.c#' CMakeLists.txt
+    # With os->id reported as "puredarwin", fastfetch's own logo autodetection
+    # picks a builtin of that name - so ship Hexley as one rather than making
+    # every invocation pass --logo-type/--logo-color flags. Files in
+    # src/logo/ascii are globbed into FASTFETCH_DATATEXT_LOGO_<NAME> by CMake.
+    cp ${./puredarwin-logo.txt} src/logo/ascii/puredarwin.txt
+    cat > pd-logo-entry.c <<'LOGOEOF'
+    // PureDarwin
+    {
+        .names = { "puredarwin" },
+        .lines = FASTFETCH_DATATEXT_LOGO_PUREDARWIN,
+        .colors = {
+            FF_COLOR_FG_RED,
+            FF_COLOR_FG_DEFAULT,
+        },
+        .colorKeys = FF_COLOR_FG_RED,
+        .colorTitle = FF_COLOR_FG_RED,
+    },
+LOGOEOF
+    # Builtins are bucketed by first letter and looked up as
+    # ffLogoBuiltins[toupper(name[0]) - 'A'], so this has to land in P[].
+    sed -i -e '/^    \/\/ PacBSD$/e cat pd-logo-entry.c' src/logo/builtin.c
+    rm pd-logo-entry.c
 
     cat > src/detection/gpu/gpu_apple.m <<'GPUEOF'
 #include "gpu.h"
@@ -222,8 +234,8 @@ GPUEOF
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
     export PATH="${darwinCrossToolchain}/bin:$PATH"
     export NIX_DARWIN_TOOLCHAIN_DIR="${darwinCrossToolchain}/bin"
-    export LDFLAGS="-isysroot $DARWIN_SDK_ROOT -F$DARWIN_SDK_ROOT/System/Library/Frameworks -F${openglFramework}/System/Library/Frameworks -fuse-ld=${nativeLd}/bin/ld -nostdlib -Wl,-Z -L${libSystem}/usr/lib -L${corefoundation}/usr/lib -L${iokit}/usr/lib -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-dylinker_install_name,/usr/lib/dyld -Wl,-platform_version,macos,11.0,11.5 -Wl,-undefined,dynamic_lookup -Wl,-dylib_file,/usr/lib/libOSMesa.8.dylib:${mesa}/usr/lib/libOSMesa.8.dylib -framework OpenGL -lIOKitCF -lCoreFoundation -lSystem"
-    export CFLAGS="-isysroot $DARWIN_SDK_ROOT -F${openglFramework}/System/Library/Frameworks -I${mesa}/usr/include -I${libSystem}/usr/include -I${corefoundation}/include -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0"
+    export LDFLAGS="-isysroot $DARWIN_SDK_ROOT -F$DARWIN_SDK_ROOT/System/Library/Frameworks -F${openglFramework}/System/Library/Frameworks -fuse-ld=${nativeLd}/bin/ld -nostdlib -Wl,-Z -L${libSystem}/usr/lib -L${corefoundation}/usr/lib -L${foundation}/usr/lib -L${libobjc}/usr/lib -L${iokit}/usr/lib -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-dylinker_install_name,/usr/lib/dyld -Wl,-platform_version,macos,11.0,11.5 -Wl,-undefined,dynamic_lookup -Wl,-dylib_file,/usr/lib/libGL.1.dylib:${mesa}/usr/lib/libGL.1.dylib -Wl,-dylib_file,/usr/lib/libX11.6.dylib:${libX11}/lib/libX11.6.dylib -Wl,-dylib_file,/usr/lib/libXext.6.dylib:${libXext}/lib/libXext.6.dylib -Wl,-dylib_file,/usr/lib/libxcb.1.1.0.dylib:${libxcb}/lib/libxcb.1.1.0.dylib -Wl,-dylib_file,/usr/lib/libXau.6.dylib:${libXau}/lib/libXau.6.dylib -Wl,-dylib_file,/usr/lib/libXdmcp.6.dylib:${libXdmcp}/lib/libXdmcp.6.dylib -framework OpenGL -lIOKitCF -lCoreFoundation -lFoundation -lobjc -lSystem"
+    export CFLAGS="-isysroot $DARWIN_SDK_ROOT -F${openglFramework}/System/Library/Frameworks -I${mesa}/usr/include -I${libSystem}/usr/include -I${corefoundation}/include -I${foundation}/usr/include -I${libobjc}/usr/include -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0"
   '';
 
   dontFixup = true;

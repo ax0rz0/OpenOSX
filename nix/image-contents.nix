@@ -59,6 +59,10 @@
 , nettleSharedBuild
 , gnutlsSharedBuild
 , glibNetworkingBuild
+, llvmCrossBuild
+, vulkanLoaderBuild
+, vulkanToolsBuild
+, libxshmfenceSharedBuild
 , iomediacheckBuild
 , ioregBuild
 , isDarwin
@@ -117,8 +121,6 @@
 , openglFrameworkBuild
 , opensshBuild
 , opensslBuild
-, osmesaFbBuild
-, osmesaTriBuild
 , pangoBuild
 , pcre2Build
 , pdVirglShimBuild
@@ -167,6 +169,7 @@
 , xnuHeadersBuild
 , xorgBuild
 , xrdbBuild
+, xrandrBuild
 , xtermBuild
 , xvfbBuild
 , xvfbFontsBuild
@@ -293,6 +296,11 @@ let
     nettle = nettleSharedBuild;
     gnutls = gnutlsSharedBuild;
     glib-networking = glibNetworkingBuild;
+    # llvmpipe and lavapipe JIT through libLLVM at runtime.
+    llvm = llvmCrossBuild;
+    vulkan-loader = vulkanLoaderBuild;
+    vulkan-tools = vulkanToolsBuild;
+    libxshmfence = libxshmfenceSharedBuild;
     dlsym-test = dlsymTestBuild;
     xvfb = xvfbBuild;
     xorg = xorgBuild;
@@ -363,8 +371,6 @@ let
     mesa = mesaBuild;
     mesa-demos = mesaDemosBuild;
     pd-virgl-shim = pdVirglShimBuild;
-    osmesa-tri = osmesaTriBuild;
-    osmesa-fb = osmesaFbBuild;
     libobjc = libobjcBuild;
     foundation = foundationBuild;
     iokit = iokitBuild;
@@ -433,6 +439,7 @@ let
     xfce4-terminal = xfce4TerminalBuild;
     iceauth = iceauthBuild;
     xrdb = xrdbBuild;
+    xrandr = xrandrBuild;
     xinit = xinitBuild;
   };
 
@@ -599,7 +606,7 @@ let
         imageFileName = "puredarwin-arm64-virt-minimal-release.img";
         bootArgs = "serial=3 -noprogress ahci_debug=1 kext=0xffff io=0xffff";
       };
-      strippedExtraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild mesaBuild pdVirglShimBuild osmesaTriBuild osmesaFbBuild mesaDemosBuild ];
+      strippedExtraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild mesaBuild pdVirglShimBuild mesaDemosBuild ];
       imageStrippedBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystemStripped;
         extraPackages = strippedExtraPackages;
@@ -873,9 +880,7 @@ let
       libcxx-dylib = libcxxDylibBuild;
       libcxx-test = libcxxTestBuild;
       mesa = mesaBuild;
-      osmesa-tri = osmesaTriBuild;
-      osmesa-fb = osmesaFbBuild;
-      libobjc = libobjcBuild;
+          libobjc = libobjcBuild;
       objc-test = objcTestBuild;
       foundation = foundationBuild;
       autoconf = autoconfBuild;

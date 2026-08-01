@@ -1,7 +1,8 @@
 #include <OpenGL/OpenGL.h>
 
-#include <GL/osmesa.h>
+#include <GL/glx.h>
 
+#include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -26,8 +27,8 @@ struct _CGLPixelFormatObject {
 
 struct _CGLContextObject {
 	unsigned int      retain_count;
-	OSMesaContext     osmesa;
-	void             *buffer;
+	GLXContext        glx;
+	GLXPbuffer        pbuffer;
 	int               width;
 	int               height;
 	CGLPixelFormatObj pixel_format;
@@ -38,9 +39,31 @@ struct _CGLContextObject {
 static _Thread_local CGLContextObj pd_cgl_current;
 
 /*
+ * CGL contexts are offscreen, so each one is backed by a GLX pbuffer rather
+ * than a window. That needs a display connection, which every context shares:
+ * closing it while contexts remain alive would invalidate them, and CGL has no
+ * "shut down" entry point where a refcounted one could be dropped.
+ */
+static Display        *pd_cgl_display;
+static pthread_once_t  pd_cgl_display_once = PTHREAD_ONCE_INIT;
+
+static void
+pd_cgl_open_display(void)
+{
+	pd_cgl_display = XOpenDisplay(NULL);
+}
+
+static Display *
+pd_cgl_get_display(void)
+{
+	pthread_once(&pd_cgl_display_once, pd_cgl_open_display);
+	return pd_cgl_display;
+}
+
+/*
  * Attribute lists are NULL/0-terminated and mix bare flags with value pairs.
- * Anything not understood is skipped rather than rejected: OSMesa cannot honour
- * kCGLPFAAccelerated or a display mask, but refusing the whole request over an
+ * Anything not understood is skipped rather than rejected: a pbuffer cannot
+ * honour kCGLPFAAccelerated or a display mask, but refusing the whole request over an
  * attribute that only expresses a preference would leave callers with no
  * context at all.
  */
@@ -199,43 +222,87 @@ CGLCreateContext(CGLPixelFormatObj pix, CGLContextObj share, CGLContextObj *ctx)
 		return kCGLBadAlloc;
 	}
 
+	Display *dpy = pd_cgl_get_display();
+	if (dpy == NULL) {
+		free(c);
+		return kCGLBadConnection;
+	}
+
 	c->width  = PD_CGL_DEFAULT_WIDTH;
 	c->height = PD_CGL_DEFAULT_HEIGHT;
-	c->buffer = calloc((size_t)c->width * (size_t)c->height, 4);
-	if (c->buffer == NULL) {
-		free(c);
-		return kCGLBadAlloc;
-	}
 
 	int depth   = pix != NULL ? pix->depth_size   : 24;
 	int stencil = pix != NULL ? pix->stencil_size : 8;
 	int accum   = pix != NULL ? pix->accum_size   : 0;
 
-	/* A core-profile request maps onto OSMesa's core profile so that the
+	int fb_attribs[] = {
+		GLX_DRAWABLE_TYPE, GLX_PBUFFER_BIT,
+		GLX_RENDER_TYPE,   GLX_RGBA_BIT,
+		GLX_RED_SIZE,      8,
+		GLX_GREEN_SIZE,    8,
+		GLX_BLUE_SIZE,     8,
+		GLX_ALPHA_SIZE,    pix != NULL && pix->alpha_size ? pix->alpha_size : 8,
+		GLX_DEPTH_SIZE,    depth,
+		GLX_STENCIL_SIZE,  stencil,
+		GLX_ACCUM_RED_SIZE, accum,
+		GLX_DOUBLEBUFFER,  False,
+		None
+	};
+
+	int nconfigs = 0;
+	GLXFBConfig *configs = glXChooseFBConfig(dpy, DefaultScreen(dpy),
+	    fb_attribs, &nconfigs);
+	if (configs == NULL || nconfigs == 0) {
+		if (configs != NULL) {
+			XFree(configs);
+		}
+		free(c);
+		return kCGLBadPixelFormat;
+	}
+
+	int pb_attribs[] = {
+		GLX_PBUFFER_WIDTH,  c->width,
+		GLX_PBUFFER_HEIGHT, c->height,
+		GLX_LARGEST_PBUFFER, False,
+		None
+	};
+	c->pbuffer = glXCreatePbuffer(dpy, configs[0], pb_attribs);
+	if (c->pbuffer == None) {
+		XFree(configs);
+		free(c);
+		return kCGLBadAlloc;
+	}
+
+	/* A core-profile request goes through glXCreateContextAttribsARB so the
 	 * version string a caller sees matches what it asked for; anything else
-	 * gets the default (compatibility) context. */
+	 * gets the default (compatibility) context. The entry point is resolved at
+	 * runtime because it is an extension, not part of the GLX ABI. */
 	if (pix != NULL && pix->profile >= kCGLOGLPVersion_3_2_Core) {
-		int major = (pix->profile >> 12) & 0xf;
-		int minor = (pix->profile >> 8) & 0xf;
-		c->osmesa = OSMesaCreateContextAttribs((const int[]) {
-			OSMESA_FORMAT,                 OSMESA_RGBA,
-			OSMESA_DEPTH_BITS,             depth,
-			OSMESA_STENCIL_BITS,           stencil,
-			OSMESA_ACCUM_BITS,             accum,
-			OSMESA_PROFILE,                OSMESA_CORE_PROFILE,
-			OSMESA_CONTEXT_MAJOR_VERSION,  major,
-			OSMESA_CONTEXT_MINOR_VERSION,  minor,
-			0
-		}, share != NULL ? share->osmesa : NULL);
+		PFNGLXCREATECONTEXTATTRIBSARBPROC create_attribs =
+		    (PFNGLXCREATECONTEXTATTRIBSARBPROC)glXGetProcAddress(
+		        (const GLubyte *)"glXCreateContextAttribsARB");
+		if (create_attribs != NULL) {
+			int ctx_attribs[] = {
+				GLX_CONTEXT_MAJOR_VERSION_ARB, (pix->profile >> 12) & 0xf,
+				GLX_CONTEXT_MINOR_VERSION_ARB, (pix->profile >> 8)  & 0xf,
+				GLX_CONTEXT_PROFILE_MASK_ARB,
+				    GLX_CONTEXT_CORE_PROFILE_BIT_ARB,
+				None
+			};
+			c->glx = create_attribs(dpy, configs[0],
+			    share != NULL ? share->glx : NULL, True, ctx_attribs);
+		}
 	}
 
-	if (c->osmesa == NULL) {
-		c->osmesa = OSMesaCreateContextExt(OSMESA_RGBA, depth, stencil, accum,
-		    share != NULL ? share->osmesa : NULL);
+	if (c->glx == NULL) {
+		c->glx = glXCreateNewContext(dpy, configs[0], GLX_RGBA_TYPE,
+		    share != NULL ? share->glx : NULL, True);
 	}
 
-	if (c->osmesa == NULL) {
-		free(c->buffer);
+	XFree(configs);
+
+	if (c->glx == NULL) {
+		glXDestroyPbuffer(dpy, c->pbuffer);
 		free(c);
 		return kCGLBadContext;
 	}
@@ -263,12 +330,19 @@ CGLReleaseContext(CGLContextObj ctx)
 		return;
 	}
 
+	Display *dpy = pd_cgl_get_display();
+
 	if (pd_cgl_current == ctx) {
+		if (dpy != NULL) {
+			glXMakeContextCurrent(dpy, None, None, NULL);
+		}
 		pd_cgl_current = NULL;
 	}
-	OSMesaDestroyContext(ctx->osmesa);
+	if (dpy != NULL) {
+		glXDestroyContext(dpy, ctx->glx);
+		glXDestroyPbuffer(dpy, ctx->pbuffer);
+	}
 	CGLReleasePixelFormat(ctx->pixel_format);
-	free(ctx->buffer);
 	free(ctx);
 }
 
@@ -288,16 +362,20 @@ CGLGetContextRetainCount(CGLContextObj ctx)
 CGLError
 CGLSetCurrentContext(CGLContextObj ctx)
 {
+	Display *dpy = pd_cgl_get_display();
+	if (dpy == NULL) {
+		return kCGLBadConnection;
+	}
+
 	if (ctx == NULL) {
 		/* CGL has no "unbind" entry point of its own; a NULL context here is
-		 * how callers release the current one. OSMesa keeps its binding until
-		 * something else is made current, so just drop our own record. */
+		 * how callers release the current one. */
+		glXMakeContextCurrent(dpy, None, None, NULL);
 		pd_cgl_current = NULL;
 		return kCGLNoError;
 	}
 
-	if (!OSMesaMakeCurrent(ctx->osmesa, ctx->buffer, GL_UNSIGNED_BYTE,
-	        ctx->width, ctx->height)) {
+	if (!glXMakeContextCurrent(dpy, ctx->pbuffer, ctx->pbuffer, ctx->glx)) {
 		return kCGLBadContext;
 	}
 

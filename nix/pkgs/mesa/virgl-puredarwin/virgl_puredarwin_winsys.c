@@ -65,7 +65,7 @@ static inline struct virgl_pd_cmd_buf *virgl_pd_cmd_buf(struct virgl_cmd_buf *cb
    return (struct virgl_pd_cmd_buf *)cbuf;
 }
 
-static inline boolean can_cache_resource_with_bind(uint32_t bind)
+static inline bool can_cache_resource_with_bind(uint32_t bind)
 {
    return bind == VIRGL_BIND_CONSTANT_BUFFER ||
           bind == VIRGL_BIND_INDEX_BUFFER ||
@@ -111,9 +111,9 @@ static void virgl_hw_res_destroy(struct virgl_pd_winsys *vws, struct virgl_hw_re
    FREE(res);
 }
 
-static boolean virgl_pd_resource_is_busy(struct virgl_winsys *vws, struct virgl_hw_res *res)
+static bool virgl_pd_resource_is_busy(struct virgl_winsys *vws, struct virgl_hw_res *res)
 {
-   return FALSE; /* submits are synchronous */
+   return false; /* submits are synchronous */
 }
 
 static void virgl_pd_resource_reference(struct virgl_winsys *vws,
@@ -204,7 +204,7 @@ static void virgl_pd_resource_wait(struct virgl_winsys *vws, struct virgl_hw_res
 
 // command buffers
 
-static boolean virgl_pd_lookup_res(struct virgl_pd_cmd_buf *cbuf, struct virgl_hw_res *res)
+static bool virgl_pd_lookup_res(struct virgl_pd_cmd_buf *cbuf, struct virgl_hw_res *res)
 {
    unsigned hash = res->res_handle & (sizeof(cbuf->is_handle_added) - 1);
    int i;
@@ -249,7 +249,7 @@ static void virgl_pd_add_res(struct virgl_pd_winsys *pdws, struct virgl_pd_cmd_b
    }
    cbuf->res_bo[cbuf->cres] = NULL;
    virgl_pd_resource_reference(&pdws->base, &cbuf->res_bo[cbuf->cres], res);
-   cbuf->is_handle_added[hash] = TRUE;
+   cbuf->is_handle_added[hash] = true;
    cbuf->reloc_indices_hashlist[hash] = cbuf->cres;
    p_atomic_inc(&res->num_cs_references);
    cbuf->cres++;
@@ -316,11 +316,11 @@ static int virgl_pd_submit_cmd(struct virgl_winsys *vws, struct virgl_cmd_buf *_
 }
 
 static void virgl_pd_emit_res(struct virgl_winsys *vws, struct virgl_cmd_buf *_cbuf,
-                              struct virgl_hw_res *res, boolean write_buf)
+                              struct virgl_hw_res *res, bool write_buf)
 {
    struct virgl_pd_winsys *pdws = virgl_pd_winsys(vws);
    struct virgl_pd_cmd_buf *cbuf = virgl_pd_cmd_buf(_cbuf);
-   boolean already = virgl_pd_lookup_res(cbuf, res);
+   bool already = virgl_pd_lookup_res(cbuf, res);
 
    if (write_buf)
       cbuf->base.buf[cbuf->base.cdw++] = res->res_handle;
@@ -328,10 +328,10 @@ static void virgl_pd_emit_res(struct virgl_winsys *vws, struct virgl_cmd_buf *_c
       virgl_pd_add_res(pdws, cbuf, res);
 }
 
-static boolean virgl_pd_res_is_ref(struct virgl_winsys *vws, struct virgl_cmd_buf *_cbuf,
+static bool virgl_pd_res_is_ref(struct virgl_winsys *vws, struct virgl_cmd_buf *_cbuf,
                                    struct virgl_hw_res *res)
 {
-   return p_atomic_read(&res->num_cs_references) ? TRUE : FALSE;
+   return p_atomic_read(&res->num_cs_references) ? true : false;
 }
 
 static int virgl_pd_get_caps(struct virgl_winsys *vws, struct virgl_drm_caps *caps)
@@ -381,10 +381,13 @@ static void virgl_pd_fence_reference(struct virgl_winsys *vws,
 
 // present
 
-static void virgl_pd_flush_frontbuffer(struct virgl_winsys *vws, struct virgl_hw_res *res,
+static void virgl_pd_flush_frontbuffer(struct virgl_winsys *vws,
+                                       struct virgl_cmd_buf *cbuf,
+                                       struct virgl_hw_res *res,
                                        unsigned level, unsigned layer,
                                        void *winsys_drawable_handle, struct pipe_box *sub_box)
 {
+   (void)cbuf;
    struct virgl_pd_winsys *pdws = virgl_pd_winsys(vws);
    struct pipe_box box;
    if (!res->dt)
@@ -406,7 +409,8 @@ static void virgl_pd_flush_frontbuffer(struct virgl_winsys *vws, struct virgl_hw
       pdws->sws->displaytarget_unmap(pdws->sws, res->dt);
    }
 
-   pdws->sws->displaytarget_display(pdws->sws, res->dt, winsys_drawable_handle, sub_box);
+   pdws->sws->displaytarget_display(pdws->sws, res->dt, winsys_drawable_handle,
+                                    sub_box ? 1 : 0, sub_box);
 }
 
 static void virgl_pd_winsys_destroy(struct virgl_winsys *vws)

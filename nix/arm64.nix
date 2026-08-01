@@ -412,11 +412,6 @@ let
     openssl = opensslArm64Build;
     zlib = xvfbZlibArm64Build;
   };
-  osmesaTriArm64Build = mkArm64Build ./pkgs/mesa/osmesa-tri.nix {
-    libcxxDylib = libcxxDylibArm64Build;
-    libcxxabiDylib = libcxxabiDylibArm64Build;
-    mesa = mesaArm64Build;
-  };
   pangoArm64Build = mkArm64Build ./pkgs/gtk/pango.nix {
     nativeMesonTools = nativeMesonToolsDir;
     inherit (pkgs) pango;
@@ -913,33 +908,6 @@ let
   hostOtoolArm64Build = hostOtoolBuild;
   xkeyboardConfigArm64Build = xkeyboardConfigBuild;
 
-  osmesaFbArm64Build =
-  if isDarwin then null else (mkPureDarwinBuild {
-      pname = "puredarwin-osmesa-fb-arm64";
-      src = fbdoomSource;
-      buildTargets = [ "osmesa-fb" ];
-      enableProjects = false;
-      enableKernel = false;
-      installUserland = false;
-      installKernel = false;
-      puredarwinArch = "arm64";
-      inherit arm64CrossToolchain;
-      extraCmakeFlags = [
-        "-DPUREDARWIN_ENABLE_OSMESA_FB=ON"
-        "-DPUREDARWIN_OSMESA_PREFIX=${mesaArm64Build}/usr"
-      ];
-  }).overrideAttrs (old: {
-      installPhase = ''
-        runHook preInstall
-        mkdir -p $out/usr/bin
-        cp build-nix/src/Userspace/osmesa-fb/osmesa-fb $out/usr/bin/osmesa-fb
-        runHook postInstall
-      '';
-  });
-  # Arch-independent: X11 locale data, fonts, and a stdenvNoCC shim, so
-  # the x86 builds are reused rather than duplicated.
-  # Arch-independent: X11 locale data, fonts, and a stdenvNoCC shim, so
-  # the x86 builds are reused rather than duplicated.
   xlibLocaleArm64Build = xlibLocaleBuild;
   xvfbFontsArm64Build = xvfbFontsBuild;
   i3statusShimArm64Build = i3statusShimBuild;
@@ -1359,8 +1327,6 @@ let
     mesa = mesaArm64Build;
     mesa-demos = mesaDemosArm64Build;
     pd-virgl-shim = pdVirglShimArm64Build;
-    osmesa-tri = osmesaTriArm64Build;
-    osmesa-fb = osmesaFbArm64Build;
     libobjc = libobjcArm64Build;
     foundation = foundationArm64Build;
     iokit = iokitArm64Build;
@@ -1448,7 +1414,6 @@ in
     netsurfArm64Build
     openglFrameworkArm64Build
     opensshArm64Build
-    osmesaTriArm64Build
     pangoArm64Build
     pythonArm64Build
     securityArm64Build
@@ -1493,7 +1458,6 @@ in
     pdVirglShimArm64Build
     hostOtoolArm64Build
     xkeyboardConfigArm64Build
-    osmesaFbArm64Build
     xlibLocaleArm64Build
     xvfbFontsArm64Build
     i3statusShimArm64Build

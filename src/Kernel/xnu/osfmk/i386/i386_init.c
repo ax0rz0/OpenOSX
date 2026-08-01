@@ -659,9 +659,7 @@ i386_slide_and_rebase_image(uintptr_t kstart_addr)
 	 * rebase/slide all the kexts in the collection
 	 * (EFI should have already rebased the kernel)
 	 */
-	DBG("[MH] pre kernel_collection_slide kc_mh=%p\n", kc_mh);
 	kernel_collection_slide(kc_mh, (const void **) (void *)collection_base_pointers);
-	DBG("[MH] post kernel_collection_slide\n");
 
 
 	/*
@@ -670,7 +668,6 @@ i386_slide_and_rebase_image(uintptr_t kstart_addr)
 	 */
 	kernel_collection_adjust_mh_addrs(kc_mh, slide, false,
 	    NULL, NULL, NULL, NULL, NULL, NULL, &kc_highest_nonlinkedit_vmaddr);
-	DBG("[MH] post kernel_collection_adjust_mh_addrs\n");
 }
 
 /*

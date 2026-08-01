@@ -97,7 +97,6 @@
 #include <i386/machine_routines.h>
 #include <i386/mp.h>            /* mp_rendezvous_break_lock */
 #include <i386/cpuid.h>
-#include <i386/cpu_threads.h>  /* x86_topo_lock */
 #include <i386/fpu.h>
 #include <i386/machine_cpu.h>
 #include <i386/pmap.h>
@@ -573,18 +572,6 @@ hibernate_newruntime_map(void * map, vm_size_t map_size, uint32_t system_table_o
 void
 machine_init(void)
 {
-	/*
-	 * Initialize x86_topo_lock as early as possible.  On the boot CPU it is
-	 * otherwise only initialized in cpu_thread_init() from smp_init(), which
-	 * runs AFTER efi_init() below.  Any panic before that (e.g. inside
-	 * efi_init) enters mp_kdp_enter(), which does simple_lock_try(&x86_topo_lock)
-	 * on the still-uninitialized lock; usld_lock_common_checks() then panics
-	 * ("... is not a usimple lock"), turning every early panic into an
-	 * invisible nested-panic storm that hides the real message.  Re-initializing
-	 * an unheld lock is harmless (cpu_thread_init re-inits it later).
-	 */
-	simple_lock_init(&x86_topo_lock, 0);
-
 	/* Now with VM up, switch to dynamically allocated cpu data */
 	cpu_data_realloc();
 

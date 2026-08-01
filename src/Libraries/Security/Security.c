@@ -167,3 +167,136 @@ AuthorizationCreateFromExternalForm(const AuthorizationExternalForm *extForm,
     if ( authorization )  *authorization = &_pd_authorization_token;
     return errAuthorizationSuccess;
 }
+
+OSStatus
+SecKeychainAddGenericPassword(SecKeychainRef keychain,
+                              UInt32 serviceNameLength, const char *serviceName,
+                              UInt32 accountNameLength, const char *accountName,
+                              UInt32 passwordLength, const void *passwordData,
+                              SecKeychainItemRef *itemRef)
+{
+    (void) keychain;
+    (void) serviceNameLength; (void) serviceName;
+    (void) accountNameLength; (void) accountName;
+    (void) passwordLength; (void) passwordData;
+    if ( itemRef )  *itemRef = NULL;
+    return errSecNotAvailable;
+}
+
+OSStatus
+SecKeychainFindGenericPassword(CFTypeRef keychainOrArray,
+                               UInt32 serviceNameLength, const char *serviceName,
+                               UInt32 accountNameLength, const char *accountName,
+                               UInt32 *passwordLength, void **passwordData,
+                               SecKeychainItemRef *itemRef)
+{
+    (void) keychainOrArray;
+    (void) serviceNameLength; (void) serviceName;
+    (void) accountNameLength; (void) accountName;
+    if ( passwordLength )  *passwordLength = 0;
+    if ( passwordData )    *passwordData = NULL;
+    if ( itemRef )         *itemRef = NULL;
+    return errSecItemNotFound;
+}
+
+OSStatus
+SecKeychainGetUserInteractionAllowed(Boolean *state)
+{
+    if ( state )  *state = false;
+    return errSecSuccess;
+}
+
+OSStatus
+SecKeychainSetUserInteractionAllowed(Boolean state)
+{
+    (void) state;
+    return errSecSuccess;
+}
+
+OSStatus
+SecKeychainItemCopyAttributesAndData(SecKeychainItemRef itemRef,
+                                     SecKeychainAttributeInfo *info,
+                                     SecItemClass *itemClass,
+                                     SecKeychainAttributeList **attrList,
+                                     UInt32 *length, void **outData)
+{
+    (void) itemRef;
+    (void) info;
+    if ( itemClass )  *itemClass = 0;
+    if ( attrList )   *attrList = NULL;
+    if ( length )     *length = 0;
+    if ( outData )    *outData = NULL;
+    return errSecItemNotFound;
+}
+
+OSStatus
+SecKeychainItemDelete(SecKeychainItemRef itemRef)
+{
+    (void) itemRef;
+    return errSecItemNotFound;
+}
+
+OSStatus
+SecKeychainItemFreeAttributesAndData(SecKeychainAttributeList *attrList,
+                                     void *data)
+{
+    (void) attrList;
+    (void) data;
+    return errSecSuccess;
+}
+
+OSStatus
+SecKeychainItemModifyAttributesAndData(SecKeychainItemRef itemRef,
+                                       const SecKeychainAttributeList *attrList,
+                                       UInt32 length, const void *data)
+{
+    (void) itemRef;
+    (void) attrList;
+    (void) length;
+    (void) data;
+    return errSecItemNotFound;
+}
+
+OSStatus
+SecKeychainSearchCopyNext(SecKeychainSearchRef searchRef,
+                          SecKeychainItemRef *itemRef)
+{
+    (void) searchRef;
+    if ( itemRef )  *itemRef = NULL;
+    return errSecItemNotFound;
+}
+
+OSStatus
+SecKeychainSearchCreateFromAttributes(CFTypeRef keychainOrArray,
+                                      SecItemClass itemClass,
+                                      const SecKeychainAttributeList *attrList,
+                                      SecKeychainSearchRef *searchRef)
+{
+    (void) keychainOrArray;
+    (void) itemClass;
+    (void) attrList;
+    if ( searchRef )  *searchRef = NULL;
+    return errSecItemNotFound;
+}
+
+OSStatus
+SecTrustSettingsCopyCertificates(SecTrustSettingsDomain domain,
+                                 CFArrayRef *certArray)
+{
+    (void) domain;
+    if ( certArray )  *certArray = NULL;
+    return errSecNoTrustSettings;
+}
+
+OSStatus
+SecItemExport(CFTypeRef secItemOrArray, SecExternalFormat outputFormat,
+              SecItemImportExportFlags flags, const void *keyParams,
+              CFDataRef *exportedData)
+{
+    (void) secItemOrArray;
+    (void) outputFormat;
+    (void) flags;
+    (void) keyParams;
+    if ( exportedData )  *exportedData = NULL;
+    return errSecUnimplemented;
+}

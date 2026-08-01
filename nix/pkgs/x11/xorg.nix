@@ -185,6 +185,15 @@ EOF
     mkdir -p $out/bin
     ln -sf ../usr/bin/Xorg $out/bin/Xorg
 
+    # Xorg's loader builds candidate module filenames as "lib%s.so"/"%s.so"
+    # (see LoaderOpen callers), but meson names a shared_module ".dylib" on
+    # darwin.
+    for mod in "$out"/usr/lib/xorg/modules/*.dylib \
+               "$out"/usr/lib/xorg/modules/*/*.dylib; do
+      [ -e "$mod" ] || continue
+      ln -sf "$(basename "$mod")" "''${mod%.dylib}.so"
+    done
+
     runHook postInstall
   '';
 

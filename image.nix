@@ -464,6 +464,11 @@ EOF
     cp ${cacert}/etc/ssl/certs/ca-bundle.crt $staging/etc/ssl/cert.pem
     chmod 644 $staging/etc/ssl/cert.pem
 
+    # Wine's crypt32 scans CRYPT_knownLocations for a root store and looks for
+    # this path, not cert.pem, so without it the fallback finds no trust anchors.
+    mkdir -p $staging/etc/ssl/certs
+    ln -sf ../cert.pem $staging/etc/ssl/certs/ca-certificates.crt
+
     mkdir -p $staging/System/Library/CoreServices
     cat > $staging/System/Library/CoreServices/SystemVersion.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>

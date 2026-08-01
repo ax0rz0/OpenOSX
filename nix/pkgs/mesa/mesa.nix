@@ -1,4 +1,6 @@
 { stdenv
+, glslang
+, spirv-tools
 , lib
 , requireFile
 , fetchurl
@@ -14,6 +16,8 @@
 , libSystem
 , libcxxDylib
 , libcxxabiDylib
+, llvm
+, libxshmfence
 , zlib
 , expat
 , libX11
@@ -47,32 +51,42 @@ let
   depIncludes = [
     "-I${lib.getDev zlib}/include"
     "-I${lib.getDev expat}/include"
+    "-I${llvm}/usr/include"
   ];
   depLibs = [
     "-L${zlib}/lib"
     "-L${expat}/lib"
+    "-L${llvm}/usr/lib"
   ];
 
-  xDeps = [ libX11 libXext libxcb libXau libXdmcp xorgproto xtrans ];
+  xDeps = [ libX11 libXext libxcb libXau libXdmcp xorgproto xtrans libxshmfence ];
   xPkgConfigPath = lib.concatMapStringsSep ":"
     (p: "${p}/lib/pkgconfig:${p}/share/pkgconfig") xDeps;
 in
 stdenv.mkDerivation {
   pname = "puredarwin-mesa";
-  version = "23.1.9";
+  version = "26.1.5";
 
   src = fetchurl {
-    url = "https://archive.mesa3d.org/mesa-23.1.9.tar.xz";
-    hash = "sha256-KVuifCgUbtCSFOjOea+hZZ7fnRQt7MPJH4BFUtZPdRA=";
+    url = "https://archive.mesa3d.org/mesa-26.1.5.tar.xz";
+    hash = "sha256-eeQhx84YzZ55C4N1kgMld58QeYYwvzDgsi8aIchhcSI=";
   };
 
-  nativeBuildInputs = [ meson ninja pkg-config pythonEnv bison flex ];
+  nativeBuildInputs = [ meson ninja pkg-config pythonEnv bison flex glslang spirv-tools ];
   buildInputs = [ zlib expat ];
 
   postPatch = ''
     patchShebangs .
 
     patch -p1 < ${./mesa-virgl-darwin.patch}
+
+    # The XFIXES QueryVersion reply is dereferenced without a NULL check, unlike
+    # the DRI3/Present queries right above it, so a server that advertises
+    # XFIXES but does not answer the version request takes every Vulkan X11
+    # client down. Guard it the way its neighbours already are.
+    substituteInPlace src/vulkan/wsi/wsi_common_x11.c \
+      --replace 'wsi_conn->has_xfixes = (ver_reply->major_version >= 2);' \
+                'wsi_conn->has_xfixes = ver_reply != NULL && (ver_reply->major_version >= 2);'
 
     mkdir -p src/gallium/winsys/virgl/puredarwin
     cp ${virglWinsysSrc}/virgl_puredarwin_winsys.c src/gallium/winsys/virgl/puredarwin/
@@ -87,41 +101,19 @@ stdenv.mkDerivation {
       --replace 'vws = virgl_vtest_winsys_wrap(winsys);' \
                 'vws = virgl_puredarwin_winsys_wrap(winsys);'
 
-    # The OSMesa target gets the same virgl treatment as libgl-xlib below:
-    # driver_virgl (which is what defines GALLIUM_VIRGL, so inline_sw_helper.h's
-    # "virpipe" branch compiles in at all), the PureDarwin winsys source, and the
-    # shim to link against. Without this, OSMesa knows only softpipe -
-    # sw_screen_create_named(winsys, "virpipe") returns NULL and
-    # st_api_create_context() dereferences the NULL screen. libgalliumvl_stub
-    # comes along for the ride: virgl_screen.c references the vl_video_buffer_*
-    # video layer, and libgl-xlib links that same stub for the same reason.
-    ameson=src/gallium/targets/osmesa/meson.build
-    substituteInPlace $ameson \
-      --replace "  'target.c'," \
-                "  'target.c', '../../winsys/virgl/puredarwin/virgl_puredarwin_winsys.c'," \
-      --replace 'osmesa_link_args = []' \
-                "osmesa_link_args = ['-L${pdVirglShim}/usr/lib', '-lpd_virgl_shim']" \
-      --replace 'dep_unwind, driver_swrast' \
-                'dep_unwind, driver_swrast, driver_virgl' \
-      --replace 'libmesa, libgallium, libws_null, osmesa_link_with,' \
-                'libmesa, libgallium, libws_null, libgalliumvl_stub, osmesa_link_with,' \
-      --replace '    inc_gallium_drivers,' \
-                "    inc_gallium_drivers, include_directories('../../winsys/virgl/puredarwin'), inc_virtio,"
-
     xmeson=src/gallium/targets/libgl-xlib/meson.build
     substituteInPlace $xmeson \
       --replace "files('xlib.c')," \
                 "files('xlib.c', '../../winsys/virgl/puredarwin/virgl_puredarwin_winsys.c')," \
       --replace 'gallium_xlib_ld_args = []' \
-                "gallium_xlib_ld_args = ['-L${pdVirglShim}/usr/lib', '-lpd_virgl_shim']"
-    substituteInPlace $xmeson \
+                "gallium_xlib_ld_args = ['-L${pdVirglShim}/usr/lib', '-lpd_virgl_shim']" \
       --replace "include_directories('../../frontends/glx/xlib')," \
-                "include_directories('../../frontends/glx/xlib'), include_directories('../../winsys/virgl/puredarwin'), inc_virtio, inc_gallium_drivers,"
+                "include_directories('../../frontends/glx/xlib'), include_directories('../../winsys/virgl/puredarwin'), inc_virtio,"
   '';
 
   configurePhase = ''
     runHook preConfigure
-    export PATH="${nativeMesonTools}/bin:$PATH"
+    export PATH="${llvm}/usr/bin:${nativeMesonTools}/bin:$PATH"
 
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
@@ -133,15 +125,20 @@ stdenv.mkDerivation {
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
+objc = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
+objcpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
 ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
 strip = '${darwinCrossToolchain}/bin/${targetTriple}-strip'
 pkg-config = '${pkg-config}/bin/pkg-config'
 install_name_tool = '${darwinCrossToolchain}/bin/${targetTriple}-install_name_tool'
+llvm-config = '${llvm}/usr/bin/llvm-config'
 
 [built-in options]
 c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (s: "'${s}'") depIncludes}]
+objc_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (s: "'${s}'") depIncludes}]
 cpp_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-nostdinc++', '-I${libcxxDylib}/usr/include/c++/v1', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (s: "'${s}'") depIncludes}]
 c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (s: "'${s}'") depLibs}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-Wl,-fixup_chains', '-lSystem']
+objc_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (s: "'${s}'") depLibs}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-Wl,-fixup_chains', '-lSystem']
 cpp_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', '-L${libcxxDylib}/usr/lib', '-L${libcxxabiDylib}/usr/lib', ${lib.concatMapStringsSep ", " (s: "'${s}'") depLibs}, '-L${libXau}/lib', '-L${libXdmcp}/lib', '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-Wl,-fixup_chains', '-lXau', '-lXdmcp', '-lc++', '-lc++abi', '-lSystem']
 
 [host_machine]
@@ -161,23 +158,18 @@ EOF
       --libdir=lib \
       --buildtype=release \
       -Ddefault_library=shared \
-      -Dgallium-drivers=swrast,virgl \
-      -Dvulkan-drivers= \
+      -Dgallium-drivers=llvmpipe,softpipe,virgl \
+      -Dvulkan-drivers=swrast \
       -Dplatforms=x11 \
-      -Dosmesa=true \
       -Dopengl=true \
       -Dgles1=disabled \
       -Dgles2=disabled \
       -Dglx=xlib \
       -Degl=disabled \
       -Dgbm=disabled \
-      -Ddri3=disabled \
-      -Dllvm=disabled \
-      -Dshared-glapi=enabled \
-      -Dgallium-vdpau=disabled \
+      -Dllvm=enabled \
+      -Dshared-llvm=enabled \
       -Dgallium-va=disabled \
-      -Dgallium-xa=disabled \
-      -Dgallium-nine=false \
       -Dgallium-rusticl=false \
       -Dglvnd=false \
       -Dlmsensors=disabled \
@@ -221,6 +213,14 @@ EOF
         "$INSTALL_NAME_TOOL" -change "@rpath/$base" "/usr/lib/$base" "$f" 2>/dev/null || true
         "$INSTALL_NAME_TOOL" -change "$out/usr/lib/$base" "/usr/lib/$base" "$f" 2>/dev/null || true
       done
+    done
+
+    # The generated ICD manifest points library_path at the store path, which
+    # does not exist on the guest. The loader accepts a bare filename and then
+    # resolves it the way dlopen would, i.e. from /usr/lib.
+    for icd in "$out"/usr/share/vulkan/icd.d/*.json; do
+      [ -e "$icd" ] || continue
+      sed -i "s|\"library_path\": \".*/\([^/]*\.dylib\)\"|\"library_path\": \"/usr/lib/\1\"|" "$icd"
     done
 
     runHook postInstall

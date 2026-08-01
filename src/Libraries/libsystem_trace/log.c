@@ -534,7 +534,7 @@ isLikelyPrivateData(const UInt8 *bytes, CFIndex len)
             printable++;
     }
 
-    // If mostly printable and short → likely a secret
+    // If mostly printable and short -> likely a secret
     if (len <= 64 && printable > (len * 0.8))
         return true;
 
@@ -550,7 +550,7 @@ _NSCF2data(const void *obj, char *string_value, size_t string_sz, bool *is_priva
     string_value[0] = '\0';
     if (is_private) *is_private = false;
 
-    // Check if this is toll‑free bridged CFData/NSData
+    // Check if this is toll-free bridged CFData/NSData
     /* CoreFoundation is resolved lazily (see init.h); if it never loaded, or
      * this is not a CFData, there is nothing to decode. */
     if (!obj || !_CFGetTypeID || !_CFDataGetTypeID || !_CFDataGetLength ||
@@ -580,7 +580,7 @@ _NSCF2data(const void *obj, char *string_value, size_t string_sz, bool *is_priva
         return true;
     }
 
-    // Non‑private: produce a hex dump (truncated to fit buffer)
+    // Non-private: produce a hex dump (truncated to fit buffer)
     size_t maxBytes = (string_sz - 1) / 2; // 2 chars per byte
     if (maxBytes > (size_t)len) maxBytes = len;
 

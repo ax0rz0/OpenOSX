@@ -938,6 +938,8 @@
               libSystem = libSystemBuild;
               libcxxDylib = libcxxDylibBuild;
               libcxxabiDylib = libcxxabiDylibBuild;
+              llvm = llvmCrossBuild;
+              libxshmfence = libxshmfenceSharedBuild;
               zlib = xvfbZlibBuild;
               expat = expatBuild;
               libX11 = xlibBuild;
@@ -963,16 +965,20 @@
               libXdmcp = xvfbLibXdmcpBuild;
               inherit (pkgs) meson ninja pkg-config xorgproto xtrans;
             };
-          osmesaTriBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa/osmesa-tri.nix {
+          hostOtoolBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/host-otool.nix { };
+          llvmCrossBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/llvm-cross.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libcxxDylib = libcxxDylibBuild;
               libcxxabiDylib = libcxxabiDylibBuild;
-              mesa = mesaBuild;
+              nativeMesonTools = nativeMesonToolsDir;
+              llvmSrc = pkgs.llvmPackages_21.libllvm.monorepoSrc;
+              llvmVersion = pkgs.llvmPackages_21.llvm.version;
+              nativeTblgen = "${pkgs.llvmPackages_21.llvm}/bin/llvm-tblgen";
+              nativeLlvmConfig = "${pkgs.llvmPackages_21.llvm.dev}/bin/llvm-config";
             };
-          hostOtoolBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/host-otool.nix { };
           nativeMesonToolsDir =
             if isDarwin then null else pkgs.runCommand "puredarwin-native-meson-tools" { } ''
               mkdir -p $out/bin
@@ -1387,6 +1393,30 @@
               libcxxabiDylib = libcxxabiDylibBuild;
               inherit (pkgs) xorgproto;
             };
+          xrandrBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-xrandr";
+              version = "1.5.4";
+              src = pkgs.fetchurl {
+                url = "https://www.x.org/releases/individual/app/xrandr-1.5.4.tar.xz";
+                hash = "sha256-LK/MsqrySRpAaGdhF6DU+QqzB3JLlv/8VM0dqVN3lAA=";
+              };
+              deps = [
+                pkgs.xorgproto
+                xlibBuild
+                xvfbLibXrandrBuild
+                xvfbLibXrenderBuild
+                xvfbLibXextBuild
+                xcbBuild
+                xvfbLibXauBuild
+                xvfbLibXdmcpBuild
+              ];
+              preConfigureExtra = ''
+                export LIBS="-lXrandr -lXrender -lXext -lX11 -lxcb -lXau -lXdmcp $LIBS"
+              '';
+            };
           xrdbBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -1725,6 +1755,45 @@
           };
 
           # Wine's schannel/bcrypt TLS backend is GnuTLS-only
+          vulkanToolsBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa/vulkan-tools.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libcxxDylib = libcxxDylibBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
+              nativeMesonTools = nativeMesonToolsDir;
+              vulkanTools = pkgs.vulkan-tools;
+              vulkanHeaders = pkgs.vulkan-headers;
+              vulkanLoader = vulkanLoaderBuild;
+              libX11 = libX11SharedBuild;
+              libXext = libXextSharedBuild;
+              libxcb = libxcbSharedBuild;
+              libXau = libXauSharedBuild;
+              libXdmcp = libXdmcpSharedBuild;
+              libXrandr = libXrandrSharedBuild;
+              inherit (pkgs) xorgproto;
+            };
+          vulkanLoaderBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/mesa/vulkan-loader.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              nativeMesonTools = nativeMesonToolsDir;
+              vulkanLoader = pkgs.vulkan-loader;
+              vulkanHeaders = pkgs.vulkan-headers;
+              libX11 = libX11SharedBuild;
+              libxcb = libxcbSharedBuild;
+              libXau = libXauSharedBuild;
+              libXdmcp = libXdmcpSharedBuild;
+              libXrandr = libXrandrSharedBuild;
+              libXrender = libXrenderSharedBuild;
+              inherit (pkgs) xorgproto;
+            };
+          libxshmfenceSharedBuild = if isDarwin then null else mkSharedXorgLib {
+            pname = "puredarwin-libxshmfence";
+            inherit (pkgs.libxshmfence) version src;
+            deps = [ pkgs.xorgproto ];
+            configureFlags = [ "--with-shared-memory-dir=/tmp" ];
+          };
           nettleSharedBuild = if isDarwin then null else mkSharedXorgLib {
             pname = "puredarwin-nettle";
             inherit (pkgs.nettle) version src;
@@ -1739,7 +1808,12 @@
             pname = "puredarwin-gnutls";
             inherit (pkgs.gnutls) version src;
             deps = [ nettleSharedBuild ];
+            postPatchExtra = ''
+              substituteInPlace configure \
+                --replace ' -framework Security -framework CoreFoundation' ""
+            '';
             configureFlags = [
+              "--with-default-trust-store-file=/etc/ssl/cert.pem"
               "--with-nettle-mini"
               "--with-included-libtasn1"
               "--with-included-unistring"
@@ -1992,8 +2066,15 @@
               libSystem = libSystemBuild;
               fastfetch = pkgs.fastfetch;
               corefoundation = coreFoundationBuild;
+              foundation = foundationBuild;
+              libobjc = libobjcBuild;
               iokit = iokitBuild;
               openglFramework = openglFrameworkBuild;
+              libX11 = libX11SharedBuild;
+              libXext = libXextSharedBuild;
+              libxcb = libxcbSharedBuild;
+              libXau = libXauSharedBuild;
+              libXdmcp = libXdmcpSharedBuild;
               mesa = mesaBuild;
             };
           xtermBuild =
@@ -2095,6 +2176,12 @@
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               mesa = mesaBuild;
+              libX11 = libX11SharedBuild;
+              inherit (pkgs) xorgproto;
+              libXext = libXextSharedBuild;
+              libxcb = libxcbSharedBuild;
+              libXau = libXauSharedBuild;
+              libXdmcp = libXdmcpSharedBuild;
               src = ./src/Libraries/OpenGL;
             };
           # arm64 twins of the remaining image packages and their dependency
@@ -2178,7 +2265,6 @@
             netsurfArm64Build
             openglFrameworkArm64Build
             opensshArm64Build
-            osmesaTriArm64Build
             pangoArm64Build
             pythonArm64Build
             securityArm64Build
@@ -2223,7 +2309,6 @@
             pdVirglShimArm64Build
             hostOtoolArm64Build
             xkeyboardConfigArm64Build
-            osmesaFbArm64Build
             xlibLocaleArm64Build
             xvfbFontsArm64Build
             i3statusShimArm64Build
@@ -2470,27 +2555,6 @@
               runHook postInstall
             '';
           });
-          osmesaFbBuild =
-            if isDarwin then null else (mkPureDarwinBuild {
-              pname = "puredarwin-osmesa-fb";
-              src = fbdoomSource;
-              buildTargets = [ "osmesa-fb" ];
-              enableProjects = false;
-              enableKernel = false;
-              installUserland = false;
-              installKernel = false;
-              extraCmakeFlags = [
-                "-DPUREDARWIN_ENABLE_OSMESA_FB=ON"
-                "-DPUREDARWIN_OSMESA_PREFIX=${mesaBuild}/usr"
-              ];
-            }).overrideAttrs (old: {
-              installPhase = ''
-                runHook preInstall
-                mkdir -p $out/usr/bin
-                cp build-nix/src/Userspace/osmesa-fb/osmesa-fb $out/usr/bin/osmesa-fb
-                runHook postInstall
-              '';
-            });
           kernelBuild = mkPureDarwinBuild {
             pname = "puredarwin-kernel";
             src = kernelSource;
@@ -2548,7 +2612,7 @@
               coreServicesBuild dbusBuild dilloBuild diskArbitrationBuild wineBuild dlsymTestBuild dmenuBuild exoBuild expatBuild fastfetchBuild
               libX11SharedBuild libxcbSharedBuild libXauSharedBuild libXdmcpSharedBuild
               libXextSharedBuild libXrenderSharedBuild libXfixesSharedBuild libXiSharedBuild
-              libXcursorSharedBuild libXrandrSharedBuild nettleSharedBuild gnutlsSharedBuild glibNetworkingBuild
+              libXcursorSharedBuild libXrandrSharedBuild nettleSharedBuild gnutlsSharedBuild glibNetworkingBuild llvmCrossBuild vulkanLoaderBuild libxshmfenceSharedBuild vulkanToolsBuild
               fbdoomBuild fbdoomExternalSrc fileBuild flexBuild fontconfigBuild foundationBuild
               freetype2Build fribidiBuild garconBuild gdkPixbufBuild gitBuild glibBuild gnum4Build
               gnumakeBuild gtk3Build harfbuzzBuild i3Build i3statusShimBuild iceauthBuild
@@ -2562,8 +2626,8 @@
               libpngBuild libutf8procBuild libwapcapletBuild libwnckBuild libxfce4uiBuild
               libxfce4utilBuild libxfce4windowingBuild libxml2Build libzDylibBuild mesaBuild
               mesaDemosBuild migcomDarwinBuild mkPureDarwinBuild nanoBuild nativeLd ncursesBuild
-              netsurfBuild objcTestBuild openglFrameworkBuild opensshBuild opensslBuild osmesaFbBuild
-              osmesaTriBuild pangoBuild pcre2Build pdVirglShimBuild pkgconfBuild pkgs pythonBuild
+              netsurfBuild objcTestBuild openglFrameworkBuild opensshBuild opensslBuild
+              pangoBuild pcre2Build pdVirglShimBuild pkgconfBuild pkgs pythonBuild
               securityBuild splitBaseSystemArm64VirtMinimal splitBaseSystemArm64VirtMinimalRelease
               startupNotificationBuild system systemConfigurationBuild systemStarterBuild tccBuild
               toyboxArm64Build toyboxBuild userlandBuild vteBuild xcalcBuild xcbBuild xcbCursorBuild
@@ -2571,7 +2635,7 @@
               xclockBuild xeyesBuild xfce4AppfinderBuild xfce4PanelBuild xfce4SessionBuild
               xfce4SettingsBuild xfce4TerminalBuild xfconfBuild xfdesktopBuild xfwm4Build xinitBuild
               xkbcommonBuild xkbcompBuild xkeyboardConfigBuild xlibBuild xlibLocaleBuild xmessageBuild
-              xnu-loader xnuHeadersBuild xorgBuild xrdbBuild xtermBuild xvfbBuild xvfbFontsBuild
+              xnu-loader xnuHeadersBuild xorgBuild xrdbBuild xrandrBuild xtermBuild xvfbBuild xvfbFontsBuild
               xvfbLibICEBuild xvfbLibSMBuild xvfbLibXauBuild xvfbLibXcompositeBuild xvfbLibXcursorBuild
               xvfbLibXdamageBuild xvfbLibXdmcpBuild xvfbLibXextBuild xvfbLibXfixesBuild
               xvfbLibXineramaBuild xvfbLibXkbfileBuild xvfbLibXpresentBuild xvfbLibXrandrBuild
@@ -2606,6 +2670,11 @@
             libXrandr-shared = libXrandrSharedBuild;
             nettle-shared = nettleSharedBuild;
             gnutls-shared = gnutlsSharedBuild;
+            libxshmfence-shared = libxshmfenceSharedBuild;
+            xrandr = xrandrBuild;
+            vulkan-loader = vulkanLoaderBuild;
+            vulkan-tools = vulkanToolsBuild;
+            llvm-cross = llvmCrossBuild;
             glib-networking = glibNetworkingBuild;
             freetype-shared = freetype2Build;
           };
@@ -2644,7 +2713,6 @@
             libcxxDylib-arm64 = libcxxDylibArm64Build;
             libcxxabiDylib-arm64 = libcxxabiDylibArm64Build;
             libobjc-arm64 = libobjcArm64Build;
-            osmesaFb-arm64 = osmesaFbArm64Build;
             pdVirglShim-arm64 = pdVirglShimArm64Build;
             xkeyboardConfig-arm64 = xkeyboardConfigArm64Build;
             xlibLocale-arm64 = xlibLocaleArm64Build;
@@ -2689,7 +2757,6 @@
             netsurf-arm64 = netsurfArm64Build;
             openglFramework-arm64 = openglFrameworkArm64Build;
             openssh-arm64 = opensshArm64Build;
-            osmesaTri-arm64 = osmesaTriArm64Build;
             pango-arm64 = pangoArm64Build;
             python-arm64 = pythonArm64Build;
             security-arm64 = securityArm64Build;

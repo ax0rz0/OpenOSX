@@ -69,11 +69,6 @@ stdenv.mkDerivation {
       -L${openssl.out}/lib -L${zlib.out}/lib -L${libxml2.out}/lib \
       -lcrypto -lssl -lz -lxml2 -lm -lpthread
 
-    # install_name_tool: our own darwin cross toolchain's install_name_tool
-    # is just a wrapper around llvm-install-name-tool, which has a real
-    # parsing bug on some of our own dylibs' load commands ("unsupported
-    # load command"). Build the genuine cctools implementation instead,
-    # reusing the libstuff objects already compiled above.
     $CC $CFLAGS -c "${cctools}/misc/install_name_tool.c" -o obj/int_install_name_tool.c.o
     $CC $CFLAGS -c "${cctools}/libmacho/arch.c" -o obj/libmacho_arch.c.o
     $CC obj/int_install_name_tool.c.o obj/libmacho_arch.c.o obj/libstuff_*.o \

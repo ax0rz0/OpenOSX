@@ -17,6 +17,8 @@
 #include "xf86str.h"
 #include "xf86Module.h"
 #include "fb.h"
+#include "damage.h"
+#include "damagestr.h"
 #include "micmap.h"
 #include "mipointer.h"
 #include "colormapst.h"
@@ -35,6 +37,10 @@
 typedef struct {
     PDGOPFramebuffer fb;          /* live IOGOPFramebuffer connection + mapping */
     Bool             fbOpen;
+    void            *shadow;      /* cached-RAM render target, blitted to VRAM */
+    DamagePtr        damage;      /* tracks which parts of it need pushing out */
+    ScreenBlockHandlerProcPtr BlockHandler;
+    CreateScreenResourcesProcPtr CreateScreenResources;
     CloseScreenProcPtr CloseScreen;
     OptionInfoPtr    Options;
 } PDGOPRec, *PDGOPPtr;
@@ -70,6 +76,7 @@ static void PDGOPIdentify(int flags);
 static Bool PDGOPProbe(DriverPtr drv, int flags);
 static Bool PDGOPPreInit(ScrnInfoPtr pScrn, int flags);
 static Bool PDGOPScreenInit(ScreenPtr pScreen, int argc, char **argv);
+static Bool PDGOPCreateScreenResources(ScreenPtr pScreen);
 static Bool PDGOPEnterVT(ScrnInfoPtr pScrn);
 static void PDGOPLeaveVT(ScrnInfoPtr pScrn);
 static Bool PDGOPSwitchMode(ScrnInfoPtr pScrn, DisplayModePtr mode);
@@ -317,6 +324,106 @@ PDGOPPreInit(ScrnInfoPtr pScrn, int flags)
     return TRUE;
 }
 
+/* Copy the damaged rectangles from the cached-RAM shadow into the VRAM
+ * aperture. Both are linear and share a stride, so each rectangle is a run of
+ * per-scanline memcpy()s - sequential write-combine stores, which is the one
+ * access pattern the aperture is fast at. */
+static void
+PDGOPBlitDamage(ScrnInfoPtr pScrn, RegionPtr region)
+{
+    PDGOPPtr p = PDGOPGetRec(pScrn);
+    int      nbox;
+    BoxPtr   box;
+    int      bpp = pScrn->bitsPerPixel >> 3;
+    size_t   stride = (size_t)pScrn->displayWidth * (size_t)bpp;
+
+    if (region == NULL || p->shadow == NULL) {
+        return;
+    }
+
+    nbox = RegionNumRects(region);
+    box  = RegionRects(region);
+
+    for (; nbox--; box++) {
+        int y1 = box->y1 < 0 ? 0 : box->y1;
+        int y2 = box->y2 > pScrn->virtualY ? pScrn->virtualY : box->y2;
+        int x1 = box->x1 < 0 ? 0 : box->x1;
+        int x2 = box->x2 > pScrn->virtualX ? pScrn->virtualX : box->x2;
+        size_t width;
+
+        if (x2 <= x1 || y2 <= y1) {
+            continue;
+        }
+        width = (size_t)(x2 - x1) * (size_t)bpp;
+
+        for (int y = y1; y < y2; y++) {
+            size_t off = (size_t)y * stride + (size_t)x1 * (size_t)bpp;
+            memcpy((CARD8 *)(uintptr_t)p->fb.address + off,
+                   (CARD8 *)p->shadow + off, width);
+        }
+    }
+}
+
+/* Damage reporting only records the region; the copy happens once per dispatch
+ * cycle from the block handler, so a burst of small draws costs one blit. */
+static void
+PDGOPDamageReport(DamagePtr damage, RegionPtr region, void *closure)
+{
+    (void)damage;
+    (void)region;
+    (void)closure;
+}
+
+static void
+PDGOPBlockHandler(ScreenPtr pScreen, void *timeout)
+{
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
+    PDGOPPtr    p     = PDGOPGetRec(pScrn);
+    RegionPtr   region;
+
+    pScreen->BlockHandler = p->BlockHandler;
+    (*pScreen->BlockHandler)(pScreen, timeout);
+    p->BlockHandler = pScreen->BlockHandler;
+    pScreen->BlockHandler = PDGOPBlockHandler;
+
+    if (p->damage == NULL) {
+        return;
+    }
+    region = DamageRegion(p->damage);
+    if (RegionNotEmpty(region)) {
+        PDGOPBlitDamage(pScrn, region);
+        DamageEmpty(p->damage);
+    }
+}
+
+static Bool
+PDGOPCreateScreenResources(ScreenPtr pScreen)
+{
+    ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
+    PDGOPPtr    p     = PDGOPGetRec(pScrn);
+    Bool        ret;
+
+    pScreen->CreateScreenResources = p->CreateScreenResources;
+    ret = (*pScreen->CreateScreenResources)(pScreen);
+    p->CreateScreenResources = pScreen->CreateScreenResources;
+    pScreen->CreateScreenResources = PDGOPCreateScreenResources;
+
+    if (!ret) {
+        return FALSE;
+    }
+
+    p->damage = DamageCreate(PDGOPDamageReport, NULL, DamageReportNonEmpty,
+                             TRUE, pScreen, NULL);
+    if (p->damage == NULL) {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "DamageCreate failed\n");
+        return FALSE;
+    }
+    DamageRegister(&(*pScreen->GetScreenPixmap)(pScreen)->drawable, p->damage);
+    DamageSetReportAfterOp(p->damage, TRUE);
+
+    return TRUE;
+}
+
 static Bool
 PDGOPScreenInit(ScreenPtr pScreen, int argc, char **argv)
 {
@@ -336,10 +443,18 @@ PDGOPScreenInit(ScreenPtr pScreen, int argc, char **argv)
     if (!p->fbOpen || p->fb.address == 0) {
         return FALSE;
     }
-    fbstart = (void *)(uintptr_t)p->fb.address;
 
     /* Clear VRAM to black before X takes over. */
-    memset(fbstart, 0, (size_t)p->fb.size);
+    memset((void *)(uintptr_t)p->fb.address, 0, (size_t)p->fb.size);
+
+    p->shadow = calloc(1, (size_t)p->fb.size);
+    if (p->shadow == NULL) {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR,
+                   "failed to allocate %llu-byte shadow framebuffer\n",
+                   (unsigned long long)p->fb.size);
+        return FALSE;
+    }
+    fbstart = p->shadow;
 
     miClearVisualTypes();
     if (!miSetVisualTypes(pScrn->depth, miGetDefaultVisualMask(pScrn->depth),
@@ -387,6 +502,21 @@ PDGOPScreenInit(ScreenPtr pScreen, int argc, char **argv)
 
     xf86SetBackingStore(pScreen);
 
+    /* Registers the Damage extension's private keys on this screen. Without it
+     * DamageRegister() faults looking up a private that was never allocated. */
+    if (!DamageSetup(pScreen)) {
+        xf86DrvMsg(pScrn->scrnIndex, X_ERROR, "DamageSetup failed\n");
+        return FALSE;
+    }
+
+    /* The screen pixmap does not exist yet - CreateScreenResources builds it
+     * after ScreenInit returns - so damage cannot be attached here. */
+    p->CreateScreenResources = pScreen->CreateScreenResources;
+    pScreen->CreateScreenResources = PDGOPCreateScreenResources;
+
+    p->BlockHandler = pScreen->BlockHandler;
+    pScreen->BlockHandler = PDGOPBlockHandler;
+
     /* Wrap CloseScreen so we tear down the PDGOP mapping. */
     p->CloseScreen = pScreen->CloseScreen;
     pScreen->CloseScreen = PDGOPCloseScreen;
@@ -400,6 +530,19 @@ PDGOPCloseScreen(ScreenPtr pScreen)
     ScrnInfoPtr pScrn = xf86ScreenToScrn(pScreen);
     PDGOPPtr    p = PDGOPGetRec(pScrn);
 
+    if (p->damage != NULL) {
+        DamageUnregister(p->damage);
+        DamageDestroy(p->damage);
+        p->damage = NULL;
+    }
+    if (p->BlockHandler != NULL) {
+        pScreen->BlockHandler = p->BlockHandler;
+        p->BlockHandler = NULL;
+    }
+    if (p->shadow != NULL) {
+        free(p->shadow);
+        p->shadow = NULL;
+    }
     if (p->fbOpen) {
         PDGOPClose(&p->fb);
         p->fbOpen = FALSE;

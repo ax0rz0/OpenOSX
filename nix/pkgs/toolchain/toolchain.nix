@@ -113,7 +113,7 @@ let
     (simpleWrapper "objdump" "${bintools}/bin/llvm-objdump")
     (simpleWrapper "otool" "${hostOtool}/bin/otool")
     (simpleWrapper "dsymutil" "${bintools}/bin/dsymutil")
-    (simpleWrapper "install_name_tool" "${bintools}/bin/llvm-install-name-tool")
+    (simpleWrapper "install_name_tool" "${hostOtool}/bin/install_name_tool")
     (simpleWrapper "lipo" "${bintools}/bin/llvm-lipo")
     ldWrapper
   ];

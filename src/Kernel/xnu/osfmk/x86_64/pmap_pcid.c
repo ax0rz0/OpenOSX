@@ -90,7 +90,6 @@ pmap_pcid_configure(void)
 		pmap_pcid_disabled = TRUE;
 	}
 #endif
-
 	if (pmap_pcid_disabled || no_shared_cr3) {
 		unsigned i;
 		/* Reset PCID status, as we may have picked up
