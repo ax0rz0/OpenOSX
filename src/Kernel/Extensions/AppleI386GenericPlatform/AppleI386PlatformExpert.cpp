@@ -540,6 +540,13 @@ int AppleI386PlatformExpert::handlePEHaltRestart(unsigned int type) {
 					outb(0x80, 0);
 				}
 			}
+
+			IOLog("AppleI386PlatformExpert: ACPI power off unavailable, "
+			      "resetting instead\n");
+			outb(0xCF9, 0x02);
+			temporary_sum = 2;
+			temporary_sum += 2;
+			outb(0xCF9, 0x04);
 			ret = -1;
 			break;
 
