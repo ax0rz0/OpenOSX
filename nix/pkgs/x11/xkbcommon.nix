@@ -13,6 +13,7 @@
 , libxcb
 , libXau
 , libXdmcp
+, libxml2
 , xkeyboard-config
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
@@ -20,7 +21,9 @@
 let
   targetInfo = import ../../lib/target-info.nix targetTriple;
 
-  xDeps = [ libxcb libXau libXdmcp ];
+  # libxml2 is libxkbregistry's only dependency; the Wayland driver in Wine
+  # will not build without libxkbregistry.
+  xDeps = [ libxcb libXau libXdmcp libxml2 ];
   xPkgConfigDeps = map lib.getDev xDeps;
   sdkTarball = requireFile {
     name = "MacOSX11.3.sdk.tar.xz";
@@ -57,7 +60,7 @@ pkgconfig = '${pkg-config}/bin/pkg-config'
 
 [built-in options]
 c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-DHAVE_STRNDUP=1', '-fno-stack-protector', '-I${libSystem}/usr/include']
-c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-dylinker_install_name,/usr/lib/dyld', '-Wl,-platform_version,macos,11.0,11.5', '-lSystem', '${libxcb}/lib/libxcb.a', '${libXau}/lib/libXau.a', '${libXdmcp}/lib/libXdmcp.a']
+c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-dylinker_install_name,/usr/lib/dyld', '-Wl,-platform_version,macos,11.0,11.5', '-lSystem', '${libxcb}/lib/libxcb.a', '${libXau}/lib/libXau.a', '${libXdmcp}/lib/libXdmcp.a', '${libxml2}/lib/libxml2.a']
 
 [host_machine]
 system = 'darwin'
@@ -72,10 +75,10 @@ EOF
       --prefix=$out \
       --buildtype=release \
       -Ddefault_library=static \
-      -Dxkb-config-root=${xkeyboard-config}/share/X11/xkb \
-      -Dx-locale-root=${xkeyboard-config}/share/X11/locale \
+      -Dxkb-config-root=/usr/share/X11/xkb \
+      -Dx-locale-root=/usr/share/X11/locale \
       -Denable-x11=true \
-      -Denable-xkbregistry=false \
+      -Denable-xkbregistry=true \
       -Denable-wayland=false \
       -Denable-docs=false \
       -Denable-bash-completion=false

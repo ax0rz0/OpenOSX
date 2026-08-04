@@ -34,17 +34,21 @@
 , gnum4Build
 , gnumakeBuild
 , gtk3Build
+, gtkLayerShellBuild
 , harfbuzzBuild
 , i3Build
 , i3statusShimBuild
 , iceauthBuild
+, cursorThemeBuild
 , iconThemesBuild
 , icuCoreBuild
 , imageExtraPackagesArm64
 , iographicsBuild
 , iokitBuild
 , coreServicesBuild
+, jsoncBuild
 , dlsymTestBuild
+, gsbaseTestBuild
 , wineBuild
 , libX11SharedBuild
 , libxcbSharedBuild
@@ -78,6 +82,14 @@
 , launchdBuild
 , lib
 , libSystemBuild
+, libdrmBuild
+, pdsurfaceBuild
+, libgbmBuild
+, waylandBuild
+, waylandProtocolsBuild
+, wlrootsBuild
+, swayBuild
+, xwaylandBuild
 , libXftBuild
 , libapfsrwBuild
 , libcrocoBuild
@@ -114,6 +126,11 @@
 , migcomDarwinBuild
 , mkPureDarwinBuild
 , nanoBuild
+, ninjaBuild
+, cmakeBuild
+, clangCrossBuild
+, kcToolsGuestBuild
+, mesonBuild
 , nativeLd
 , ncursesBuild
 , netsurfBuild
@@ -150,6 +167,7 @@
 , xcbXrmBuild
 , xclockBuild
 , xeyesBuild
+, thunarBuild
 , xfce4AppfinderBuild
 , xfce4PanelBuild
 , xfce4SessionBuild
@@ -160,6 +178,7 @@
 , xfwm4Build
 , xinitBuild
 , xkbcommonBuild
+, xvfbPixmanBuild
 , xkbcompBuild
 , xkeyboardConfigBuild
 , xlibBuild
@@ -302,8 +321,19 @@ let
     vulkan-tools = vulkanToolsBuild;
     libxshmfence = libxshmfenceSharedBuild;
     dlsym-test = dlsymTestBuild;
+    gsbase-test = gsbaseTestBuild;
     xvfb = xvfbBuild;
     xorg = xorgBuild;
+    xwayland = xwaylandBuild;
+    wayland = waylandBuild;
+    wlroots = wlrootsBuild;
+    sway = swayBuild;
+    # sway links libjson-c as a dylib, so it has to be on the image and not
+    # only in the build closure.
+    json-c = jsoncBuild;
+    libdrm = libdrmBuild;
+    pdsurface = pdsurfaceBuild;
+    libgbm = libgbmBuild;
     libxcvt = xvfbLibxcvtBuild;
     xeyes = xeyesBuild;
     xclock = xclockBuild;
@@ -320,6 +350,7 @@ let
     cairo-gobject = cairoGobjectBuild;
     libXrandr = xvfbLibXrandrBuild;
     gtk3 = gtk3Build;
+    gtk-layer-shell = gtkLayerShellBuild;
     libpng = libpngBuild;
     libcroco = libcrocoBuild;
     librsvg = librsvgBuild;
@@ -344,6 +375,11 @@ let
     nano = nanoBuild;
     bmake = bmakeBuild;
     gnumake = gnumakeBuild;
+    ninja = ninjaBuild;
+    cmake = cmakeBuild;
+    clang = clangCrossBuild;
+    kc-tools-guest = kcToolsGuestBuild;
+    meson = mesonBuild;
     pkgconf = pkgconfBuild;
     gnum4 = gnum4Build;
     autoconf = autoconfBuild;
@@ -433,6 +469,8 @@ let
     xfce4-panel = xfce4PanelBuild;
     xfdesktop = xfdesktopBuild;
     xfce4-appfinder = xfce4AppfinderBuild;
+    thunar = thunarBuild;
+    cursor-theme = cursorThemeBuild;
     icon-themes = iconThemesBuild;
     xfce4-settings = xfce4SettingsBuild;
     vte = vteBuild;
@@ -465,6 +503,11 @@ let
     basesystem-split = splitBaseSystem;
     default = fullBuild;
     fbdoom = fbdoomBuild;
+    wayland = waylandBuild;
+    wayland-protocols = waylandProtocolsBuild;
+    wlroots = wlrootsBuild;
+    sway = swayBuild;
+    xwayland = xwaylandBuild;
   } // imageExtraPackageSet // lib.optionalAttrs (!isDarwin) {
     libX11 = xlibBuild;
     libxcb = xcbBuild;
@@ -495,6 +538,11 @@ let
     i3status = i3statusShimBuild;
     openssh = opensshBuild;
     gnumake = gnumakeBuild;
+    ninja = ninjaBuild;
+    cmake = cmakeBuild;
+    clang = clangCrossBuild;
+    kc-tools-guest = kcToolsGuestBuild;
+    meson = mesonBuild;
     pkgconf = pkgconfBuild;
     gnum4 = gnum4Build;
     autoconf = autoconfBuild;
@@ -606,7 +654,7 @@ let
         imageFileName = "puredarwin-arm64-virt-minimal-release.img";
         bootArgs = "serial=3 -noprogress ahci_debug=1 kext=0xffff io=0xffff";
       };
-      strippedExtraPackages = [ zshBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild mesaBuild pdVirglShimBuild mesaDemosBuild ];
+      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild libffiBuild xvfbFontsBuild cursorThemeBuild waylandBuild wlrootsBuild swayBuild cairoBuild glibBuild fribidiBuild harfbuzzBuild pangoBuild pcre2Build xvfbPixmanBuild jsoncBuild libdrmBuild pdsurfaceBuild libgbmBuild xkbcommonBuild fontconfigBuild freetype2Build expatBuild xkeyboardConfigBuild xkbcompBuild xwaylandBuild xvfbLibxcvtBuild libxshmfenceSharedBuild xeyesBuild mesaBuild pdVirglShimBuild mesaDemosBuild llvmCrossBuild ];
       imageStrippedBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystemStripped;
         extraPackages = strippedExtraPackages;

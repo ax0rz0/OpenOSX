@@ -36,7 +36,11 @@ kern_return_t
 PDGOPOpen(PDGOPFramebuffer *fb)
 {
     kern_return_t kr;
+#ifdef _PD_IOKITLIB_H
     char *matching;
+#else
+    CFDictionaryRef matching;
+#endif
     uint64_t scalarOut[2] = {0, 0};
     uint32_t scalarOutCnt = 2;
     uint64_t scalarIn[3];
@@ -67,10 +71,17 @@ PDGOPOpen(PDGOPFramebuffer *fb)
         if (matching == NULL) {
             continue;
         }
-        kr = IOServiceGetMatchingService(fb->masterPort, matching, &fb->service);
-        if (kr == KERN_SUCCESS && fb->service != IO_OBJECT_NULL) {
+#ifdef _PD_IOKITLIB_H
+        kr = IOServiceGetMatchingService(fb->masterPort, matching,
+            &fb->service);
+#else
+        fb->service = IOServiceGetMatchingService(fb->masterPort, matching);
+        kr = fb->service != IO_OBJECT_NULL ? KERN_SUCCESS : KERN_FAILURE;
+#endif
+        if (fb->service != IO_OBJECT_NULL) {
             break;
         }
+        kr = KERN_FAILURE;
         fb->service = IO_OBJECT_NULL;
     }
     PDGOP_SET_STAGE("IOServiceGetMatchingService");
@@ -134,15 +145,15 @@ PDGOPClose(PDGOPFramebuffer *fb)
     if (fb == NULL) {
         return;
     }
-    if (fb->address != 0 && fb->connect != IO_CONNECT_NULL) {
+    if (fb->address != 0 && fb->connect != IO_OBJECT_NULL) {
         (void)IOConnectUnmapMemory64(fb->connect, kIOFBVRAMMemory,
             mach_task_self(), fb->address);
     }
-    if (fb->connect != IO_CONNECT_NULL) {
+    if (fb->connect != IO_OBJECT_NULL) {
         (void)IOServiceClose(fb->connect);
         (void)IOObjectRelease(fb->connect);
     }
-    if (fb->service != IO_SERVICE_NULL) {
+    if (fb->service != IO_OBJECT_NULL) {
         (void)IOObjectRelease(fb->service);
     }
     if (fb->masterPort != MACH_PORT_NULL) {

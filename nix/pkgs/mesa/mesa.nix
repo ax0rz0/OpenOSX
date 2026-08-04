@@ -27,6 +27,9 @@
 , libXdmcp
 , xorgproto
 , xtrans
+, wayland
+, waylandProtocols
+, waylandScanner
 , pdVirglShim
 , virglWinsysSrc
 , virglAbiHeader
@@ -52,14 +55,16 @@ let
     "-I${lib.getDev zlib}/include"
     "-I${lib.getDev expat}/include"
     "-I${llvm}/usr/include"
-  ];
+  ] ++ map (p: "-I${lib.getDev p}/include") xDeps;
   depLibs = [
     "-L${zlib}/lib"
     "-L${expat}/lib"
     "-L${llvm}/usr/lib"
+    "-L${wayland}/lib"
   ];
 
-  xDeps = [ libX11 libXext libxcb libXau libXdmcp xorgproto xtrans libxshmfence ];
+  xDeps = [ libX11 libXext libxcb libXau libXdmcp xorgproto xtrans libxshmfence
+            wayland waylandProtocols ];
   xPkgConfigPath = lib.concatMapStringsSep ":"
     (p: "${p}/lib/pkgconfig:${p}/share/pkgconfig") xDeps;
 in
@@ -72,7 +77,7 @@ stdenv.mkDerivation {
     hash = "sha256-eeQhx84YzZ55C4N1kgMld58QeYYwvzDgsi8aIchhcSI=";
   };
 
-  nativeBuildInputs = [ meson ninja pkg-config pythonEnv bison flex glslang spirv-tools ];
+  nativeBuildInputs = [ meson ninja pkg-config pythonEnv bison flex glslang spirv-tools waylandScanner ];
   buildInputs = [ zlib expat ];
 
   postPatch = ''
@@ -88,18 +93,64 @@ stdenv.mkDerivation {
       --replace 'wsi_conn->has_xfixes = (ver_reply->major_version >= 2);' \
                 'wsi_conn->has_xfixes = ver_reply != NULL && (ver_reply->major_version >= 2);'
 
+    # Mesa equates "darwin" with "macOS running XQuartz" and picks the applegl
+    # DRI platform, whose GLX provider is a client of libXplugin - an XQuartz
+    # private library that cannot exist here, so libGL comes out with an
+    # unsatisfiable /usr/lib/libXplugin.1.dylib dependency and nothing that
+    # links it can be loaded at all. pseudo-drm is the platform for exactly
+    # this shape: real X11, no KMS/DRM device underneath.
+    substituteInPlace meson.build \
+      --replace "  with_dri_platform = 'apple'" \
+                "  with_dri_platform = 'pseudo-drm'"
+
     mkdir -p src/gallium/winsys/virgl/puredarwin
     cp ${virglWinsysSrc}/virgl_puredarwin_winsys.c src/gallium/winsys/virgl/puredarwin/
     cp ${virglWinsysSrc}/virgl_puredarwin_public.h src/gallium/winsys/virgl/puredarwin/
     cp ${pdVirglShim}/include/pd_virgl_shim.h src/gallium/winsys/virgl/puredarwin/
     cp ${virglAbiHeader} src/gallium/winsys/virgl/puredarwin/IOVirtIOGPU3DShared.h
 
+    # Two changes beyond swapping vtest for our winsys. The wrap returns NULL
+    # when IOVirtIOGPU has no 3D user client (real hardware, or virtio-gpu
+    # without virgl), and virgl_create_screen() is not prepared for that - so
+    # guard it. And virgl only ever got picked when GALLIUM_DRIVER named it,
+    # which left every default launch on llvmpipe; adding it to the implicit
+    # list ahead of llvmpipe makes it the preference while still falling
+    # through when the device is not there. LIBGL_ALWAYS_SOFTWARE still forces
+    # software, and an explicit GALLIUM_DRIVER still wins outright.
     helper=src/gallium/auxiliary/target-helpers/inline_sw_helper.h
-    substituteInPlace $helper \
+    for helper in src/gallium/auxiliary/target-helpers/inline_sw_helper.h \
+                  src/gallium/auxiliary/target-helpers/sw_helper.h; do
+      substituteInPlace "$helper" \
       --replace '#include "virgl/vtest/virgl_vtest_public.h"' \
                 '#include "virgl/puredarwin/virgl_puredarwin_public.h"' \
       --replace 'vws = virgl_vtest_winsys_wrap(winsys);' \
-                'vws = virgl_puredarwin_winsys_wrap(winsys);'
+                'vws = virgl_puredarwin_winsys_wrap(winsys);' \
+      --replace 'screen = virgl_create_screen(vws, NULL);' \
+                'screen = vws ? virgl_create_screen(vws, NULL) : NULL;' \
+      --replace '      "llvmpipe",' \
+                '#if defined(GALLIUM_VIRGL)
+      (sw_vk || only_sw) ? "" : "virpipe",
+#endif
+      "llvmpipe",'
+    done
+
+    # The DRI helper still contains the Linux virtio-gpu entry point even
+    # though the Darwin virgl build intentionally omits the DRM winsys.
+    # Leave the descriptor as a stub on Darwin; the PureDarwin winsys is
+    # selected through the software frontend below.
+    drmhelper=src/gallium/auxiliary/target-helpers/drm_helper.h
+    substituteInPlace "$drmhelper" \
+      --replace '#if defined(GALLIUM_VIRGL)' \
+                '#if defined(GALLIUM_VIRGL) && !defined(__APPLE__)'
+
+    dritarget=src/gallium/targets/dri/meson.build
+    substituteInPlace "$dritarget" \
+      --replace "files('dri_target.c')," \
+                "files('dri_target.c', '../../winsys/virgl/puredarwin/virgl_puredarwin_winsys.c')," \
+      --replace "include_directories('../../frontends/dri')," \
+                "include_directories('../../frontends/dri'), include_directories('../../winsys/virgl/puredarwin'), inc_virtio," \
+      --replace 'gallium_dri_ld_args = [cc.get_supported_link_arguments' \
+                "gallium_dri_ld_args = ['-L${pdVirglShim}/usr/lib', '-lpd_virgl_shim'] + [cc.get_supported_link_arguments"
 
     xmeson=src/gallium/targets/libgl-xlib/meson.build
     substituteInPlace $xmeson \
@@ -113,13 +164,17 @@ stdenv.mkDerivation {
 
   configurePhase = ''
     runHook preConfigure
-    export PATH="${llvm}/usr/bin:${nativeMesonTools}/bin:$PATH"
+    export PATH="${llvm}/usr/bin:${nativeMesonTools}/bin:${waylandScanner}/bin:$PATH"
 
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
     export PKG_CONFIG_PATH="${lib.getDev zlib}/lib/pkgconfig:${lib.getDev expat}/lib/pkgconfig:${xPkgConfigPath}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
+    # meson asks for wayland-scanner as a native dependency, so it resolves
+    # through the build machine's pkg-config rather than the cross one above.
+    export PKG_CONFIG_PATH_FOR_BUILD="${waylandScanner}/lib/pkgconfig"
+    export PKG_CONFIG_LIBDIR_FOR_BUILD="${waylandScanner}/lib/pkgconfig"
 
     cat > puredarwin-cross.ini <<EOF
 [binaries]
@@ -160,12 +215,13 @@ EOF
       -Ddefault_library=shared \
       -Dgallium-drivers=llvmpipe,softpipe,virgl \
       -Dvulkan-drivers=swrast \
-      -Dplatforms=x11 \
+      -Dplatforms=x11,wayland \
       -Dopengl=true \
       -Dgles1=disabled \
-      -Dgles2=disabled \
-      -Dglx=xlib \
-      -Degl=disabled \
+      -Dgles2=enabled \
+      -Dglx=dri \
+      -Dglx-direct=false \
+      -Degl=enabled \
       -Dgbm=disabled \
       -Dllvm=enabled \
       -Dshared-llvm=enabled \
@@ -212,6 +268,17 @@ EOF
         # image layout so they resolve from /usr/lib at runtime.
         "$INSTALL_NAME_TOOL" -change "@rpath/$base" "/usr/lib/$base" "$f" 2>/dev/null || true
         "$INSTALL_NAME_TOOL" -change "$out/usr/lib/$base" "/usr/lib/$base" "$f" 2>/dev/null || true
+      done
+    done
+
+    # The EGL Wayland platform links libwayland-client directly, and that one
+    # comes from another package, so the loop above never sees it. It installs
+    # at /lib on the image, not /usr/lib.
+    for f in $allfiles; do
+      for dylib in ${wayland}/lib/*.dylib; do
+        [ -e "$dylib" ] || continue
+        base=$(basename "$dylib")
+        "$INSTALL_NAME_TOOL" -change "@rpath/$base" "/lib/$base" "$f" 2>/dev/null || true
       done
     done
 

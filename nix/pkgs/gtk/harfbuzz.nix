@@ -10,13 +10,28 @@
 , libSystem
 , harfbuzz
 , freetype
+, icu
+, glib
+, pcre2
+, libffi
+, libiconv
+, cairo
+, pixman
+, libpng
+, zlib
+, expat
+, fontconfig
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
 
 let
   targetInfo = import ../../lib/target-info.nix targetTriple;
 
-  deps = [ freetype ];
+  deps = [
+    freetype icu
+    glib pcre2 libffi libiconv
+    cairo pixman libpng zlib expat fontconfig
+  ];
   sdkTarball = requireFile {
     name = "MacOSX11.3.sdk.tar.xz";
     sha256 = "9adc1373d3879e1973d28ad9f17c9051b02931674a3ec2a2498128989ece2cb1";
@@ -79,13 +94,13 @@ EOF
       --libdir=lib \
       --buildtype=release \
       -Ddefault_library=static \
-      -Dglib=disabled \
-      -Dgobject=disabled \
-      -Dcairo=disabled \
+      -Dglib=enabled \
+      -Dgobject=enabled \
+      -Dcairo=enabled \
       -Dchafa=disabled \
-      -Dpng=disabled \
-      -Dzlib=disabled \
-      -Dicu=disabled \
+      -Dpng=enabled \
+      -Dzlib=enabled \
+      -Dicu=enabled \
       -Dfreetype=enabled \
       -Dcoretext=disabled \
       -Draster=disabled \

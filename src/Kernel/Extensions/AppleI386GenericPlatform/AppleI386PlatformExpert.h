@@ -44,6 +44,17 @@ public:
 	virtual IOService *probe(IOService *provider, SInt32 *score) APPLE_KEXT_OVERRIDE;
 	virtual bool start(IOService *provider) APPLE_KEXT_OVERRIDE;
 	void publishPlatformUUIDFromDeviceTree(void);
+	void cacheACPIPowerOffFromDeviceTree(void);
+
+	/* PM1a/PM1b control ports for ACPI soft-off, found by walking the FADT at
+	 * start(). PEHaltRestart can be reached from panic context, where mapping
+	 * memory and taking IORegistry locks is not safe, so the lookup happens
+	 * once up front and the halt path only does an outw(). */
+	static UInt16 sPM1aControlPort;
+	static UInt16 sPM1bControlPort;
+	static UInt8  sS5SleepTypeA;
+	static UInt8  sS5SleepTypeB;
+	static bool   sACPIPowerOffReady;
 	virtual bool configure(IOService *provider) APPLE_KEXT_OVERRIDE;
 	virtual bool matchNubWithPropertyTable(IOService *nub, OSDictionary *table);
 	virtual IOService *createNub(OSDictionary *from) APPLE_KEXT_OVERRIDE;

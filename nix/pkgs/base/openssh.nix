@@ -39,15 +39,6 @@ int	setresgid(gid_t, gid_t, gid_t);
 #if !defined(HAVE_SETRESUID) || defined(__APPLE__)
 int	setresuid(uid_t, uid_t, uid_t);
 #endif'
-
-    # The bring-up passwd(1) stores "plain:<password>" until PureDarwin has
-    # crypt(3)/shadow plumbing. Keep this compatibility inside OpenSSH so libc
-    # does not gain process-wide plaintext password semantics.
-    substituteInPlace openbsd-compat/xcrypt.c \
-      --replace-fail 'char *crypted;' 'char *crypted;
-
-	if (salt != NULL && strncmp(salt, "plain:", 6) == 0)
-		return strcmp(password, salt + 6) == 0 ? (char *)salt : (char *)"";'
   '';
 
   configurePhase = ''
@@ -166,10 +157,71 @@ int	setresuid(uid_t, uid_t, uid_t);
     make install-nokeys DESTDIR=$out STRIP_OPT=
     cat >> $out/etc/ssh/sshd_config <<'EOF'
 
-# PureDarwin bring-up defaults. Revisit once accounts, shadow passwords, and
-# service management are complete.
+# Root is the only real account on a PureDarwin image, so refusing its login
+# would leave nobody able to connect. Password auth needs a password set with
+# passwd(1) first: the shipped /etc/master.passwd has '*' for every account,
+# which no crypt(3) output can match.
 PermitRootLogin yes
 PasswordAuthentication yes
+
+# launchd (pid 1) puts DYLD_INSERT_LIBRARIES=/usr/lib/libobjc.A.dylib in its
+# environment so that every descendant has libobjc mapped: libSystem has
+# undefined objc_* references (libdispatch's object.m) that dyld resolves by
+# flat-namespace lookup, and it cannot depend on libobjc directly without
+# breaking dyld's "libSystem initializes first" rule.
+#
+# sshd does not inherit its environment into the session - session.c builds a
+# fresh one - so without this the login shell starts with no libobjc mapped and
+# dyld fails it with "Symbol not found: ___objc_personality_v0". SetEnv is the
+# supported hook for putting it back.
+SetEnv DYLD_INSERT_LIBRARIES=/usr/lib/libobjc.A.dylib
+EOF
+
+    # install-nokeys skips host key generation on purpose - keys made at image
+    # build time would be identical on every install, and ssh-keygen is a
+    # target binary this build host cannot run anyway. Generate on first boot.
+    mkdir -p $out/usr/libexec $out/System/Library/LaunchDaemons
+    cat > $out/usr/libexec/pd-sshd <<'EOF'
+#!/bin/sh
+# launchctl's system bootstrap empties /var/run at boot, so sshd's pid file has
+# nowhere to go unless the directory is recreated here.
+/bin/mkdir -p /var/run
+
+# Privilege separation: sshd exits if this is missing, or is owned by anyone
+# but root, or is group/world writable.
+/bin/mkdir -p /var/empty
+
+if ! test -f /etc/ssh/ssh_host_ed25519_key; then
+    /bin/ssh-keygen -A
+fi
+
+# -D keeps sshd in the foreground so launchd can supervise it; -e sends the log
+# to stderr, which the plist captures, instead of syslog.
+exec /sbin/sshd -D -e
+EOF
+    chmod +x $out/usr/libexec/pd-sshd
+
+    cat > $out/System/Library/LaunchDaemons/org.puredarwin.sshd.plist <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>org.puredarwin.sshd</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/usr/libexec/pd-sshd</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<true/>
+	<key>StandardOutPath</key>
+	<string>/var/log/sshd.log</string>
+	<key>StandardErrorPath</key>
+	<string>/var/log/sshd.log</string>
+</dict>
+</plist>
 EOF
     runHook postInstall
   '';

@@ -38,6 +38,31 @@ static bool usb_hid_mouse_iobsd_published(void *, void *, IOService *, IONotifie
 static int usb_hid_open(dev_t, int, int, struct proc *) { return 0; }
 static int usb_hid_close(dev_t, int, int, struct proc *) { return 0; }
 
+/* spec_open() calls d_open on every open but spec_close() only reaches d_close
+ * once vcount() drops to zero, so this tracks "somebody has it open" rather
+ * than a balanced count. */
+static volatile bool gKbdGrabbed;
+
+static int
+usb_hid_kbd_open(dev_t, int, int, struct proc *)
+{
+    gKbdGrabbed = true;
+    return 0;
+}
+
+static int
+usb_hid_kbd_close(dev_t, int, int, struct proc *)
+{
+    gKbdGrabbed = false;
+    return 0;
+}
+
+bool
+USBHIDKeyboardIsGrabbed(void)
+{
+    return gKbdGrabbed;
+}
+
 static int
 usb_hid_kbd_read(dev_t, struct uio *uio, int)
 {
@@ -83,7 +108,7 @@ usb_hid_mouse_read(dev_t, struct uio *uio, int)
 }
 
 static struct cdevsw usb_hid_kbd_cdevsw = {
-    usb_hid_open, usb_hid_close, usb_hid_kbd_read, eno_rdwrt,
+    usb_hid_kbd_open, usb_hid_kbd_close, usb_hid_kbd_read, eno_rdwrt,
     eno_ioctl, eno_stop, eno_reset, 0, eno_select, eno_mmap,
     eno_strat, eno_getc, eno_putc, 0
 };

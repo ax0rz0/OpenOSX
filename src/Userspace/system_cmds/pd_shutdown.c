@@ -24,8 +24,11 @@ main(int argc, char **argv)
 	int sig = SIGTERM;
 	const char *name = base_name(argv[0]);
 
+	/* SIGINT is reboot and SIGTERM is halt/poweroff; see the handler in
+	 * launchd's core.c. NOT SIGUSR1 - launchd has always used that for the
+	 * calendar interval timer. */
 	if (strcmp(name, "reboot") == 0) {
-		sig = SIGUSR1;
+		sig = SIGINT;
 	} else if (strcmp(name, "halt") == 0 ||
 	    strcmp(name, "poweroff") == 0 ||
 	    strcmp(name, "shutdown") == 0) {
@@ -42,7 +45,7 @@ main(int argc, char **argv)
 			sig = SIGTERM;
 		} else if (strcmp(argv[1], "-r") == 0 ||
 		    strcmp(argv[1], "reboot") == 0) {
-			sig = SIGUSR1;
+			sig = SIGINT;
 		} else {
 			return usage(argv[0]);
 		}

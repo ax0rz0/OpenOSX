@@ -33,6 +33,7 @@ private:
     IOUSBPipe *fInterruptPipe;
     IOBufferMemoryDescriptor *fReportMem;
     volatile bool fRunning;
+    bool fConsoleGrabbed;
     UInt8 fLastReport[8];
 };
 

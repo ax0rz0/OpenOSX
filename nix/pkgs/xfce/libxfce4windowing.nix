@@ -46,6 +46,11 @@
 , libXres
 , startupNotification
 , xorgproto
+, wayland
+, waylandProtocols
+, waylandScanner
+, xkbcommon
+, mesa
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
 
@@ -62,6 +67,7 @@ let
     libXfixes libXcursor libXres
     startupNotification
     xorgproto
+    wayland waylandProtocols xkbcommon
   ];
   depPcPaths = map lib.getDev deps;
   sdkTarball = requireFile {
@@ -78,7 +84,7 @@ stdenv.mkDerivation {
   pname = "puredarwin-libxfce4windowing";
   inherit version src;
 
-  nativeBuildInputs = [ meson ninja pkg-config python3 ];
+  nativeBuildInputs = [ meson ninja pkg-config python3 waylandScanner ];
   buildInputs = deps;
 
   postPatch = ''
@@ -88,13 +94,17 @@ stdenv.mkDerivation {
 
   configurePhase = ''
     runHook preConfigure
-    export PATH="${nativeMesonTools}/bin:$PATH"
+    export PATH="${nativeMesonTools}/bin:${waylandScanner}/bin:$PATH"
 
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
-    export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" depPcPaths}:${lib.makeSearchPath "share/pkgconfig" depPcPaths}"
+    export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" depPcPaths}:${lib.makeSearchPath "share/pkgconfig" depPcPaths}:${waylandScanner}/lib/pkgconfig"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
+    # meson asks for wayland-scanner as a native dependency, so it resolves
+    # through the build machine's pkg-config rather than the cross one above.
+    export PKG_CONFIG_PATH_FOR_BUILD="${waylandScanner}/lib/pkgconfig"
+    export PKG_CONFIG_LIBDIR_FOR_BUILD="${waylandScanner}/lib/pkgconfig"
 
     cat > puredarwin-cross.ini <<EOF
 [binaries]
@@ -106,7 +116,7 @@ pkg-config = '${pkg-config}/bin/pkg-config'
 install_name_tool = '${darwinCrossToolchain}/bin/${targetTriple}-install_name_tool'
 
 [built-in options]
-c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}]
+c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-I${libSystem}/usr/include', '-I${mesa}/usr/include', '-I${../wayland/pd-compat-include}', '-DWL_EGL_PLATFORM=1', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}]
 c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-Wl,-undefined,dynamic_lookup', '-lSystem']
 
 [host_machine]
@@ -133,7 +143,7 @@ EOF
       -Dvala=disabled \
       -Dtests=false \
       -Dx11=enabled \
-      -Dwayland=disabled \
+      -Dwayland=enabled \
       -Dvisibility=false
 
     runHook postConfigure

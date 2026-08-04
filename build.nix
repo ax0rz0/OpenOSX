@@ -347,6 +347,28 @@ EOF
       chmod -R u+w $out/pd-guest-headers
       cp -RL src/Libraries/AvailabilityVersions/include/. $out/pd-guest-headers/
       cp -RL src/Libraries/libSystem/pthread/include/. $out/pd-guest-headers/
+      # libc's stdlib.h includes <malloc/_malloc.h>; libmalloc exposes these to
+      # the build as an INTERFACE include dir and has no install rule, so
+      # without this the guest /usr/include cannot compile stdlib.h.
+      cp -RL src/Libraries/libSystem/libmalloc/include/. $out/pd-guest-headers/
+      # Apple's libc headers.sh installs only libc's own headers, because on
+      # real Darwin these come from separate projects (Libm, Libinfo,
+      # libplatform, dyld, libsystem_kernel). Nothing else stages them here, so
+      # a guest compiler cannot resolve <math.h>, <netdb.h>, <pwd.h>,
+      # <grp.h>, <setjmp.h>, <dlfcn.h> or the <gethostuuid.h> unistd.h pulls in.
+      cp -L src/Libraries/libSystem/libc/include/math.h $out/pd-guest-headers/
+      cp -L src/Libraries/libSystem/libc/include/netdb.h $out/pd-guest-headers/
+      cp -L src/Libraries/libSystem/libc/include/pwd.h $out/pd-guest-headers/
+      cp -L src/Libraries/libSystem/libc/include/grp.h $out/pd-guest-headers/
+      cp -L src/Libraries/libSystem/libplatform/include/setjmp.h $out/pd-guest-headers/
+      cp -L src/Libraries/dyld/upstream/include/dlfcn.h $out/pd-guest-headers/
+      cp -L src/Libraries/libSystem/libsystem_kernel/include/gethostuuid.h $out/pd-guest-headers/
+      # Same for <sched.h>, which libc++'s __threading_support includes.
+      cp -L src/Libraries/libSystem/pthread/include/pthread/sched.h $out/pd-guest-headers/
+      # libpthread's header is <pthread/pthread.h>, but every consumer writes
+      # #include <pthread.h>; Darwin ships it at both paths.
+      cp -L src/Libraries/libSystem/pthread/include/pthread/pthread.h $out/pd-guest-headers/pthread.h
+      chmod -R u+w $out/pd-guest-headers
       rm -f $out/pd-guest-headers/sys_pthread_types.modulemap
       chmod -R u+w $out/pd-guest-headers
     fi

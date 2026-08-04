@@ -17,7 +17,9 @@ target_sources(libSystem_B_stub PRIVATE
     ${CMAKE_SOURCE_DIR}/src/Libraries/XPC/launchd/pd_sandbox_check.c
     # mach-o getsection helpers (getsectiondata/getsegmentdata/... ) that
     # libobjc references; libmacho isn't otherwise compiled into PD libSystem.
-    ${CMAKE_SOURCE_DIR}/tools/cctools/libmacho/getsecbyname.c)
+    ${CMAKE_SOURCE_DIR}/tools/cctools/libmacho/getsecbyname.c
+    # NXGetArchInfo* - also libmacho, and also part of libSystem on Darwin.
+    ${CMAKE_SOURCE_DIR}/tools/cctools/libmacho/arch.c)
 
 target_link_options(libSystem_B_stub PRIVATE
     -compatibility_version 1.0.0
@@ -31,7 +33,9 @@ endif()
 target_compile_options(libSystem_B_stub PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
 target_link_options(libSystem_B_stub PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
 target_include_directories(libSystem_B_stub PRIVATE
-    ${CMAKE_SOURCE_DIR}/src/Libraries/XPC/launchd/System-compat)
+    ${CMAKE_SOURCE_DIR}/src/Libraries/XPC/launchd/System-compat
+    # libmacho/arch.c reaches for cctools' own stuff/openstep_mach.h
+    ${CMAKE_SOURCE_DIR}/tools/cctools/include)
 
 set(LIBSYSTEM_EXPORTS ${CMAKE_CURRENT_SOURCE_DIR}/libSystem.exports)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LIBSYSTEM_EXPORTS})
@@ -63,7 +67,7 @@ endforeach()
 add_dependencies(libSystem_B_stub
     libsystem_kernel_static libplatform_static pthread_full_static
     libc_static libc_internal_static libmalloc_static
-    corecrypto_static CrashReporterClient libresolv_static
+    corecrypto_static commoncrypto_static CrashReporterClient libresolv_static
     libdispatch_static openlibm_static XPC_notify_client_static XPC_notifyd_mig_static
     mDNSResponder_dnssd_static XPC_libinfo_static syslog_asl_static
     libsystem_trace_static libdarwin_static libSystemConfiguration_static

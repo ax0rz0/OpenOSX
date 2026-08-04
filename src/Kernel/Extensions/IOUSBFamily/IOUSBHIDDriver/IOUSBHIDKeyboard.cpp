@@ -44,6 +44,7 @@ bool IOUSBHIDKeyboard::init(OSDictionary *dict)
     fInterruptPipe = NULL;
     fReportMem = NULL;
     fRunning = false;
+    fConsoleGrabbed = false;
     bzero(fLastReport, sizeof(fLastReport));
     setName("IOUSBHIDKeyboard");
     setProperty("HIDKeyboardKeysDefined", kOSBooleanTrue);
@@ -170,6 +171,24 @@ static bool reportHasUsage(const UInt8 report[8], UInt8 usage)
 
 void IOUSBHIDKeyboard::handleReport(const UInt8 report[8])
 {
+    bool grabbed = USBHIDKeyboardIsGrabbed();
+    if (grabbed && !fConsoleGrabbed) {
+        /* Anything held down when the grab started has already been reported
+         * to the console; without a matching release it stays latched there
+         * for the lifetime of the compositor. */
+        AbsoluteTime now;
+        clock_get_uptime((uint64_t *)&now);
+        for (UInt8 bit = 0; bit < 8; bit++)
+            if (fLastReport[0] & (1U << bit))
+                dispatchKeyboardEvent(gUSBModToADB[bit], false, now);
+        for (int i = 2; i < 8; i++) {
+            UInt8 usage = fLastReport[i];
+            if (usage >= 4 && usage <= 0x75 && gUSBToADB[usage] != DEADKEY)
+                dispatchKeyboardEvent(gUSBToADB[usage], false, now);
+        }
+    }
+    fConsoleGrabbed = grabbed;
+
     if (report[2] == 1) {
         bcopy(report, fLastReport, sizeof(fLastReport));
         return;
@@ -198,6 +217,8 @@ void IOUSBHIDKeyboard::dispatchUSBUsage(UInt8 usage, bool down)
     if (usage > 0x75) return;
     USBHIDPushKeyboardEvent(usage, down);
 
+    if (fConsoleGrabbed) return;
+
     UInt8 adb = gUSBToADB[usage];
     if (adb == DEADKEY) return;
 
@@ -210,6 +231,8 @@ void IOUSBHIDKeyboard::dispatchModifier(UInt8 bit, bool down)
 {
     if (bit >= 8) return;
     USBHIDPushKeyboardEvent((UInt8)(0xE0 + bit), down);
+
+    if (fConsoleGrabbed) return;
 
     AbsoluteTime now;
     clock_get_uptime((uint64_t *)&now);

@@ -59,6 +59,7 @@
             xfce4TerminalSrc
             xfce4SettingsSrc
             xfce4AppfinderSrc
+            thunarSrc
             ;
           iig = iig-tools.packages.${system}.default or (
             (pkgs.callPackage iig-tools { }).overrideAttrs (old: {
@@ -135,6 +136,11 @@
             "tools/mig"
             # libobjc needs the mach-o getsection helpers compiled into libSystem.
             "tools/cctools/libmacho/getsecbyname.c"
+            # NXGetArchInfo* is part of libSystem on Darwin, same libmacho source.
+            "tools/cctools/libmacho/arch.c"
+            "tools/cctools/include/mach-o/arch.h"
+            "tools/cctools/include/stuff/openstep_mach.h"
+            "tools/cctools/include/mach/machine.h"
           ];
           mkPureDarwinBuild = args: pkgs.callPackage ./build.nix ({
             inherit darwinCrossToolchain nativeLd nativeUnifdef nativeMigcom iig;
@@ -225,17 +231,14 @@
               '';
             };
           xvfbLibXdmcpBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-stub-lib.nix {
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain;
-              name = "Xdmcp";
-              version = pkgs.libxdmcp.version or "1.1.5";
-              pcName = "xdmcp";
-              pcDescription = "X Display Manager Control Protocol library";
-              includeFrom = [ pkgs.libxdmcp pkgs.xorgproto ];
-              source = ''
-                int XdmcpWrap(const unsigned char *input, unsigned char *wrapper, const unsigned char *key) { (void)input; (void)wrapper; (void)key; return 0; }
-                int XdmcpUnwrap(const unsigned char *input, unsigned char *wrapper, const unsigned char *key) { (void)input; (void)wrapper; (void)key; return 0; }
-              '';
+              nativeLd = nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libXdmcp";
+              version = pkgs.libxdmcp.version;
+              src = pkgs.libxdmcp.src;
+              deps = [ pkgs.xorgproto ];
             };
           xvfbZlibBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-zlib.nix {
@@ -530,6 +533,17 @@
               libSystem = libSystemBuild;
               inherit (pkgs) harfbuzz;
               freetype = freetype2Build;
+              icu = icuCoreBuild;
+              glib = glibBuild;
+              pcre2 = pcre2Build;
+              libffi = libffiBuild;
+              libiconv = libiconvBuild;
+              cairo = cairoBuild;
+              pixman = xvfbPixmanBuild;
+              libpng = libpngBuild;
+              zlib = xvfbZlibBuild;
+              expat = expatBuild;
+              fontconfig = fontconfigBuild;
             };
           pangoBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/gtk/pango.nix {
@@ -900,6 +914,7 @@
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               libX11 = xlibBuild;
+              mesa = mesaBuild;
               inherit (pkgs) libepoxy xorgproto meson ninja python3;
             };
           pdVirglShimBuild =
@@ -947,6 +962,9 @@
               libxcb = xcbBuild;
               libXau = xvfbLibXauBuild;
               libXdmcp = xvfbLibXdmcpBuild;
+              wayland = waylandBuild;
+              waylandProtocols = waylandProtocolsBuild;
+              waylandScanner = waylandScannerBuild;
               pdVirglShim = pdVirglShimBuild;
               virglWinsysSrc = ./nix/pkgs/mesa/virgl-puredarwin;
               virglAbiHeader = ./src/Kernel/Extensions/IOVirtIOGPU/IOVirtIOGPU3DShared.h;
@@ -978,6 +996,175 @@
               llvmVersion = pkgs.llvmPackages_21.llvm.version;
               nativeTblgen = "${pkgs.llvmPackages_21.llvm}/bin/llvm-tblgen";
               nativeLlvmConfig = "${pkgs.llvmPackages_21.llvm.dev}/bin/llvm-config";
+            };
+          # WebKitGTK's mandatory dependencies (Source/cmake/OptionsGTK.cmake).
+          # Independently useful: sqlite3, libjpeg and libsoup have no other
+          # provider in this tree.
+          libgpgErrorBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libgpg-error";
+              inherit (pkgs.libgpg-error) version src;
+              # mkheader looks for syscfg/lock-obj-pub.<host_os>.h, i.e.
+              # darwin20.4, while the tree ships the generic
+              # x86_64-apple-darwin one. Same contents, different name.
+              postPatchExtra = ''
+                cp src/syscfg/lock-obj-pub.x86_64-apple-darwin.h \
+                   src/syscfg/lock-obj-pub.darwin20.4.h
+              '';
+              # sysutils.c calls mkdir() without including <sys/stat.h>, which
+              # newer clang makes a hard error rather than an implicit decl.
+              preConfigureExtra = ''
+                export CFLAGS="$CFLAGS -include sys/stat.h"
+              '';
+              configureFlags = [
+                "--disable-nls"
+                "--disable-doc"
+                "--disable-tests"
+                "--disable-languages"
+              ];
+            };
+          libtasn1Build =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libtasn1";
+              inherit (pkgs.libtasn1) version src;
+              configureFlags = [ "--disable-doc" "--disable-gtk-doc" ];
+            };
+          sqliteBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-sqlite";
+              inherit (pkgs.sqlite) version;
+              # nixpkgs' sqlite src is a .zip the default unpacker cannot read.
+              src = pkgs.runCommand "sqlite-src-${pkgs.sqlite.version}" { nativeBuildInputs = [ pkgs.unzip ]; } ''
+                unzip -q ${pkgs.sqlite.src}
+                mkdir -p $out
+                cp -R sqlite-src-*/. $out/
+                chmod -R u+w $out
+              '';
+              configureFlags = [ "--disable-readline" "--disable-editline" ];
+            };
+          webkitgtkBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/webkitgtk.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libcxxDylib = libcxxDylibBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
+              nativeMesonTools = nativeMesonToolsDir;
+              glibNative = pkgs.glib.dev;
+              inherit (pkgs) cmake ninja pkg-config python3 perl ruby gperf unifdef;
+              webkitgtk = pkgs.webkitgtk_6_0;
+              icu = icuCoreBuild;
+              deps = [
+                glibBuild pcre2Build libffiBuild xvfbZlibBuild libiconvBuild
+                cairoBuild cairoGobjectBuild xvfbPixmanBuild
+                pangoBuild fribidiBuild harfbuzzBuild freetype2Build
+                fontconfigBuild expatBuild
+                gdkPixbufBuild libepoxyBuild atspi2CoreBuild dbusBuild libpngBuild
+                gtk3Build icuCoreBuild libxml2Build
+                libsoupBuild sqliteBuild libpslBuild nghttp2Build
+                libgcryptBuild libgpgErrorBuild libtasn1Build libjpegBuild libwebpBuild
+                waylandBuild waylandProtocolsBuild xkbcommonBuild mesaBuild
+                xlibBuild xcbBuild xvfbLibXauBuild xvfbLibXdmcpBuild
+                xvfbLibXextBuild xvfbLibXrenderBuild xvfbLibXfixesBuild
+                xvfbLibXcompositeBuild xvfbLibXdamageBuild
+                pkgs.xorgproto
+              ];
+            };
+          libsoupBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/libsoup.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              nativeMesonTools = nativeMesonToolsDir;
+              glibNative = pkgs.glib.dev;
+              inherit (pkgs) meson ninja pkg-config python3;
+              libsoup = pkgs.libsoup_3;
+              glib = glibBuild;
+              pcre2 = pcre2Build;
+              libffi = libffiBuild;
+              zlib = xvfbZlibBuild;
+              libiconv = libiconvBuild;
+              sqlite = sqliteBuild;
+              libpsl = libpslBuild;
+              nghttp2 = nghttp2Build;
+              libxml2 = libxml2Build;
+            };
+          nghttp2Build =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-nghttp2";
+              inherit (pkgs.nghttp2) version src;
+              # Only libnghttp2 is wanted; the apps are C++ and pull in
+              # libev/openssl/jansson that nothing here needs.
+              configureFlags = [ "--enable-lib-only" "--disable-python-bindings" ];
+            };
+          libpslBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libpsl";
+              inherit (pkgs.libpsl) version;
+              # Upstream ships a .tar.lz, which the default unpacker cannot read.
+              src = pkgs.runCommand "libpsl-src-${pkgs.libpsl.version}" { nativeBuildInputs = [ pkgs.lzip ]; } ''
+                lzip -dc ${pkgs.libpsl.src} | tar -x
+                mkdir -p $out
+                cp -R libpsl-*/. $out/
+                chmod -R u+w $out
+              '';
+              # No libidn2/libunistring here, so IDNA is the builtin variant.
+              # python is a build-time tool: it generates the suffix tables.
+              nativeDeps = [ pkgs.python3 ];
+              configureFlags = [ "--disable-runtime" "--disable-builtin" "--disable-man" ];
+            };
+          libwebpBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/libwebp.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) libwebp cmake ninja;
+            };
+          libjpegBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/libjpeg-turbo.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              inherit (pkgs) libjpeg_turbo cmake ninja;
+            };
+          libgcryptBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pname = "puredarwin-libgcrypt";
+              inherit (pkgs.libgcrypt) version src;
+              deps = [ libgpgErrorBuild ];
+              configureFlags = [
+                "--disable-doc"
+                "--disable-tests"
+                "--disable-asm"
+                "--with-libgpg-error-prefix=${libgpgErrorBuild}"
+              ];
+            };
+          kcToolsGuestBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/kc-tools-guest.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              kcToolsSrc = kc-tools;
+              inherit (pkgs) cmake ninja;
+            };
+          clangCrossBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/toolchain/clang-cross.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libcxxDylib = libcxxDylibBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
+              nativeMesonTools = nativeMesonToolsDir;
+              llvm = llvmCrossBuild;
+              llvmSrc = pkgs.llvmPackages_21.libllvm.monorepoSrc;
+              llvmVersion = pkgs.llvmPackages_21.llvm.version;
+              nativeTblgen = "${pkgs.llvmPackages_21.llvm}/bin/llvm-tblgen";
             };
           nativeMesonToolsDir =
             if isDarwin then null else pkgs.runCommand "puredarwin-native-meson-tools" { } ''
@@ -1110,6 +1297,11 @@
               libXcursor = xvfbLibXcursorBuild;
               libpng = libpngBuild;
               glibNative = pkgs.glib.dev;
+              wayland = waylandBuild;
+              waylandProtocols = waylandProtocolsBuild;
+              waylandScanner = waylandScannerBuild;
+              xkbcommon = xkbcommonBuild;
+              mesa = mesaBuild;
               inherit (pkgs) gtk3 xorgproto;
             };
           libwnckBuild =
@@ -1152,6 +1344,49 @@
               startupNotification = startupNotificationBuild;
               inherit (pkgs) libwnck xorgproto;
             };
+          gtkLayerShellBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/wayland/gtk-layer-shell.nix {
+              nativeMesonTools = nativeMesonToolsDir;
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              glib = glibBuild;
+              pcre2 = pcre2Build;
+              libffi = libffiBuild;
+              zlib = xvfbZlibBuild;
+              libiconv = libiconvBuild;
+              cairo = cairoBuild;
+              cairoGobject = cairoGobjectBuild;
+              pixman = xvfbPixmanBuild;
+              pango = pangoBuild;
+              fribidi = fribidiBuild;
+              harfbuzz = harfbuzzBuild;
+              freetype2 = freetype2Build;
+              fontconfig = fontconfigBuild;
+              expat = expatBuild;
+              gdkPixbuf = gdkPixbufBuild;
+              libepoxy = libepoxyBuild;
+              atspi2Core = atspi2CoreBuild;
+              dbus = dbusBuild;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXi = xvfbLibXiBuild;
+              libXrender = xvfbLibXrenderBuild;
+              libXrandr = xvfbLibXrandrBuild;
+              libXfixes = xvfbLibXfixesBuild;
+              libXcursor = xvfbLibXcursorBuild;
+              libpng = libpngBuild;
+              glibNative = pkgs.glib.dev;
+              gtk3 = gtk3Build;
+              wayland = waylandBuild;
+              waylandProtocols = waylandProtocolsBuild;
+              waylandScanner = waylandScannerBuild;
+              xkbcommon = xkbcommonBuild;
+              mesa = mesaBuild;
+              inherit (pkgs) gtk-layer-shell xorgproto;
+            };
           xvfbBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -1190,6 +1425,75 @@
               libxkbfile = xvfbLibXkbfileBuild;
               libXdmcp = pkgs.libxdmcp;
               libxcvt = xvfbLibxcvtBuild;
+            };
+          pdsurfaceBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/pdsurface.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              corefoundation = coreFoundationBuild;
+              iokit = iokitBuild;
+            };
+          libgbmBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/libgbm.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              pdsurface = pdsurfaceBuild;
+            };
+          libdrmBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/libdrm.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              corefoundation = coreFoundationBuild;
+              iokit = iokitBuild;
+              puredarwinSource = ./src/Libraries/libdrm;
+              src = pkgs.libdrm.src;
+              inherit (pkgs) meson ninja pkg-config python3 requireFile;
+            };
+          jsoncBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/json-c.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              src = pkgs.json_c.src;
+              inherit (pkgs) cmake ninja pkg-config requireFile;
+            };
+          xwaylandBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xwayland.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              xwayland = pkgs.xwayland;
+              pixman = xvfbPixmanBuild;
+              xorgproto = pkgs.xorgproto;
+              xtrans = pkgs.xtrans;
+              xlib = xlibBuild;
+              xcb = xcbBuild;
+              libXfont2 = xvfbLibXfont2Build;
+              libxkbfile = xvfbLibXkbfileBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXfixes = xvfbLibXfixesBuild;
+              libXrender = xvfbLibXrenderBuild;
+              libXrandr = xvfbLibXrandrBuild;
+              libXres = xvfbLibXresBuild;
+              libXcomposite = xvfbLibXcompositeBuild;
+              libXdamage = xvfbLibXdamageBuild;
+              libxshmfence = libxshmfenceSharedBuild;
+              zlib = xvfbZlibBuild;
+              freetype2 = freetype2Build;
+              libfontenc = libfontencBuild;
+              xvfbZlib = xvfbZlibBuild;
+              libxcvt = xvfbLibxcvtBuild;
+              wayland = waylandBuild;
+              waylandProtocols = waylandProtocolsBuild;
+              waylandScanner = waylandScannerBuild;
+              xkbcommon = xkbcommonBuild;
+              xkbcomp = xkbcompBuild;
+              xkeyboardConfig = xkeyboardConfigBuild;
+              openssl = opensslBuild;
+              mesaGlHeaders = pkgs.mesa-gl-headers;
+              mesa = mesaBuild;
+              libepoxy = libepoxyBuild;
+              libdrm = libdrmBuild;
             };
           xvfbLibXrenderBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
@@ -1266,6 +1570,12 @@
             inherit gdkPixbufBuild;
             inherit glibBuild;
             inherit gtk3Build;
+            inherit gtkLayerShellBuild;
+            inherit mesaBuild;
+            inherit waylandBuild;
+            inherit waylandProtocolsBuild;
+            inherit waylandScannerBuild;
+            inherit xkbcommonBuild;
             inherit harfbuzzBuild;
             inherit isDarwin;
             inherit libSystemBuild;
@@ -1282,6 +1592,7 @@
             inherit pcre2Build;
             inherit pkgs;
             inherit startupNotificationBuild;
+            inherit thunarSrc;
             inherit vteBuild;
             inherit xcbBuild;
             inherit xfce4AppfinderSrc;
@@ -1325,7 +1636,12 @@
             xfce4TerminalBuild
             xfce4SettingsBuild
             xfce4AppfinderBuild
+            thunarBuild
             ;
+          cursorThemeBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/cursor-theme.nix {
+              inherit (pkgs) vanilla-dmz;
+            };
           iconThemesBuild =
             if isDarwin then null else pkgs.runCommand "puredarwin-icon-themes" { } ''
               mkdir -p "$out/share/icons"
@@ -1866,6 +2182,11 @@
               expat = expatBuild;
               gnutls = gnutlsSharedBuild;
               mesa = mesaBuild;
+              wayland = waylandBuild;
+              waylandProtocols = waylandProtocolsBuild;
+              waylandScanner = waylandScannerBuild;
+              xkbcommon = xkbcommonBuild;
+              libxml2 = libxml2Build;
             };
 
           dilloBuild =
@@ -1946,6 +2267,27 @@
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               pkgconf = pkgs.pkgconf-unwrapped;
+            };
+          mesonBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/meson.nix {
+              python = pythonBuild;
+              inherit (pkgs) meson;
+            };
+          cmakeBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/cmake.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libcxxDylib = libcxxDylibBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
+              inherit (pkgs) cmake ninja;
+            };
+          ninjaBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/ninja.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libcxxDylib = libcxxDylibBuild;
+              libcxxabiDylib = libcxxabiDylibBuild;
+              inherit (pkgs) ninja;
             };
           gnum4Build =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/base/gnum4.nix {
@@ -2058,7 +2400,70 @@
               libxcb = xcbBuild;
               libXau = xvfbLibXauBuild;
               libXdmcp = xvfbLibXdmcpBuild;
+              libxml2 = libxml2Build;
               xkeyboard-config = xkeyboardConfigBuild;
+            };
+          waylandScannerBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/wayland/wayland-scanner.nix {
+              src = ./src/ThirdParty/wayland;
+              inherit (pkgs) expat libxml2;
+            };
+          waylandProtocolsBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/wayland/wayland-protocols.nix {
+              src = ./src/ThirdParty/wayland-protocols;
+            };
+          wlrootsBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/wayland/wlroots.nix {
+              inherit darwinCrossToolchain nativeLd;
+              nativeMesonTools = nativeMesonToolsDir;
+              libSystem = libSystemBuild;
+              iokit = iokitBuild;
+              iokitHeaders = iokitCFStaticBuild;
+              pdgopSource = ./src/Libraries/PDGOP;
+              pdVirglShim = pdVirglShimBuild;
+              libdrm = libdrmBuild;
+              pixman = xvfbPixmanBuild;
+              wayland = waylandBuild;
+              waylandProtocols = waylandProtocolsBuild;
+              waylandScanner = waylandScannerBuild;
+              xkbcommon = xkbcommonBuild;
+              xcb = xcbBuild;
+              xcbWm = xcbWmBuild;
+              xwayland = xwaylandBuild;
+              pdsurface = pdsurfaceBuild;
+              src = ./src/ThirdParty/wlroots;
+            };
+          swayBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/wayland/sway.nix {
+              inherit darwinCrossToolchain nativeLd;
+              nativeMesonTools = nativeMesonToolsDir;
+              libSystem = libSystemBuild;
+              cairo = cairoBuild;
+              fribidi = fribidiBuild;
+              freetype = freetype2Build;
+              glib = glibBuild;
+              harfbuzz = harfbuzzBuild;
+              jsonc = jsoncBuild;
+              libdrm = libdrmBuild;
+              pango = pangoBuild;
+              pcre2 = pcre2Build;
+              pixman = xvfbPixmanBuild;
+              wayland = waylandBuild;
+              waylandProtocols = waylandProtocolsBuild;
+              waylandScanner = waylandScannerBuild;
+              wlroots = wlrootsBuild;
+              xkbcommon = xkbcommonBuild;
+              xcb = xcbBuild;
+              xcbWm = xcbWmBuild;
+              src = ./src/ThirdParty/sway;
+            };
+          waylandBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/wayland/wayland.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              libffi = libffiBuild;
+              waylandScanner = waylandScannerBuild;
+              src = ./src/ThirdParty/wayland;
             };
           fastfetchBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apps/fastfetch.nix {
@@ -2138,6 +2543,11 @@
               libSystem = libSystemBuild;
               libcxxabiDylib = libcxxabiDylibBuild;
               src = objcSource;
+            };
+          gsbaseTestBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/gsbase-test.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
             };
           dlsymTestBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/dlsym-test.nix {
@@ -2609,33 +3019,33 @@
             inherit
               atspi2CoreBuild autoconfBuild automakeBuild bisonBuild bmakeBuild cairoBuild
               cairoGobjectBuild cctoolsBuild coreFoundationBuild curlBuild darwinCrossToolchain
-              coreServicesBuild dbusBuild dilloBuild diskArbitrationBuild wineBuild dlsymTestBuild dmenuBuild exoBuild expatBuild fastfetchBuild
+              coreServicesBuild dbusBuild dilloBuild diskArbitrationBuild wineBuild dlsymTestBuild gsbaseTestBuild dmenuBuild exoBuild expatBuild fastfetchBuild
               libX11SharedBuild libxcbSharedBuild libXauSharedBuild libXdmcpSharedBuild
               libXextSharedBuild libXrenderSharedBuild libXfixesSharedBuild libXiSharedBuild
               libXcursorSharedBuild libXrandrSharedBuild nettleSharedBuild gnutlsSharedBuild glibNetworkingBuild llvmCrossBuild vulkanLoaderBuild libxshmfenceSharedBuild vulkanToolsBuild
               fbdoomBuild fbdoomExternalSrc fileBuild flexBuild fontconfigBuild foundationBuild
               freetype2Build fribidiBuild garconBuild gdkPixbufBuild gitBuild glibBuild gnum4Build
-              gnumakeBuild gtk3Build harfbuzzBuild i3Build i3statusShimBuild iceauthBuild
-              iconThemesBuild icuCoreBuild imageExtraPackagesArm64 iographicsBuild iokitBuild
-              iomediacheckBuild ioregBuild isDarwin kc-tools kernelArm64Build kernelArm64VirtBuild
+              gnumakeBuild gtk3Build gtkLayerShellBuild harfbuzzBuild i3Build i3statusShimBuild iceauthBuild
+              cursorThemeBuild iconThemesBuild icuCoreBuild imageExtraPackagesArm64 iographicsBuild iokitBuild
+              iomediacheckBuild ioregBuild isDarwin jsoncBuild kc-tools kernelArm64Build kernelArm64VirtBuild
               kernelArm64VirtDebugBuild kernelBuild kernelDebugBuild kextsArm64Build kextsBuild
-              launchctlBuild launchdBuild lib libSystemBuild libXftBuild libapfsrwBuild libcssBuild
-              libcurlDylibBuild libcxxDylibBuild libcxxTestBuild libcxxabiDylibBuild libdisplayInfoBuild
+              launchctlBuild launchdBuild lib libSystemBuild libdrmBuild libXftBuild libapfsrwBuild libcssBuild waylandBuild waylandProtocolsBuild wlrootsBuild swayBuild
+              pdsurfaceBuild libgbmBuild libcurlDylibBuild libcxxDylibBuild libcxxTestBuild libcxxabiDylibBuild libdisplayInfoBuild
               libdomBuild libepoxyBuild libevBuild libffiBuild libhubbubBuild libiconvArm64Build
               libiconvBuild libnsbmpBuild libnsgifBuild libnsutilsBuild libobjcBuild libparserutilsBuild
               libpngBuild libutf8procBuild libwapcapletBuild libwnckBuild libxfce4uiBuild
               libxfce4utilBuild libxfce4windowingBuild libxml2Build libzDylibBuild mesaBuild
-              mesaDemosBuild migcomDarwinBuild mkPureDarwinBuild nanoBuild nativeLd ncursesBuild
+              mesaDemosBuild migcomDarwinBuild mkPureDarwinBuild clangCrossBuild cmakeBuild kcToolsGuestBuild mesonBuild nanoBuild nativeLd ncursesBuild ninjaBuild
               netsurfBuild objcTestBuild openglFrameworkBuild opensshBuild opensslBuild
               pangoBuild pcre2Build pdVirglShimBuild pkgconfBuild pkgs pythonBuild
               securityBuild splitBaseSystemArm64VirtMinimal splitBaseSystemArm64VirtMinimalRelease
               startupNotificationBuild system systemConfigurationBuild systemStarterBuild tccBuild
               toyboxArm64Build toyboxBuild userlandBuild vteBuild xcalcBuild xcbBuild xcbCursorBuild
               xcbImageBuild xcbKeysymsBuild xcbRenderUtilBuild xcbUtilBuild xcbWmBuild xcbXrmBuild
-              xclockBuild xeyesBuild xfce4AppfinderBuild xfce4PanelBuild xfce4SessionBuild
+              xclockBuild xeyesBuild thunarBuild xfce4AppfinderBuild xfce4PanelBuild xfce4SessionBuild
               xfce4SettingsBuild xfce4TerminalBuild xfconfBuild xfdesktopBuild xfwm4Build xinitBuild
               xkbcommonBuild xkbcompBuild xkeyboardConfigBuild xlibBuild xlibLocaleBuild xmessageBuild
-              xnu-loader xnuHeadersBuild xorgBuild xrdbBuild xrandrBuild xtermBuild xvfbBuild xvfbFontsBuild
+              xnu-loader xnuHeadersBuild xorgBuild xwaylandBuild xrdbBuild xrandrBuild xtermBuild xvfbBuild xvfbFontsBuild xvfbPixmanBuild
               xvfbLibICEBuild xvfbLibSMBuild xvfbLibXauBuild xvfbLibXcompositeBuild xvfbLibXcursorBuild
               xvfbLibXdamageBuild xvfbLibXdmcpBuild xvfbLibXextBuild xvfbLibXfixesBuild
               xvfbLibXineramaBuild xvfbLibXkbfileBuild xvfbLibXpresentBuild xvfbLibXrandrBuild
@@ -2658,6 +3068,7 @@
             coreservices = coreServicesBuild;
             wine-tools = wineToolsBuild;
             dlsym-test = dlsymTestBuild;
+            gsbase-test = gsbaseTestBuild;
             libX11-shared = libX11SharedBuild;
             libxcb-shared = libxcbSharedBuild;
             libXau-shared = libXauSharedBuild;
@@ -2675,6 +3086,18 @@
             vulkan-loader = vulkanLoaderBuild;
             vulkan-tools = vulkanToolsBuild;
             llvm-cross = llvmCrossBuild;
+            clang = clangCrossBuild;
+            kc-tools-guest = kcToolsGuestBuild;
+            libgpg-error = libgpgErrorBuild;
+            libgcrypt = libgcryptBuild;
+            libjpeg = libjpegBuild;
+            libwebp = libwebpBuild;
+            nghttp2 = nghttp2Build;
+            libpsl = libpslBuild;
+            libsoup = libsoupBuild;
+            webkitgtk = webkitgtkBuild;
+            libtasn1 = libtasn1Build;
+            sqlite = sqliteBuild;
             glib-networking = glibNetworkingBuild;
             freetype-shared = freetype2Build;
           };

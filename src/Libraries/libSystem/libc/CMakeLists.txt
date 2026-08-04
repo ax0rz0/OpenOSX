@@ -365,10 +365,14 @@ target_sources(libc_static PRIVATE
     secure/sprintf_chk.c         # ___sprintf_chk
     gen/FreeBSD/termios.c        # _tcgetattr
     gen/setlogin.c               # _setlogin
+    gen/crypt.c                  # _crypt/_setkey/_encrypt (real Apple Libc DES crypt, what passwd(1) and sshd both call)
+    gen/FreeBSD/readpassphrase.c # _readpassphrase/_getpass (passwd(1) prompts with it)
     string/FreeBSD/strnstr.c     # _strnstr
     os/pd_assumes.c               # os_assumes/os_assert real-contract impl (see file comment: real os/assumes.c needs firehose/os_log private ABI logd doesn't back here)
     emulated/lchflags.c           # _lchflags (real launchctl.c)
     emulated/flock.c              # _flock
+    emulated/lutimes.c            # _lutimes (setattrlist-based, real Apple source)
+    emulated/copyfile.c           # _copyfile/_fcopyfile + copyfile_state_* (see file comment for what is carried across)
     uuid/uuidsrc/gen_uuid.c      # uuid_generate/uuid_generate_random/uuid_generate_time (real Libinfo/launchd need the full uuid_* family)
     uuid/uuidsrc/clear.c         # uuid_clear
     uuid/uuidsrc/compare.c       # uuid_compare
@@ -525,6 +529,7 @@ set_source_files_properties(
     stdtime/FreeBSD/localtime.c stdtime/FreeBSD/strftime.c stdtime/FreeBSD/asctime.c
     stdio/FreeBSD/setbuf.c stdio/FreeBSD/setbuffer.c stdio/FreeBSD/setvbuf.c
     gen/FreeBSD/basename.c gen/FreeBSD/gethostname.c gen/FreeBSD/daemon.c
+    gen/FreeBSD/readpassphrase.c
     PROPERTIES COMPILE_FLAGS "-include${CMAKE_CURRENT_SOURCE_DIR}/fbsdcompat/_fbsd_compat_.h")
 # fnmatch.c needs the collate internals (__collate_*) gated behind __LIBC__ in
 # collate.h; no underscore-alias shim required.

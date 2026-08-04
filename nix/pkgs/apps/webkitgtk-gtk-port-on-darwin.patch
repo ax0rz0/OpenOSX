@@ -1,0 +1,55 @@
+--- a/Source/WTF/wtf/CMakeLists.txt
++++ b/Source/WTF/wtf/CMakeLists.txt
+@@ -700,7 +700,7 @@
+         win/SoftLinking.h
+         win/Win32Handle.h
+     )
+-elseif (APPLE)
++elseif (APPLE AND "${PORT}" STREQUAL "Mac")
+     list(APPEND WTF_SOURCES
+         darwin/OSLogPrintStream.mm
+     )
+--- a/Source/cmake/WebKitCommon.cmake
++++ b/Source/cmake/WebKitCommon.cmake
+@@ -141,7 +141,7 @@
+     # Determine the operating system
+     # -----------------------------------------------------------------------------
+     if (UNIX)
+-        if (APPLE)
++        if (APPLE AND "${PORT}" STREQUAL "Mac")
+             set(WTF_OS_MACOS 1)
+         elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+             set(WTF_OS_LINUX 1)
+--- a/Source/WebCore/CMakeLists.txt
++++ b/Source/WebCore/CMakeLists.txt
+@@ -3096,7 +3096,7 @@
+ 
+ WEBKIT_FRAMEWORK(WebCore)
+ 
+-if (APPLE)
++if ("${PORT}" STREQUAL "Mac")
+     set_target_properties(WebCore PROPERTIES LINK_FLAGS "-weak-lxslt -sub_library libobjc -umbrella WebKit -allowable_client WebCoreTestSupport -allowable_client WebKit2 -allowable_client WebKitLegacy")
+ endif ()
+ 
+--- a/Source/cmake/WebKitMacros.cmake
++++ b/Source/cmake/WebKitMacros.cmake
+@@ -266,7 +266,7 @@
+     endif ()
+     foreach (framework IN LISTS _public_frameworks)
+         # FIXME: https://bugs.webkit.org/show_bug.cgi?id=231774
+-        if (APPLE)
++        if ("${PORT}" STREQUAL "Mac")
+             list(APPEND ${_target_name}_PRIVATE_LIBRARIES WebKit::${framework})
+         else ()
+             list(APPEND ${_target_name}_LIBRARIES WebKit::${framework})
+--- a/Source/WebKit/CMakeLists.txt
++++ b/Source/WebKit/CMakeLists.txt
+@@ -1130,7 +1130,7 @@
+     endif ()
+ endif ()
+ 
+-if (APPLE)
++if ("${PORT}" STREQUAL "Mac")
+     WEBKIT_ADD_TARGET_CXX_FLAGS(WebKit -fobjc-weak)
+ endif ()
+ 

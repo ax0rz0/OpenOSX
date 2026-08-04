@@ -7,11 +7,11 @@
  *   GET_DISPLAY_INFO -> RESOURCE_CREATE_2D -> RESOURCE_ATTACH_BACKING ->
  *   SET_SCANOUT, then TRANSFER_TO_HOST_2D + RESOURCE_FLUSH on a timer.
  * Register/protocol layout from the public VIRTIO 1.1 spec (PCI
- * transport, section 4.1; virtio-gpu device, section 5.7) - no Apple
- * source exists for this device class.
+ * transport, section 4.1; virtio-gpu device, section 5.7)
  */
 
 #include "IOVirtIOGPU.h"
+#include "IOVirtIOGPUSurfaceClient.h"
 #include "IOVirtIOGPU3DShared.h"
 #include "IOVirtIOGPUUserClient.h"
 #include <IOKit/IOLib.h>
@@ -30,7 +30,7 @@ OSDefineMetaClassAndStructors(IOVirtIOGPU, IOFramebuffer);
 #define kDepth         0
 #define kDefaultWidth  1024
 #define kDefaultHeight 768
-#define kFlushIntervalMs 33   // ~30 Hz
+#define kFlushIntervalMs 16   // fallback cadence; native presents wake it immediately
 
 static bool gVGPUDebug;
 static bool gVGPUDebugChecked;
@@ -72,6 +72,11 @@ enum {
     VIRTIO_GPU_CMD_SUBMIT_3D             = 0x0207,
     VIRTIO_GPU_CMD_GET_CAPSET_INFO       = 0x0108,
     VIRTIO_GPU_CMD_GET_CAPSET            = 0x0109,
+
+    // Cursor queue (queue 1). The device consumes these without writing a
+    // response, unlike everything on the control queue.
+    VIRTIO_GPU_CMD_UPDATE_CURSOR         = 0x0300,
+    VIRTIO_GPU_CMD_MOVE_CURSOR           = 0x0301,
 
     VIRTIO_GPU_RESP_OK_NODATA        = 0x1100,
     VIRTIO_GPU_RESP_OK_DISPLAY_INFO  = 0x1101,
@@ -117,6 +122,15 @@ struct VGpuRespDisplayInfo {
 struct VGpuResourceCreate2D {
     VGpuCtrlHdr hdr;
     uint32_t resource_id, format, width, height;
+};
+
+struct VGpuCursorPos { uint32_t scanout_id, x, y, padding; };
+struct VGpuUpdateCursor {
+    VGpuCtrlHdr hdr;
+    VGpuCursorPos pos;
+    uint32_t resource_id;
+    uint32_t hot_x, hot_y;
+    uint32_t padding;
 };
 
 struct VGpuMemEntry { uint64_t addr; uint32_t length; uint32_t padding; };
@@ -345,10 +359,216 @@ IOVirtIOGPU::gpuSetScanout(uint32_t scanoutId, uint32_t resourceId, uint32_t wid
 }
 
 bool
-IOVirtIOGPU::gpuTransferToHost2D(uint32_t resourceId, uint32_t width, uint32_t height)
+IOVirtIOGPU::gpuFlushSurface(uint32_t resourceId, uint32_t x, uint32_t y,
+                             uint32_t width, uint32_t height)
+{
+    return gpuTransferToHost2D(resourceId, x, y, width, height) &&
+           gpuResourceFlush(resourceId, x, y, width, height);
+}
+
+bool
+IOVirtIOGPU::gpuCreateSurfaceResource(uint32_t width, uint32_t height,
+                                      uint32_t *outResourceId,
+                                      uint32_t *outStride,
+                                      IOBufferMemoryDescriptor **outBacking)
+{
+    if (!width || !height || !outResourceId || !outStride || !outBacking)
+        return false;
+
+    uint32_t stride = width * 4;
+    size_t bytes = (size_t)stride * height;
+    IOBufferMemoryDescriptor *backing =
+        IOBufferMemoryDescriptor::inTaskWithPhysicalMask(
+            kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous,
+            bytes, 0xFFFFFFFFULL);
+    if (!backing)
+        return false;
+    bzero(backing->getBytesNoCopy(), bytes);
+
+    uint32_t resourceId = allocResourceId();
+    if (!gpuCreateResource2D(resourceId, width, height) ||
+        !gpuAttachBacking(resourceId, backing->getPhysicalAddress(),
+                          (uint32_t)bytes)) {
+        backing->release();
+        return false;
+    }
+
+    *outResourceId = resourceId;
+    *outStride = stride;
+    *outBacking = backing;
+    return true;
+}
+
+// Point the scanout at a resource other than the driver's own 2D framebuffer,
+// so a client that renders on the host GPU can be displayed without its pixels
+// ever travelling back through guest memory. Passing resource 0 restores the
+// framebuffer, which is also what happens if the client goes away.
+bool
+IOVirtIOGPU::gpuSetScanoutResource(uint32_t resourceId, uint32_t width,
+                                   uint32_t height)
+{
+    if (resourceId == 0) {
+        resourceId = fResourceId;
+        width = fWidth;
+        height = fHeight;
+    }
+    if (width == 0 || height == 0 || width > fWidth || height > fHeight)
+        return false;
+
+    if (!gpuSetScanout(0, resourceId, width, height))
+        return false;
+
+    fScanoutResourceId = resourceId;
+    // Whatever the resource already holds on the host is what appears; a
+    // guest-backed surface has to be pushed with gpuFlushSurface() first.
+    return gpuResourceFlush(resourceId, 0, 0, width, height);
+}
+
+bool
+IOVirtIOGPU::gpuTransferToHost2D(uint32_t resourceId, uint32_t x, uint32_t y,
+                                 uint32_t width, uint32_t height)
 {
     VGpuTransferToHost2D req; bzero(&req, sizeof(req));
     req.hdr.type = VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D;
+    req.r.x = x;
+    req.r.y = y;
+    req.r.width = width;
+    req.r.height = height;
+    req.resource_id = resourceId;
+
+    VGpuCtrlHdr resp; bzero(&resp, sizeof(resp));
+    return sendCommand(&req, sizeof(req), &resp, sizeof(resp)) &&
+           resp.type == VIRTIO_GPU_RESP_OK_NODATA;
+}
+
+// One physically contiguous allocation holds both the cursor command scratch
+// and the 64x64 image, so the image pages can stay attached to the resource for
+// the life of the driver.
+bool
+IOVirtIOGPU::gpuSetupCursorResource()
+{
+    if (!fCursorQOK)
+        return false;
+
+    size_t imageBytes = (size_t)kCursorEdge * kCursorEdge * 4;
+    fCursorMem = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(
+        kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous,
+        kCursorCmdBytes + imageBytes, 0xFFFFFFFFULL);
+    if (!fCursorMem) {
+        DEBUG("failed to allocate cursor buffer\n");
+        return false;
+    }
+
+    fCursorVirt = fCursorMem->getBytesNoCopy();
+    fCursorCmdPhys = fCursorMem->getPhysicalAddress();
+    bzero(fCursorVirt, kCursorCmdBytes + imageBytes);
+    fCursorImageBase = (uint8_t *)fCursorVirt + kCursorCmdBytes;
+    fCursorImagePhys = fCursorCmdPhys + kCursorCmdBytes;
+
+    fCursorLock = IOLockAlloc();
+    if (!fCursorLock) {
+        DEBUG("failed to allocate cursor lock\n");
+        return false;
+    }
+
+    fCursorResourceId = allocResourceId();
+    if (!gpuCreateResource2D(fCursorResourceId, kCursorEdge, kCursorEdge) ||
+        !gpuAttachBacking(fCursorResourceId, fCursorImagePhys,
+                          (uint32_t)imageBytes)) {
+        DEBUG("failed to create cursor resource\n");
+        return false;
+    }
+
+    DEBUG("hardware cursor ready (resource %u)\n", fCursorResourceId);
+    return true;
+}
+
+// Cursor-queue commands carry no response: the device consumes the buffer and
+// returns it with zero written length, so there is nothing to read back.
+bool
+IOVirtIOGPU::sendCursorCommand(const void *cmd, size_t cmdLen)
+{
+    if (!fCursorQOK || !fCursorVirt || cmdLen > kCursorCmdBytes)
+        return false;
+
+    IOLockLock(fCursorLock);
+    memcpy(fCursorVirt, cmd, cmdLen);
+    VirtIOChainEntry chain[1] = { { fCursorCmdPhys, (uint32_t)cmdLen, false } };
+    fTransport.addDescChain(&fCursorQ, chain, 1);
+    fTransport.notify(&fCursorQ);
+    bool ok = fTransport.pollForCompletion(&fCursorQ, 100);
+    IOLockUnlock(fCursorLock);
+    return ok;
+}
+
+bool
+IOVirtIOGPU::gpuSetCursorImage(const void *argb, uint32_t width, uint32_t height,
+                               uint32_t hotX, uint32_t hotY)
+{
+    if (!fCursorQOK || !fCursorImageBase)
+        return false;
+
+    // virtio-gpu cursors are a fixed 64x64; anything smaller is placed in the
+    // top-left corner and the remainder left transparent.
+    if (width > kCursorEdge || height > kCursorEdge)
+        return false;
+
+    bzero(fCursorImageBase, kCursorEdge * kCursorEdge * 4);
+    if (argb != NULL) {
+        for (uint32_t row = 0; row < height; row++) {
+            memcpy((uint8_t *)fCursorImageBase + row * kCursorEdge * 4,
+                   (const uint8_t *)argb + (size_t)row * width * 4,
+                   (size_t)width * 4);
+        }
+    }
+
+    if (!gpuTransferToHost2D(fCursorResourceId, 0, 0, kCursorEdge, kCursorEdge))
+        return false;
+
+    VGpuUpdateCursor req; bzero(&req, sizeof(req));
+    req.hdr.type = VIRTIO_GPU_CMD_UPDATE_CURSOR;
+    req.pos.scanout_id = 0;
+    req.pos.x = fCursorX;
+    req.pos.y = fCursorY;
+    // A null image hides the cursor, which virtio-gpu spells as resource 0.
+    req.resource_id = (argb != NULL) ? fCursorResourceId : 0;
+    req.hot_x = hotX;
+    req.hot_y = hotY;
+    fCursorHotX = hotX;
+    fCursorHotY = hotY;
+    return sendCursorCommand(&req, sizeof(req));
+}
+
+bool
+IOVirtIOGPU::gpuMoveCursor(uint32_t x, uint32_t y)
+{
+    if (!fCursorQOK)
+        return false;
+
+    fCursorX = x;
+    fCursorY = y;
+
+    VGpuUpdateCursor req; bzero(&req, sizeof(req));
+    req.hdr.type = VIRTIO_GPU_CMD_MOVE_CURSOR;
+    req.pos.scanout_id = 0;
+    req.pos.x = x;
+    req.pos.y = y;
+    // MOVE_CURSOR ignores the resource and hotspot fields, but the host keeps
+    // whatever UPDATE_CURSOR last set.
+    req.resource_id = fCursorResourceId;
+    req.hot_x = fCursorHotX;
+    req.hot_y = fCursorHotY;
+    return sendCursorCommand(&req, sizeof(req));
+}
+
+bool
+IOVirtIOGPU::gpuResourceFlush(uint32_t resourceId, uint32_t x, uint32_t y,
+                              uint32_t width, uint32_t height)
+{
+    VGpuResourceFlush req; bzero(&req, sizeof(req));
+    req.hdr.type = VIRTIO_GPU_CMD_RESOURCE_FLUSH;
+    req.r.x = x;
+    req.r.y = y;
     req.r.width = width;
     req.r.height = height;
     req.resource_id = resourceId;
@@ -359,17 +579,37 @@ IOVirtIOGPU::gpuTransferToHost2D(uint32_t resourceId, uint32_t width, uint32_t h
 }
 
 bool
-IOVirtIOGPU::gpuResourceFlush(uint32_t resourceId, uint32_t width, uint32_t height)
+IOVirtIOGPU::gpuPresent(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
 {
-    VGpuResourceFlush req; bzero(&req, sizeof(req));
-    req.hdr.type = VIRTIO_GPU_CMD_RESOURCE_FLUSH;
-    req.r.width = width;
-    req.r.height = height;
-    req.resource_id = resourceId;
+    if (!fFbBase || x >= fWidth || y >= fHeight)
+        return false;
+    if (width > fWidth - x)
+        width = fWidth - x;
+    if (height > fHeight - y)
+        height = fHeight - y;
+    if (!width || !height)
+        return true;
 
-    VGpuCtrlHdr resp; bzero(&resp, sizeof(resp));
-    return sendCommand(&req, sizeof(req), &resp, sizeof(resp)) &&
-           resp.type == VIRTIO_GPU_RESP_OK_NODATA;
+    /* Queue the region for the periodic control-queue worker.  The old path
+     * synchronously waited for two VirtIO responses on every mouse motion,
+     * which made XWayland clients block input while native Wayland appeared
+     * responsive. */
+    IOLockLock(fCtrlLock);
+    fNativePresent = true;
+    if (!fPresentPending) {
+        fPresentX1 = x;
+        fPresentY1 = y;
+        fPresentX2 = x + width;
+        fPresentY2 = y + height;
+        fPresentPending = true;
+    } else {
+        if (x < fPresentX1) fPresentX1 = x;
+        if (y < fPresentY1) fPresentY1 = y;
+        if (x + width > fPresentX2) fPresentX2 = x + width;
+        if (y + height > fPresentY2) fPresentY2 = y + height;
+    }
+    IOLockUnlock(fCtrlLock);
+    return true;
 }
 
 bool
@@ -652,9 +892,24 @@ IOVirtIOGPU::flushCallback(thread_call_param_t self, thread_call_param_t)
 void
 IOVirtIOGPU::scheduleFlush()
 {
-    if (fFbBase) {
-        gpuTransferToHost2D(fResourceId, fWidth, fHeight);
-        gpuResourceFlush(fResourceId, fWidth, fHeight);
+    IOLockLock(fCtrlLock);
+    bool nativePresent = fNativePresent;
+    bool pending = fPresentPending;
+    uint32_t x1 = fPresentX1, y1 = fPresentY1;
+    uint32_t x2 = fPresentX2, y2 = fPresentY2;
+    fPresentPending = false;
+    IOLockUnlock(fCtrlLock);
+
+    // Only the driver's own framebuffer needs its pixels pushed to the host;
+    // a client resource the scanout has been pointed at already lives there.
+    if (fScanoutResourceId != fResourceId) {
+        gpuResourceFlush(fScanoutResourceId, 0, 0, fWidth, fHeight);
+    } else if (fFbBase && pending) {
+        gpuTransferToHost2D(fResourceId, x1, y1, x2 - x1, y2 - y1);
+        gpuResourceFlush(fResourceId, x1, y1, x2 - x1, y2 - y1);
+    } else if (fFbBase && !nativePresent) {
+        gpuTransferToHost2D(fResourceId, 0, 0, fWidth, fHeight);
+        gpuResourceFlush(fResourceId, 0, 0, fWidth, fHeight);
     }
 
     AbsoluteTime deadline;
@@ -714,6 +969,12 @@ IOVirtIOGPU::start(IOService *provider)
         return false;
     }
 
+    // The cursor queue is optional: without it the compositor keeps drawing
+    // the pointer into the framebuffer itself, which still works.
+    fCursorQOK = fTransport.initQueue(&fCursorQ, /*queue 1 = cursorq*/ 1, 16);
+    if (!fCursorQOK)
+        DEBUG("no cursor virtqueue; falling back to a software cursor\n");
+
     fCmdMem = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(
         kernel_task, kIODirectionInOut | kIOMemoryPhysicallyContiguous,
         4096, 0xFFFFFFFFULL);
@@ -732,6 +993,7 @@ IOVirtIOGPU::start(IOService *provider)
     gpuGetDisplayInfo(&fWidth, &fHeight); // best-effort; keep defaults on failure
     fPitch = fWidth * 4;
     fResourceId = 1;
+    fScanoutResourceId = fResourceId;
 
     size_t fbSize = (size_t)fPitch * fHeight;
     fFbMem = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(
@@ -751,11 +1013,14 @@ IOVirtIOGPU::start(IOService *provider)
         DEBUG("failed to set up 2D scanout resource\n");
         return false;
     }
-    gpuTransferToHost2D(fResourceId, fWidth, fHeight);
-    gpuResourceFlush(fResourceId, fWidth, fHeight);
+    gpuTransferToHost2D(fResourceId, 0, 0, fWidth, fHeight);
+    gpuResourceFlush(fResourceId, 0, 0, fWidth, fHeight);
 
     DEBUG("virtio-gpu scanout ready: %ux%u pitch=%u fb=%p (phys 0x%llx)\n",
           fWidth, fHeight, fPitch, fFbBase, fFbPhys);
+
+    if (fCursorQOK && !gpuSetupCursorResource())
+        fCursorQOK = false; // compositor keeps its software cursor
 
     if (drvFeat & VIRTIO_GPU_F_VIRGL) {
         gpuProbeVirgl();
@@ -814,6 +1079,11 @@ IOVirtIOGPU::stop(IOService *provider)
     }
     if (fFbMem) { fFbMem->release(); fFbMem = NULL; }
     if (fCmdMem) { fCmdMem->release(); fCmdMem = NULL; }
+    if (fCursorMem) { fCursorMem->release(); fCursorMem = NULL; }
+    fCursorVirt = NULL;
+    fCursorImageBase = NULL;
+    if (fCursorQOK)
+        fTransport.freeQueue(&fCursorQ);
     fTransport.freeQueue(&fControlQ);
     fTransport.detach();
     if (fPCIDevice) {
@@ -822,6 +1092,7 @@ IOVirtIOGPU::stop(IOService *provider)
         fPCIDevice = NULL;
     }
     if (fCtrlLock) { IOLockFree(fCtrlLock); fCtrlLock = NULL; }
+    if (fCursorLock) { IOLockFree(fCursorLock); fCursorLock = NULL; }
 
     super::stop(provider);
 }
@@ -830,6 +1101,22 @@ IOReturn
 IOVirtIOGPU::newUserClient(task_t owningTask, void *securityID, UInt32 type,
                            IOUserClient **handler)
 {
+    // The PDSurface protocol does not depend on virgl, so it is offered
+    // whether or not 3D came up.
+    if (type == kPDSurfaceConnectType) {
+        IOVirtIOGPUSurfaceClient *sc =
+            IOVirtIOGPUSurfaceClient::withOwner(this, owningTask);
+        if (!sc)
+            return kIOReturnNoMemory;
+        if (!sc->attach(this) || !sc->start(this)) {
+            sc->detach(this);
+            sc->release();
+            return kIOReturnError;
+        }
+        *handler = sc;
+        return kIOReturnSuccess;
+    }
+
     // Only intercept our 3D connect type; every other type belongs to
     // IOFramebuffer's own user-client machinery (the 2D scanout path).
     if (type != kIOVirtIOGPU3DConnectType)

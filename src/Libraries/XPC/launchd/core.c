@@ -4301,6 +4301,18 @@ jobmgr_callback(void *obj, struct kevent *kev)
 		switch (kev->ident) {
 		case SIGTERM:			
 			jobmgr_log(jm, LOG_DEBUG, "Got SIGTERM. Shutting down.");
+			/* halt(8)/poweroff(8)/shutdown(8) send this. reboot_flags is 0
+			 * (RB_AUTOBOOT) by default, which would restart the machine
+			 * instead - real Darwin never hits that because its shutdown(8)
+			 * goes through the reboot2() MIG call, which sets the flags. */
+			root_jobmgr->reboot_flags = RB_HALT;
+			return launchd_shutdown();
+		case SIGINT:
+			/* reboot(8). NOT SIGUSR1: launchd has used that for the calendar
+			 * interval timer since forever (below), so a reboot request sent
+			 * there silently fires cron-style jobs and returns. */
+			jobmgr_log(jm, LOG_DEBUG, "Got SIGINT. Rebooting.");
+			root_jobmgr->reboot_flags = RB_AUTOBOOT;
 			return launchd_shutdown();
 		case SIGUSR1:
 			return calendarinterval_callback();
@@ -7004,6 +7016,7 @@ jobmgr_new(jobmgr_t jm, mach_port_t requestorport, mach_port_t transfer_port, bo
 
 	if (!jm) {
 		(void)jobmgr_assumes_zero_p(jmr, kevent_mod(SIGTERM, EVFILT_SIGNAL, EV_ADD, 0, 0, jmr));
+		(void)jobmgr_assumes_zero_p(jmr, kevent_mod(SIGINT, EVFILT_SIGNAL, EV_ADD, 0, 0, jmr));
 		(void)jobmgr_assumes_zero_p(jmr, kevent_mod(SIGUSR1, EVFILT_SIGNAL, EV_ADD, 0, 0, jmr));
 		(void)jobmgr_assumes_zero_p(jmr, kevent_mod(SIGUSR2, EVFILT_SIGNAL, EV_ADD, 0, 0, jmr));
 		(void)jobmgr_assumes_zero_p(jmr, kevent_mod(SIGINFO, EVFILT_SIGNAL, EV_ADD, 0, 0, jmr));

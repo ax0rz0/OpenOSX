@@ -101,6 +101,11 @@ let
     "tools/mig"
     # libobjc needs the mach-o getsection helpers compiled into libSystem.
     "tools/cctools/libmacho/getsecbyname.c"
+    # NXGetArchInfo* is part of libSystem on Darwin, same libmacho source.
+    "tools/cctools/libmacho/arch.c"
+    "tools/cctools/include/mach-o/arch.h"
+    "tools/cctools/include/stuff/openstep_mach.h"
+    "tools/cctools/include/mach/machine.h"
   ];
   cctoolsSource = sourceWith "puredarwin-cctools-source" [
     "src/Kernel/xnu/osfmk"
@@ -236,6 +241,10 @@ let
     url = "https://archive.xfce.org/src/xfce/xfce4-settings/4.20/xfce4-settings-4.20.5.tar.bz2";
     sha256 = "sha256-pfvg5RHM4p1gMyCt5XWtQAG9Vw5g83dgIzI3ukeK/+g=";
   };
+  thunarSrc = pkgs.fetchurl {
+    url = "https://archive.xfce.org/src/xfce/thunar/4.20/thunar-4.20.9.tar.bz2";
+    sha256 = "sha256-6wmGnOk7Eu0oVniWf1XyQ8gz8rry+xDJhErHZI2ScMs=";
+  };
   xfce4AppfinderSrc = pkgs.fetchurl {
     url = "https://archive.xfce.org/src/xfce/xfce4-appfinder/4.20/xfce4-appfinder-4.20.0.tar.bz2";
     sha256 = "sha256-gsqC933IPihdtFQ4wv4x30RRSKqYb/6/L6q+5K+ecwQ=";
@@ -271,5 +280,6 @@ in {
     xfce4TerminalSrc
     xfce4SettingsSrc
     xfce4AppfinderSrc
+    thunarSrc
     ;
 }

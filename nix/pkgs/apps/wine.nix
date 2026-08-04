@@ -31,6 +31,11 @@
 , expat
 , gnutls
 , mesa
+, wayland
+, waylandProtocols
+, waylandScanner
+, xkbcommon
+, libxml2
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
 
@@ -39,6 +44,7 @@ let
     xorgproto libX11 libxcb libXau libXdmcp libXext
     libXrender libXfixes libXi libXcursor libXrandr
   ];
+  waylandDeps = [ wayland waylandProtocols xkbcommon ];
   sdkTarball = requireFile {
     name = "MacOSX11.3.sdk.tar.xz";
     sha256 = "9adc1373d3879e1973d28ad9f17c9051b02931674a3ec2a2498128989ece2cb1";
@@ -73,8 +79,8 @@ stdenv.mkDerivation {
 
   # mingwGcc builds Wine's PE-format modules. Like winebuild it runs on the
   # build host and emits Windows binaries, so it never touches PureDarwin.
-  nativeBuildInputs = [ pkg-config gnumake flex bison mingwGcc mingwGcc32 python3 ];
-  buildInputs = xDeps ++ [ freetype fontconfig ];
+  nativeBuildInputs = [ pkg-config gnumake flex bison mingwGcc mingwGcc32 python3 waylandScanner ];
+  buildInputs = xDeps ++ waylandDeps ++ [ freetype fontconfig ];
 
   configurePhase = ''
     runHook preConfigure
@@ -82,20 +88,28 @@ stdenv.mkDerivation {
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
-    export PATH="${darwinCrossToolchain}/bin:$PATH"
+    export PATH="${darwinCrossToolchain}/bin:${waylandScanner}/bin:$PATH"
     # expat is here only because fontconfig.pc lists it in Requires.private:
     # PKG_CONFIG_LIBDIR pins the search path, so a missing transitive .pc makes
     # the whole fontconfig query fail and configure decides fontconfig is absent.
-    export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" (map lib.getDev (xDeps ++ [ freetype fontconfig expat gnutls ]))}"
+    export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" (map lib.getDev (xDeps ++ waylandDeps ++ [ freetype fontconfig expat gnutls ]))}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
     export CC="${darwinCrossToolchain}/bin/${targetTriple}-clang"
     export CXX="${darwinCrossToolchain}/bin/${targetTriple}-clang++"
     export AR="${darwinCrossToolchain}/bin/${targetTriple}-ar"
     export RANLIB="${darwinCrossToolchain}/bin/${targetTriple}-ranlib"
     export STRIP="${darwinCrossToolchain}/bin/${targetTriple}-strip"
-    export CPPFLAGS="-I${mesa}/usr/include -I${libSystem}/usr/include ${lib.concatMapStringsSep " " (dep: "-I${lib.getDev dep}/include") xDeps}"
+    export CPPFLAGS="-I${mesa}/usr/include -I${libSystem}/usr/include -I${../wayland/pd-compat-include} ${lib.concatMapStringsSep " " (dep: "-I${lib.getDev dep}/include") (xDeps ++ waylandDeps)}"
     export CFLAGS="-isysroot $DARWIN_SDK_ROOT -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector"
-    export LDFLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -L${mesa}/usr/lib ${lib.concatMapStringsSep " " (dep: "-L${dep}/lib") xDeps} -Wl,-platform_version,macos,11.0,11.5 -lSystem"
+    export LDFLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -L${mesa}/usr/lib ${lib.concatMapStringsSep " " (dep: "-L${dep}/lib") (xDeps ++ waylandDeps)} -Wl,-platform_version,macos,11.0,11.5 -lSystem"
+
+    # xkbcommon is built static, so pkg-config's plain --libs omits the
+    # transitive libxml2 that libxkbregistry needs and configure's link probe
+    # fails. These AC_ARG_VARs override the pkg-config query outright.
+    export XKBCOMMON_CFLAGS="-I${lib.getDev xkbcommon}/include"
+    export XKBCOMMON_LIBS="-L${xkbcommon}/lib -lxkbcommon"
+    export XKBREGISTRY_CFLAGS="-I${lib.getDev xkbcommon}/include"
+    export XKBREGISTRY_LIBS="-L${xkbcommon}/lib -lxkbregistry ${libxml2}/lib/libxml2.a"
 
     # dlls/win32u/Makefile.in has an unconditional
     # UNIX_LIBS = $(CORETEXT_LIBS) $(APPKIT_LIBS)
@@ -139,7 +153,7 @@ stdenv.mkDerivation {
       --without-usb \
       --without-v4l2 \
       --without-vulkan \
-      --without-wayland \
+      --with-wayland \
       2>&1 | tee configure-output.log
     configureStatus=''${PIPESTATUS[0]}
     set -e
@@ -171,6 +185,18 @@ stdenv.mkDerivation {
     if [ ! -e "$out/usr/bin/wine" ] && [ -e "$out/usr/lib/wine/x86_64-unix/wine" ]; then
       ln -s ../lib/wine/x86_64-unix/wine "$out/usr/bin/wine"
     fi
+
+    # Everything else Wine needs from the host it dlopens by soname, so the only
+    # @rpath references are its own sibling modules, which @loader_path finds.
+    # winewayland.drv is the exception: it links libwayland directly, and
+    # @loader_path points at lib/wine/<arch>-unix where no libwayland lives.
+    for so in "$out"/usr/lib/wine/*-unix/winewayland.so; do
+      [ -e "$so" ] || continue
+      for base in libwayland-client.0.dylib libwayland-egl.1.dylib; do
+        ${darwinCrossToolchain}/bin/${targetTriple}-install_name_tool \
+          -change "@rpath/$base" "/lib/$base" "$so" 2>/dev/null || true
+      done
+    done
 
     # The PE modules carry mingw DWARF debug info - mshtml.dll alone is 30MB of
     # it, ~765MB across the tree.

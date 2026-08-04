@@ -22,6 +22,8 @@ private:
     IOPCIDevice      *fPCIDevice;
     IOVirtIOTransport fTransport;
     VirtQueue         fControlQ;
+    VirtQueue         fCursorQ;
+    bool              fCursorQOK;
 
     // Command/response scratch buffer (physically contiguous, one at a
     // time - polling model, no concurrent commands).
@@ -38,6 +40,10 @@ private:
     uint32_t     fHeight;
     uint32_t     fPitch;
     uint32_t     fResourceId;
+    uint32_t     fScanoutResourceId;
+    bool         fNativePresent;
+    bool         fPresentPending;
+    uint32_t     fPresentX1, fPresentY1, fPresentX2, fPresentY2;
 
     // virgl/3D state. fVirglOK is set when the device offered
     // VIRTIO_GPU_F_VIRGL, we acked it, and a usable capset was read.
@@ -55,13 +61,31 @@ private:
 
     thread_call_t fFlushCall;
 
+    // Hardware cursor. The image is a fixed 64x64 BGRA resource whose backing
+    // pages stay attached for the life of the driver; only its contents and
+    // position change.
+    static const uint32_t kCursorEdge = 64;
+    static const size_t   kCursorCmdBytes = 256;
+    IOBufferMemoryDescriptor *fCursorMem;
+    void        *fCursorVirt;       // command scratch
+    uint64_t     fCursorCmdPhys;
+    void        *fCursorImageBase;  // 64x64 BGRA pixels
+    uint64_t     fCursorImagePhys;
+    uint32_t     fCursorResourceId;
+    uint32_t     fCursorX, fCursorY;
+    uint32_t     fCursorHotX, fCursorHotY;
+    IOLock      *fCursorLock;
+
     bool     sendCommand(const void *cmd, size_t cmdLen, void *resp, size_t respLen);
+    bool     sendCursorCommand(const void *cmd, size_t cmdLen);
 
     bool     gpuGetDisplayInfo(uint32_t *outWidth, uint32_t *outHeight);
     bool     gpuCreateResource2D(uint32_t resourceId, uint32_t width, uint32_t height);
     bool     gpuSetScanout(uint32_t scanoutId, uint32_t resourceId, uint32_t width, uint32_t height);
-    bool     gpuTransferToHost2D(uint32_t resourceId, uint32_t width, uint32_t height);
-    bool     gpuResourceFlush(uint32_t resourceId, uint32_t width, uint32_t height);
+    bool     gpuTransferToHost2D(uint32_t resourceId, uint32_t x, uint32_t y,
+                                 uint32_t width, uint32_t height);
+    bool     gpuResourceFlush(uint32_t resourceId, uint32_t x, uint32_t y,
+                              uint32_t width, uint32_t height);
 
     // Probe VIRGL capsets (GET_CAPSET_INFO/GET_CAPSET): exercises the 3D
     // control path end-to-end without rendering. Sets fVirgl* on success.
@@ -69,10 +93,13 @@ private:
     bool     gpuGetCapset(uint32_t capsetId, uint32_t version, void *out, uint32_t size);
     void     gpuProbeVirgl();
 
+    bool     gpuSetupCursorResource();
+
     void     scheduleFlush();
     static void flushCallback(thread_call_param_t self, thread_call_param_t);
 
 public:
+    bool     gpuPresent(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
     bool     gpuAttachBacking(uint32_t resourceId, uint64_t phys, uint32_t size);
     bool     gpuResourceUnref(uint32_t resId);
     bool     gpu3DCreateContext(uint32_t ctxId, const char *name);
@@ -88,6 +115,25 @@ public:
     bool     gpu3DTransferToHost(uint32_t ctxId, uint32_t resId, uint32_t width,
                                  uint32_t height, uint32_t stride, uint64_t fenceId);
     bool     gpu3DSubmit(uint32_t ctxId, uint64_t cmdPhys, uint32_t cmdLen, uint64_t fenceId);
+
+    bool     gpuSetScanoutResource(uint32_t resourceId, uint32_t width,
+                                   uint32_t height);
+
+    // Push CPU writes in a guest-backed surface to the host and repaint it.
+    bool     gpuFlushSurface(uint32_t resourceId, uint32_t x, uint32_t y,
+                             uint32_t width, uint32_t height);
+
+    // Allocate a linear guest-backed 2D resource for the PDSurface protocol.
+    // The caller owns the returned backing and maps it to userland.
+    bool     gpuCreateSurfaceResource(uint32_t width, uint32_t height,
+                                      uint32_t *outResourceId,
+                                      uint32_t *outStride,
+                                      IOBufferMemoryDescriptor **outBacking);
+
+    bool     gpuSetCursorImage(const void *argb, uint32_t width, uint32_t height,
+                              uint32_t hotX, uint32_t hotY);
+    bool     gpuMoveCursor(uint32_t x, uint32_t y);
+    bool     cursorAvailable() const { return fCursorQOK; }
 
     bool     virglAvailable() const { return fVirglOK; }
     const uint8_t *virglCaps(uint32_t *outLen) const { if (outLen) *outLen = fVirglCapsLen; return fVirglCaps; }

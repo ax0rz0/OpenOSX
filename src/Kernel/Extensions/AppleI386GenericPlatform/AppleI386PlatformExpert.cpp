@@ -141,6 +141,181 @@ void AppleI386PlatformExpert::publishPlatformUUIDFromDeviceTree(void) {
 	string->release();
 }
 
+UInt16 AppleI386PlatformExpert::sPM1aControlPort = 0;
+UInt16 AppleI386PlatformExpert::sPM1bControlPort = 0;
+UInt8  AppleI386PlatformExpert::sS5SleepTypeA = 0;
+UInt8  AppleI386PlatformExpert::sS5SleepTypeB = 0;
+bool   AppleI386PlatformExpert::sACPIPowerOffReady = false;
+
+/* Map a physical range long enough to read a table out of it. ACPI tables sit
+ * in EFI reclaim memory, which is normal RAM by the time we run. */
+static void *pd_acpi_map(UInt64 phys, UInt32 length, IOMemoryMap **mapOut) {
+	IOMemoryDescriptor *md = IOMemoryDescriptor::withPhysicalAddress(
+	    (IOPhysicalAddress)phys, length, kIODirectionIn);
+	if (md == 0) return 0;
+	IOMemoryMap *map = md->map();
+	md->release();
+	if (map == 0) return 0;
+	*mapOut = map;
+	return (void *)map->getVirtualAddress();
+}
+
+static bool pd_acpi_parse_s5(const UInt8 *dsdt, UInt32 length,
+                             UInt8 *typA, UInt8 *typB) {
+	if (dsdt == 0 || length < 8) return false;
+	for (UInt32 i = 0; i + 8 < length; i++) {
+		if (dsdt[i] != '_' || dsdt[i + 1] != 'S' ||
+		    dsdt[i + 2] != '5' || dsdt[i + 3] != '_') continue;
+
+		const UInt8 *p = dsdt + i + 4;
+		if (*p != 0x12) continue;          // PackageOp
+		p++;
+		p += ((*p & 0xC0) >> 6) + 1;       // skip PkgLength
+		if (p >= dsdt + length) return false;
+		if (*p < 2) return false;          // need at least two elements
+		p++;
+
+		/* Each element is either a byte-prefixed integer (0x0A <val>) or a
+		 * bare Zero/One/Ones constant. */
+		if (*p == 0x0A) p++;
+		if (p >= dsdt + length) return false;
+		*typA = *p++;
+		if (*p == 0x0A) p++;
+		if (p >= dsdt + length) return false;
+		*typB = *p;
+		return true;
+	}
+	return false;
+}
+
+void AppleI386PlatformExpert::cacheACPIPowerOffFromDeviceTree(void) {
+	IORegistryEntry *cfg =
+	    IORegistryEntry::fromPath("/efi/configuration-table", gIODTPlane);
+	if (cfg == 0) {
+		IOLog("AppleI386PlatformExpert: no /efi/configuration-table, "
+		      "ACPI power off unavailable\n");
+		return;
+	}
+
+	/* Prefer the ACPI 2.0 entry: its RSDP carries the 64-bit XSDT. */
+	UInt64 rsdpPhys = 0;
+	bool haveV2 = false;
+	OSIterator *children = cfg->getChildIterator(gIODTPlane);
+	if (children != 0) {
+		while (OSObject *next = children->getNextObject()) {
+			IORegistryEntry *child = OSDynamicCast(IORegistryEntry, next);
+			if (child == 0) continue;
+			OSData *alias = OSDynamicCast(OSData, child->getProperty("alias"));
+			OSData *table = OSDynamicCast(OSData, child->getProperty("table"));
+			if (alias == 0 || table == 0 || table->getLength() < 8) continue;
+			const char *a = (const char *)alias->getBytesNoCopy();
+			bool isV2 = (strncmp(a, "ACPI_20", 7) == 0);
+			if (!isV2 && strncmp(a, "ACPI", 4) != 0) continue;
+			if (haveV2 && !isV2) continue;
+			rsdpPhys = *(const UInt64 *)table->getBytesNoCopy();
+			haveV2 = isV2;
+		}
+		children->release();
+	}
+	cfg->release();
+
+	if (rsdpPhys == 0) {
+		IOLog("AppleI386PlatformExpert: no ACPI RSDP in the device tree, "
+		      "ACPI power off unavailable\n");
+		return;
+	}
+
+	IOMemoryMap *rsdpMap = 0;
+	const UInt8 *rsdp = (const UInt8 *)pd_acpi_map(rsdpPhys, 36, &rsdpMap);
+	if (rsdp == 0) return;
+
+	UInt8 revision = rsdp[15];
+	UInt64 sdtPhys = 0;
+	bool useXsdt = false;
+	if (revision >= 2) {
+		sdtPhys = *(const UInt64 *)(rsdp + 24);   // XsdtAddress
+		useXsdt = (sdtPhys != 0);
+	}
+	if (!useXsdt) sdtPhys = *(const UInt32 *)(rsdp + 16);  // RsdtAddress
+	rsdpMap->release();
+	if (sdtPhys == 0) return;
+
+	/* Read the header first for the real length, then remap the whole table. */
+	IOMemoryMap *sdtHdrMap = 0;
+	const UInt8 *sdtHdr = (const UInt8 *)pd_acpi_map(sdtPhys, 36, &sdtHdrMap);
+	if (sdtHdr == 0) return;
+	UInt32 sdtLen = *(const UInt32 *)(sdtHdr + 4);
+	sdtHdrMap->release();
+	if (sdtLen < 36 || sdtLen > (1u << 20)) return;
+
+	IOMemoryMap *sdtMap = 0;
+	const UInt8 *sdt = (const UInt8 *)pd_acpi_map(sdtPhys, sdtLen, &sdtMap);
+	if (sdt == 0) return;
+
+	UInt64 fadtPhys = 0;
+	UInt32 entrySize = useXsdt ? 8 : 4;
+	UInt32 entries = (sdtLen - 36) / entrySize;
+	for (UInt32 i = 0; i < entries && fadtPhys == 0; i++) {
+		const UInt8 *e = sdt + 36 + (i * entrySize);
+		UInt64 tablePhys = useXsdt ? *(const UInt64 *)e : *(const UInt32 *)e;
+		if (tablePhys == 0) continue;
+		IOMemoryMap *hdrMap = 0;
+		const UInt8 *hdr = (const UInt8 *)pd_acpi_map(tablePhys, 36, &hdrMap);
+		if (hdr == 0) continue;
+		if (strncmp((const char *)hdr, "FACP", 4) == 0) fadtPhys = tablePhys;
+		hdrMap->release();
+	}
+	sdtMap->release();
+
+	if (fadtPhys == 0) {
+		IOLog("AppleI386PlatformExpert: no FACP table, "
+		      "ACPI power off unavailable\n");
+		return;
+	}
+
+	IOMemoryMap *fadtMap = 0;
+	const UInt8 *fadt = (const UInt8 *)pd_acpi_map(fadtPhys, 244, &fadtMap);
+	if (fadt == 0) return;
+
+	sPM1aControlPort = (UInt16)*(const UInt32 *)(fadt + 64);   // PM1a_CNT_BLK
+	sPM1bControlPort = (UInt16)*(const UInt32 *)(fadt + 68);   // PM1b_CNT_BLK
+	UInt64 dsdtPhys = *(const UInt32 *)(fadt + 40);            // DSDT
+	fadtMap->release();
+
+	if (sPM1aControlPort == 0) {
+		IOLog("AppleI386PlatformExpert: FACP has no PM1a control block, "
+		      "ACPI power off unavailable\n");
+		return;
+	}
+
+	/* Sleep type defaults to 0, which is what QEMU's \_S5 uses; a DSDT parse
+	 * only has to correct it on hardware that differs. */
+	if (dsdtPhys != 0) {
+		IOMemoryMap *dsdtHdrMap = 0;
+		const UInt8 *dsdtHdr =
+		    (const UInt8 *)pd_acpi_map(dsdtPhys, 36, &dsdtHdrMap);
+		if (dsdtHdr != 0) {
+			UInt32 dsdtLen = *(const UInt32 *)(dsdtHdr + 4);
+			dsdtHdrMap->release();
+			if (dsdtLen >= 36 && dsdtLen <= (1u << 22)) {
+				IOMemoryMap *dsdtMap = 0;
+				const UInt8 *dsdt =
+				    (const UInt8 *)pd_acpi_map(dsdtPhys, dsdtLen, &dsdtMap);
+				if (dsdt != 0) {
+					(void)pd_acpi_parse_s5(dsdt, dsdtLen,
+					    &sS5SleepTypeA, &sS5SleepTypeB);
+					dsdtMap->release();
+				}
+			}
+		}
+	}
+
+	sACPIPowerOffReady = true;
+	IOLog("AppleI386PlatformExpert: ACPI power off via PM1a 0x%x "
+	      "(PM1b 0x%x), S5 type %u/%u\n", sPM1aControlPort, sPM1bControlPort,
+	      sS5SleepTypeA, sS5SleepTypeB);
+}
+
 bool AppleI386PlatformExpert::start(IOService *provider) {
 	setBootROMType(kBootROMTypeNewWorld);
 
@@ -150,6 +325,7 @@ bool AppleI386PlatformExpert::start(IOService *provider) {
 	registerService();
 
 	publishPlatformUUIDFromDeviceTree();
+	cacheACPIPowerOffFromDeviceTree();
 
 	// Hack: Initialize AppleI386CPU ourself because no one else will.
 	bootCPU = new AppleI386CPU;
@@ -348,6 +524,25 @@ int AppleI386PlatformExpert::handlePEHaltRestart(unsigned int type) {
 			break;
 
 		case kPEHaltCPU:
+			/* ACPI soft-off: write SLP_TYP|SLP_EN to the PM1 control
+			 * register(s). Without this the caller (halt_all_cpus) just spins
+			 * in a while(1), so the machine never actually powers down. */
+			if (sACPIPowerOffReady) {
+				outw(sPM1aControlPort,
+				    (UInt16)((sS5SleepTypeA << 10) | 0x2000));
+				if (sPM1bControlPort != 0) {
+					outw(sPM1bControlPort,
+					    (UInt16)((sS5SleepTypeB << 10) | 0x2000));
+				}
+				/* Power removal is not instantaneous; give it a moment before
+				 * admitting failure to the caller. */
+				for (temporary_sum = 0; temporary_sum < 100000; temporary_sum++) {
+					outb(0x80, 0);
+				}
+			}
+			ret = -1;
+			break;
+
 		default:
 			ret = -1;
 			break;

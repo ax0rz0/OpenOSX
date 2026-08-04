@@ -34,8 +34,9 @@ add_system_cmd(purge purge.c)
 add_system_cmd(cpuctl cpuctl.c)
 add_system_cmd(mean mean.c)
 
-# reboot/halt/poweroff/shutdown: same source, keyed on argv[0]; launchd
-# (pid 1) handles SIGUSR1=reboot / SIGTERM=poweroff (see pd_shutdown.c).
+add_system_cmd(passwd passwd.tproj/passwd.c passwd.tproj/file_passwd.c)
+target_include_directories(passwd PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/passwd.tproj)
+
 foreach(_pd_ctl reboot halt poweroff shutdown)
     add_system_cmd(${_pd_ctl} pd_shutdown.c)
 endforeach()

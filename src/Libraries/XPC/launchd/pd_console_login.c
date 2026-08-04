@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -89,6 +90,18 @@ main(void)
 	setenv("SHELL", "/bin/zsh", 1);
 	setenv("PATH", "/bin:/sbin:/usr/bin:/usr/sbin", 1);
 	setenv("TERM", "vt220", 0);
+	{
+		char runtime_dir[64];
+		if (snprintf(runtime_dir, sizeof(runtime_dir), "/tmp/runtime-%u",
+		             (unsigned)getuid()) < (int)sizeof(runtime_dir)) {
+			if (mkdir(runtime_dir, 0700) < 0 && errno != EEXIST)
+				ctrace("pd-console-login: XDG runtime mkdir failed\n");
+			else if (chmod(runtime_dir, 0700) < 0)
+				ctrace("pd-console-login: XDG runtime chmod failed\n");
+			else
+				setenv("XDG_RUNTIME_DIR", runtime_dir, 1);
+		}
+	}
 
 	char *argv[] = { "/bin/zsh", "-l", NULL };
 	ctrace("pd-console-login: exec /bin/zsh\n");

@@ -1,0 +1,9 @@
+
+prefix=/nix/store/fgq3g4mnlwdll7gmhd5gcgyx10103zxx-wayland-protocols-1.48
+includedir=${prefix}/include
+datarootdir=${prefix}/share
+pkgdatadir=${pc_sysrootdir}${datarootdir}/wayland-protocols
+
+Name: Wayland Protocols
+Description: Wayland protocol files
+Version: 1.48

@@ -250,6 +250,87 @@ IOVirtIOGPUUserClient::mGetCaps(IOExternalMethodArguments *a)
 }
 
 IOReturn
+IOVirtIOGPUUserClient::mPresent(IOExternalMethodArguments *a)
+{
+    if (a->structureInputSize < sizeof(PDGpuPresent))
+        return kIOReturnBadArgument;
+    const PDGpuPresent *present = (const PDGpuPresent *)a->structureInput;
+    return fOwner->gpuPresent(present->x, present->y, present->width,
+                               present->height)
+               ? kIOReturnSuccess : kIOReturnIOError;
+}
+
+IOReturn
+IOVirtIOGPUUserClient::mSetCursor(IOExternalMethodArguments *a)
+{
+    // A 64x64 BGRA cursor is 16KB, past the 4K inband limit, so it arrives as
+    // an ool descriptor with structureInput left NULL - same split as
+    // mSubmitCmd above.
+    const void *src = NULL;
+    IOByteCount len = 0;
+    IOMemoryMap *map = NULL;
+    IOMemoryDescriptor *ool = a->structureInputDescriptor;
+    if (ool) {
+        if (ool->prepare(kIODirectionOut) != kIOReturnSuccess)
+            return kIOReturnVMError;
+        map = ool->map();
+        if (!map) { ool->complete(); return kIOReturnVMError; }
+        src = (const void *)map->getVirtualAddress();
+        len = ool->getLength();
+    } else {
+        src = a->structureInput;
+        len = a->structureInputSize;
+    }
+
+    IOReturn ret = applyCursorImage(src, (size_t)len);
+
+    if (map) map->release();
+    if (ool) ool->complete();
+    return ret;
+}
+
+IOReturn
+IOVirtIOGPUUserClient::applyCursorImage(const void *input, size_t inputSize)
+{
+    if (input == NULL || inputSize < sizeof(PDGpuCursorImage))
+        return kIOReturnBadArgument;
+    const PDGpuCursorImage *image = (const PDGpuCursorImage *)input;
+    if (image->width > 64 || image->height > 64)
+        return kIOReturnBadArgument;
+
+    size_t pixelBytes = (size_t)image->width * image->height * 4;
+    if (inputSize - sizeof(PDGpuCursorImage) < pixelBytes)
+        return kIOReturnBadArgument;
+
+    const void *pixels = pixelBytes ?
+        (const uint8_t *)input + sizeof(PDGpuCursorImage) : NULL;
+    return fOwner->gpuSetCursorImage(pixels, image->width, image->height,
+                                     image->hot_x, image->hot_y)
+               ? kIOReturnSuccess : kIOReturnIOError;
+}
+
+IOReturn
+IOVirtIOGPUUserClient::mMoveCursor(IOExternalMethodArguments *a)
+{
+    if (a->scalarInputCount < 2)
+        return kIOReturnBadArgument;
+    return fOwner->gpuMoveCursor((uint32_t)a->scalarInput[0],
+                                 (uint32_t)a->scalarInput[1])
+               ? kIOReturnSuccess : kIOReturnIOError;
+}
+
+IOReturn
+IOVirtIOGPUUserClient::mSetScanoutResource(IOExternalMethodArguments *a)
+{
+    if (a->scalarInputCount < 3)
+        return kIOReturnBadArgument;
+    return fOwner->gpuSetScanoutResource((uint32_t)a->scalarInput[0],
+                                         (uint32_t)a->scalarInput[1],
+                                         (uint32_t)a->scalarInput[2])
+               ? kIOReturnSuccess : kIOReturnIOError;
+}
+
+IOReturn
 IOVirtIOGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArguments *args,
                                       IOExternalMethodDispatch *, OSObject *, void *)
 {
@@ -269,6 +350,10 @@ IOVirtIOGPUUserClient::externalMethod(uint32_t selector, IOExternalMethodArgumen
     case kPDVirgl_WaitFence:       return kIOReturnSuccess; // v1: submits are synchronous
     case kPDVirgl_AllocFenceId:    args->scalarOutput[0] = fOwner->allocFenceId();
                                    return kIOReturnSuccess;
+    case kPDGPU_Present:           return mPresent(args);
+    case kPDGPU_SetCursor:         return mSetCursor(args);
+    case kPDGPU_MoveCursor:        return mMoveCursor(args);
+    case kPDGPU_SetScanoutResource: return mSetScanoutResource(args);
     default:                       return kIOReturnUnsupported;
     }
 }

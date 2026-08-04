@@ -37,6 +37,11 @@ private:
     IOReturn mTransfer(IOExternalMethodArguments *a, bool toHost);
     IOReturn mSubmitCmd(IOExternalMethodArguments *a);
     IOReturn mGetCaps(IOExternalMethodArguments *a);
+    IOReturn mPresent(IOExternalMethodArguments *a);
+    IOReturn mSetCursor(IOExternalMethodArguments *a);
+    IOReturn applyCursorImage(const void *input, size_t inputSize);
+    IOReturn mMoveCursor(IOExternalMethodArguments *a);
+    IOReturn mSetScanoutResource(IOExternalMethodArguments *a);
 
 public:
     static IOVirtIOGPUUserClient *withOwner(IOVirtIOGPU *owner, task_t task);

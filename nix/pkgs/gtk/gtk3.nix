@@ -41,11 +41,26 @@
 , libXcursor
 , xorgproto
 , libpng
+, wayland ? null
+, waylandProtocols ? null
+, waylandScanner ? null
+, xkbcommon ? null
+, mesa ? null
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
 
 let
   targetInfo = import ../../lib/target-info.nix targetTriple;
+
+  waylandEnabled = wayland != null && waylandProtocols != null
+    && waylandScanner != null && xkbcommon != null && mesa != null;
+
+  # WL_EGL_PLATFORM picks the wl_display-based EGLNativeDisplayType in Mesa's
+  # eglplatform.h. Without it the __APPLE__ branch wins and the type is an int,
+  # so GDK's cast of a wl_display to it is a pointer-to-int truncation. Safe to
+  # set for the whole build: GDK's X11 backend uses GLX, never EGL.
+  waylandCArgs = lib.optionalString waylandEnabled
+    ", '-I${mesa}/usr/include', '-I${./../wayland/pd-compat-include}', '-DWL_EGL_PLATFORM=1'";
 
   deps = [
     glib pcre2 libffi zlib libiconv
@@ -57,7 +72,7 @@ let
     dbus
     libX11 libxcb libXau libXdmcp libXext libXi libXrender libXrandr libXfixes libXcursor
     xorgproto libpng
-  ];
+  ] ++ lib.optionals waylandEnabled [ wayland waylandProtocols xkbcommon ];
   depPcPaths = map lib.getDev deps;
   sdkTarball = requireFile {
     name = "MacOSX11.3.sdk.tar.xz";
@@ -73,7 +88,8 @@ stdenv.mkDerivation {
   pname = "puredarwin-gtk3";
   inherit (gtk3) version src;
 
-  nativeBuildInputs = [ meson ninja pkg-config python3 glibNative ];
+  nativeBuildInputs = [ meson ninja pkg-config python3 glibNative ]
+    ++ lib.optional waylandEnabled waylandScanner;
   buildInputs = deps;
 
   postPatch = ''
@@ -90,12 +106,10 @@ old = """if os_darwin
 else
   quartz_enabled = false
 endif"""
-new = """if os_darwin
-  wayland_enabled = false
-  quartz_enabled = false
-else
-  quartz_enabled = false
-endif"""
+# Upstream forces X11 and Wayland off on Darwin because it assumes Quartz is
+# the only display server there. PureDarwin has neither, so drop the special
+# case entirely and let the backend options decide; Quartz is never wanted.
+new = """quartz_enabled = false"""
 assert old in content, "os_darwin backend-forcing block not found"
 content = content.replace(old, new)
 
@@ -159,7 +173,8 @@ PYEOF
   configurePhase = ''
     runHook preConfigure
     export PATH="${nativeMesonTools}/bin:$PATH"
-
+${lib.optionalString waylandEnabled ''    export PATH="${waylandScanner}/bin:$PATH"
+''}
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
@@ -179,7 +194,7 @@ glib-compile-resources = '${glibNative}/bin/glib-compile-resources'
 glib-compile-schemas = '${glibNative}/bin/glib-compile-schemas'
 
 [built-in options]
-c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-DCAIRO_HAS_GOBJECT_FUNCTIONS=1', '-Ddngettext(Domain,Singular,Plural,N)=((N)==1?(Singular):(Plural))', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}]
+c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-Qunused-arguments', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-fno-stack-protector', '-DCAIRO_HAS_GOBJECT_FUNCTIONS=1', '-Ddngettext(Domain,Singular,Plural,N)=((N)==1?(Singular):(Plural))', '-I${libSystem}/usr/include', ${lib.concatMapStringsSep ", " (dep: "'-I${lib.getDev dep}/include'") deps}${waylandCArgs}]
 c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', ${lib.concatMapStringsSep ", " (dep: "'-L${dep}/lib'") deps}, '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-Wl,-undefined,dynamic_lookup', '-lSystem']
 
 [host_machine]
@@ -200,7 +215,7 @@ EOF
       --buildtype=release \
       -Ddefault_library=shared \
       -Dx11_backend=true \
-      -Dwayland_backend=false \
+      -Dwayland_backend=${lib.boolToString waylandEnabled} \
       -Dbroadway_backend=false \
       -Dwin32_backend=false \
       -Dquartz_backend=false \

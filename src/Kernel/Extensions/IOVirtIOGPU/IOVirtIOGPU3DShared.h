@@ -22,6 +22,12 @@ enum {
                                 *   structIn = virgl command stream bytes       */
     kPDVirgl_WaitFence,        /* scalarIn[0]=fenceId (v1: submits are sync)     */
     kPDVirgl_AllocFenceId,     /* scalarOut[0]=fenceId                          */
+    kPDGPU_Present,             /* structIn: PDGpuPresent damage rectangle      */
+    kPDGPU_SetCursor,           /* structIn: PDGpuCursorImage + BGRA pixels;
+                                 *   a zero-sized image hides the cursor        */
+    kPDGPU_MoveCursor,          /* scalarIn[0]=x, scalarIn[1]=y                 */
+    kPDGPU_SetScanoutResource,  /* scalarIn[0]=resId (0 restores the driver's
+                                 *   framebuffer), [1]=width, [2]=height       */
     kPDVirgl_MethodCount
 };
 
@@ -50,6 +56,22 @@ struct PDVirglTransfer {
     uint32_t stride;
     uint64_t offset;
     uint64_t fence_id;    /* 0 = no fence                            */
+};
+
+/* kPDGPU_SetCursor input: this header immediately followed by width*height
+ * BGRA pixels. virtio-gpu cursors are at most 64x64. */
+struct PDGpuCursorImage {
+    uint32_t width;
+    uint32_t height;
+    uint32_t hot_x;
+    uint32_t hot_y;
+};
+
+struct PDGpuPresent {
+    uint32_t x;
+    uint32_t y;
+    uint32_t width;
+    uint32_t height;
 };
 
 #endif /* IOVIRTIOGPU_3D_SHARED_H */

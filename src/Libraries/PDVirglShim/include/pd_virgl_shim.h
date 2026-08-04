@@ -50,6 +50,21 @@ int pd_virgl_get_caps(pd_virgl_conn *c, void *caps, size_t *inout_len);
 
 uint64_t pd_virgl_alloc_fence(pd_virgl_conn *c);
 
+int pd_virgl_present(pd_virgl_conn *c, uint32_t x, uint32_t y,
+                     uint32_t width, uint32_t height);
+
+/* Hardware cursor. A NULL image hides it. Max 64x64 BGRA. Both return 0 on
+ * success and non-zero when the device has no cursor queue. */
+int pd_virgl_set_cursor(pd_virgl_conn *c, const void *bgra, uint32_t width,
+                        uint32_t height, uint32_t hot_x, uint32_t hot_y);
+int pd_virgl_move_cursor(pd_virgl_conn *c, uint32_t x, uint32_t y);
+
+/* Scan out a virgl resource directly instead of the driver's framebuffer, so
+ * host-rendered pixels never have to travel back through guest memory. Pass
+ * res_id 0 to restore the framebuffer. */
+int pd_virgl_set_scanout_resource(pd_virgl_conn *c, uint32_t res_id,
+                                  uint32_t width, uint32_t height);
+
 #ifdef __cplusplus
 }
 #endif

@@ -2,6 +2,7 @@
 
 #include <IOKit/IOKitLib.h>
 #include <mach/mach.h>
+#include <string.h>
 
 #include "IOVirtIOGPU3DShared.h"
 
@@ -148,4 +149,52 @@ uint64_t pd_virgl_alloc_fence(pd_virgl_conn *c)
    uint64_t out = 0; uint32_t cnt = 1;
    IOConnectCallScalarMethod(conn_of(c), kPDVirgl_AllocFenceId, 0, 0, &out, &cnt);
    return out;
+}
+
+int pd_virgl_present(pd_virgl_conn *c, uint32_t x, uint32_t y,
+                     uint32_t width, uint32_t height)
+{
+   struct PDGpuPresent present = { x, y, width, height };
+   return IOConnectCallStructMethod(conn_of(c), kPDGPU_Present,
+                                    &present, sizeof(present), 0, 0)
+              == KERN_SUCCESS ? 0 : -1;
+}
+
+int pd_virgl_set_cursor(pd_virgl_conn *c, const void *bgra, uint32_t width,
+                        uint32_t height, uint32_t hot_x, uint32_t hot_y)
+{
+   uint8_t buf[sizeof(struct PDGpuCursorImage) + 64 * 64 * 4];
+   struct PDGpuCursorImage *image = (struct PDGpuCursorImage *)buf;
+   size_t pixel_bytes = (size_t)width * height * 4;
+
+   if (width > 64 || height > 64)
+      return -1;
+   if (bgra == NULL)
+      width = height = 0, pixel_bytes = 0;
+
+   image->width = width;
+   image->height = height;
+   image->hot_x = hot_x;
+   image->hot_y = hot_y;
+   if (pixel_bytes)
+      memcpy(buf + sizeof(*image), bgra, pixel_bytes);
+
+   return IOConnectCallStructMethod(conn_of(c), kPDGPU_SetCursor, buf,
+                                    sizeof(*image) + pixel_bytes, 0, 0)
+              == KERN_SUCCESS ? 0 : -1;
+}
+
+int pd_virgl_move_cursor(pd_virgl_conn *c, uint32_t x, uint32_t y)
+{
+   uint64_t in[2] = { x, y };
+   return IOConnectCallScalarMethod(conn_of(c), kPDGPU_MoveCursor, in, 2, 0, 0)
+              == KERN_SUCCESS ? 0 : -1;
+}
+
+int pd_virgl_set_scanout_resource(pd_virgl_conn *c, uint32_t res_id,
+                                  uint32_t width, uint32_t height)
+{
+   uint64_t in[3] = { res_id, width, height };
+   return IOConnectCallScalarMethod(conn_of(c), kPDGPU_SetScanoutResource,
+                                    in, 3, 0, 0) == KERN_SUCCESS ? 0 : -1;
 }

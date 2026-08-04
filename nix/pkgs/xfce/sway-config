@@ -1,0 +1,42 @@
+# Sway configuration for an Xfce session, copied to
+# ~/.config/xfce4/sway/config by startxfce4 --wayland.
+#
+# xfce4-session brings up the panel, the desktop and the settings daemon, so
+# sway's own bar and wallpaper are deliberately absent: xfce4-panel and
+# xfdesktop take those roles through the layer-shell protocol.
+
+set $mod Mod4
+set $term xfce4-terminal
+set $menu xfce4-appfinder
+
+floating_modifier $mod normal
+
+bindsym $mod+Return exec $term
+bindsym $mod+d exec $menu
+bindsym $mod+q kill
+bindsym $mod+Shift+r reload
+bindsym $mod+Shift+e exec xfce4-session-logout
+
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+
+bindsym $mod+f fullscreen
+bindsym $mod+Tab layout toggle split
+bindsym $mod+Shift+space floating toggle
+
+exec xfce4-session

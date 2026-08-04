@@ -95,6 +95,48 @@ stdenv.mkDerivation {
     ln -s libicudata.76.1.dylib $out/usr/lib/libicudata.76.dylib
     ln -s libicui18n.76.1.dylib $out/usr/lib/libicui18n.76.dylib
 
+    # Unversioned "development" symlinks. Upstream ICU installs these; this
+    # build assembles the libraries by hand and so did not. CMake's FindICU
+    # (and any plain -licuuc) resolves through find_library, which looks for
+    # libicudata.dylib and never finds the versioned name on its own.
+    ln -s libicuuc.76.1.dylib $out/usr/lib/libicuuc.dylib
+    ln -s libicudata.76.1.dylib $out/usr/lib/libicudata.dylib
+    ln -s libicui18n.76.1.dylib $out/usr/lib/libicui18n.dylib
+
+    # The headers install to $out/include but the libraries to $out/usr/lib, so
+    # no single prefix describes this package and every <prefix>/lib lookup
+    # misses - CMake's FindICU reads the version out of the headers and then
+    # reports the libraries missing. Mirror them at $out/lib so the package
+    # looks like an ordinary one. Relative targets, so they still resolve once
+    # the tree is copied into the image (/lib/libicuuc.dylib ->
+    # /usr/lib/libicuuc.76.1.dylib).
+    mkdir -p $out/lib
+    for f in "$out"/usr/lib/libicu*.dylib; do
+      ln -s "../usr/lib/$(basename "$f")" "$out/lib/$(basename "$f")"
+    done
+
+    # Upstream ICU ships these; this build assembles the library by hand and so
+    # never generated them. Anything that asks for ICU through pkg-config -
+    # harfbuzz's meson icu option, WebKit - needs them to find it at all.
+    mkdir -p $out/lib/pkgconfig
+    for mod in uc i18n; do
+      case $mod in
+        uc)   libs="-licuuc -licudata" ;;
+        i18n) libs="-licui18n -licuuc -licudata" ;;
+      esac
+      cat > "$out/lib/pkgconfig/icu-$mod.pc" <<PCEOF
+prefix=$out
+libdir=$out/usr/lib
+includedir=$out/include
+
+Name: icu-$mod
+Description: International Components for Unicode
+Version: 76.1
+Libs: -L''${libdir} $libs
+Cflags: -I''${includedir}
+PCEOF
+    done
+
     echo 'static int puredarwin_icucore_placeholder;' > placeholder.c
     ${darwinCrossToolchain}/bin/${targetTriple}-clang \
       -isysroot "$DARWIN_SDK_ROOT" -c placeholder.c -o placeholder.o

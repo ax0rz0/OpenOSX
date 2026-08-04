@@ -5,6 +5,9 @@
 , kexts
 }:
 
+let
+  kextList = import ../../lib/kc-kexts.nix;
+in
 stdenv.mkDerivation {
   pname = "puredarwin-kc";
   version = "0.1";
@@ -28,44 +31,7 @@ stdenv.mkDerivation {
 
     ${kcTools}/bin/kc-builder \
       -kernel "$KERNEL_BIN" \
-      -kext "$KEXTS/corecrypto.kext" \
-      -kext "$KEXTS/pthread.kext" \
-      -kext "$KEXTS/IOACPIFamily.kext" \
-      -kext "$KEXTS/IOPCIFamily.kext" \
-      -kext "$KEXTS/AppleAPIC.kext" \
-      -kext "$KEXTS/AppleI386GenericPlatform.kext" \
-      -kext "$KEXTS/AppleI386PCI.kext" \
-      -kext "$KEXTS/IOStorageFamily.kext" \
-      -kext "$KEXTS/IONVMEFamily.kext" \
-      -kext "$KEXTS/IOATAFamily.kext" \
-      -kext "$KEXTS/IOATAFamily.kext/Contents/PlugIns/AppleIntelPIIXATA.kext" \
-      -kext "$KEXTS/IOATABlockStorage.kext" \
-      -kext "$KEXTS/ext4.kext" \
-      -kext "$KEXTS/msdosfs.kext" \
-      -kext "$KEXTS/apfs.kext" \
-      -kext "$KEXTS/HFSEncodings.kext" \
-      -kext "$KEXTS/hfs.kext" \
-      -kext "$KEXTS/AppleFileSystemDriver.kext" \
-      -kext "$KEXTS/Ext4FileSystemDriver.kext" \
-      -kext "$KEXTS/IOHIDFamily.kext" \
-      -kext "$KEXTS/IOUSBFamily.kext" \
-      -kext "$KEXTS/IOUSBCompositeDriver.kext" \
-      -kext "$KEXTS/AppleUSBMergeNub.kext" \
-      -kext "$KEXTS/IOUSBHIDDriver.kext" \
-      -kext "$KEXTS/AppleUSBEHCI.kext" \
-      -kext "$KEXTS/AppleUSBOHCI.kext" \
-      -kext "$KEXTS/AppleUSBUHCI.kext" \
-      -kext "$KEXTS/RavynAHCIPort.kext" \
-      -kext "$KEXTS/RavynXHCIPort.kext" \
-      -kext "$KEXTS/IOGraphicsFamily.kext" \
-      -kext "$KEXTS/IOGOPFramebuffer.kext" \
-      -kext "$KEXTS/IOVirtIOFamily.kext" \
-      -kext "$KEXTS/IOVirtIOGPU.kext" \
-      -kext "$KEXTS/IOVirtIONet.kext" \
-      -kext "$KEXTS/IONetworkingFamily.kext" \
-      -kext "$KEXTS/IOIntelGen9Framebuffer.kext" \
-      -kext "$KEXTS/PDE1000.kext" \
-      -kext "$KEXTS/RavynHDAudio.kext" \
+${lib.concatMapStringsSep "\n" (k: "      -kext \"$KEXTS/" + k + "\" \\") kextList}
       "''${codeless[@]}" \
       -o kernel
     runHook postBuild
