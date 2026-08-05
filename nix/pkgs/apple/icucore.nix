@@ -78,6 +78,9 @@ stdenv.mkDerivation {
     cp -a source/common/unicode/. $out/include/unicode/
     cp -a source/i18n/unicode/. $out/include/unicode/
 
+    substituteInPlace $out/include/unicode/uconfig.h \
+      --replace-fail '#define U_DISABLE_RENAMING 0' '#define U_DISABLE_RENAMING 1'
+
     for f in build/lib/*.dylib; do
       [ -L "$f" ] && continue
       cp "$f" "$out/usr/lib/$(basename "$f")"

@@ -113,6 +113,17 @@
 , libparserutilsBuild
 , libpngBuild
 , librsvgBuild
+, gettextBuild
+, webkitgtkBuild
+, libsoupBuild
+, sqliteBuild
+, libpslBuild
+, nghttp2Build
+, libgcryptBuild
+, libgpgErrorBuild
+, libtasn1Build
+, libjpegBuild
+, libwebpBuild
 , libutf8procBuild
 , libwapcapletBuild
 , libwnckBuild
@@ -354,6 +365,17 @@ let
     libpng = libpngBuild;
     libcroco = libcrocoBuild;
     librsvg = librsvgBuild;
+    gettext = gettextBuild;
+    webkitgtk = webkitgtkBuild;
+    libsoup = libsoupBuild;
+    sqlite = sqliteBuild;
+    libpsl = libpslBuild;
+    nghttp2 = nghttp2Build;
+    libgcrypt = libgcryptBuild;
+    libgpg-error = libgpgErrorBuild;
+    libtasn1 = libtasn1Build;
+    libjpeg = libjpegBuild;
+    libwebp = libwebpBuild;
     libwapcaplet = libwapcapletBuild;
     libparserutils = libparserutilsBuild;
     libnsutils = libnsutilsBuild;

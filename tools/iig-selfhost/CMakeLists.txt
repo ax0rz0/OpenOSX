@@ -56,6 +56,7 @@ else()
 endif()
 
 set(_iig_libcxx "${CMAKE_SOURCE_DIR}/src/Libraries/libcxx")
+set(_iig_libcxx_config "${CMAKE_SOURCE_DIR}/src/Libraries/libcxxabi/config")
 
 set(_iig_cxx_flags
     ${_iig_target_flags}
@@ -67,9 +68,9 @@ set(_iig_cxx_flags
 # See the matching comment in src/Libraries/libcxxabi/CMakeLists.txt: header
 # search order for -idirafter vs -I depends on which toolchain this is.
 if((CMAKE_HOST_APPLE AND NOT CMAKE_CROSSCOMPILING) OR PUREDARWIN_NIX_TOOLCHAIN)
-    list(APPEND _iig_cxx_flags -I ${_iig_libcxx}/include)
+    list(APPEND _iig_cxx_flags -I ${_iig_libcxx_config} -I ${_iig_libcxx}/include)
 else()
-    list(APPEND _iig_cxx_flags -idirafter ${_iig_libcxx}/include)
+    list(APPEND _iig_cxx_flags -idirafter ${_iig_libcxx_config} -idirafter ${_iig_libcxx}/include)
 endif()
 
 set(_iig_srcs main parse codegen)

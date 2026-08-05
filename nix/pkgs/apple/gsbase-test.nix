@@ -60,6 +60,27 @@ stdenv.mkDerivation {
         return v;
     }
 
+    /*
+     * TSD slot 6. This is what NtCurrentTeb() compiles to on x86_64
+     * ("movq %gs:0x30,%rax"), and Wine depends on it twice over:
+     *
+     *   - In Wine code, gsbase is the TEB itself, so %gs:0x30 reads
+     *     TEB.NtTib.Self, which points back at the TEB.
+     *   - Inside a signal handler, init_handler() has just repointed gsbase at
+     *     the pthread TSD base, so %gs:0x30 reads pthread TSD slot 6 instead.
+     *
+     * save_context() calls amd64_thread_data()->dr0 in the handler, which is
+     * &NtCurrentTeb()->GdiTebBatch at offset 0x2f0. If slot 6 reads back as 0
+     * that computes to the literal address 0x2f0 and faults - which is the
+     * wine-preloader crash loop.
+     */
+    static uint64_t read_gsbase_slot6(void)
+    {
+        uint64_t v;
+        __asm__ volatile("movq %%gs:0x30, %0" : "=r"(v));
+        return v;
+    }
+
     static void report(const char *who)
     {
         struct thread_identifier_info tiinfo;
@@ -82,6 +103,11 @@ stdenv.mkDerivation {
         printf("  pthread_self()      = %p\n", (void *)pthread_self());
         printf("  %%gs:0x0 (tsd slot 0) = 0x%llx\n",
                (unsigned long long)read_gsbase_slot0());
+        printf("  %%gs:0x30 (tsd slot 6) = 0x%llx  <- what NtCurrentTeb() reads\n",
+               (unsigned long long)read_gsbase_slot6());
+        if (read_gsbase_slot6() == 0)
+            printf("  NOTE: slot 6 is 0. In a signal handler Wine would compute"
+                   " NtCurrentTeb()->GdiTebBatch as 0x2f0 and fault there.\n");
         if (kr == KERN_SUCCESS && tiinfo.thread_handle == 0)
             printf("  VERDICT: thread_info succeeded but handle is 0 -"
                    " Wine will zero gsbase on the first signal.\n");

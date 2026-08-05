@@ -56,7 +56,13 @@ set(_config "${CMAKE_CURRENT_SOURCE_DIR}/config")   # __config_site, __assertion
 set(_abi_flags
     ${_target_flags}
     -isysroot ${_sdk}
-    -std=c++17 -nostdinc++ -funwind-tables -fexceptions -fPIC -Os -DNDEBUG
+    # LLVM 21's libc++/libc++abi are written in C++23 (constinit, etc).
+    -std=c++23 -nostdinc++ -funwind-tables -fexceptions -fPIC -Os -DNDEBUG
+    # charconv.cpp reaches for <shared/fp_bits.h>, which LLVM 21 shares with
+    # llvm-libc rather than keeping under libcxx; the headers it needs are
+    # vendored at src/Libraries/llvm-libc.
+    -I ${CMAKE_CURRENT_SOURCE_DIR}/../llvm-libc
+    -I ${CMAKE_CURRENT_SOURCE_DIR}/../llvm-libc/include
     -I ${_config}
     -I ${_libcxxabi}/include
     -I ${_libcxxabi}/src
@@ -170,7 +176,7 @@ set(_uw_objs "")
 foreach(s ${_uw_cxx})
     set(_obj "${CMAKE_CURRENT_BINARY_DIR}/uw_${s}.o")
     add_custom_command(OUTPUT "${_obj}"
-        COMMAND "${_real_clang}" ${_uw_flags} -std=c++17 -fno-exceptions -fno-rtti
+        COMMAND "${_real_clang}" ${_uw_flags} -std=c++23 -fno-exceptions -fno-rtti
                 -c "${_libunwind}/src/${s}.cpp" -o "${_obj}"
         DEPENDS "${_libunwind}/src/${s}.cpp"
         COMMENT "Building libunwind ${s}.cpp (raw clang)" VERBATIM)
@@ -212,19 +218,30 @@ add_dependencies(libunwind_static libunwind_static_build)
 # std::system_error support they need to report pthread failures. Everything
 # else in libc++ (containers, iostream, etc) stays unwired - add more source
 # files here if/when something else needs them.
+# LLVM 21 split several of these out of the files that used to hold them:
+# call_once out of mutex, error_category out of system_error, new_helpers out
+# of new, and verbose_abort is the new assertion/abort path every header calls.
 set(_cxx_srcs
     mutex
     mutex_destructor
+    call_once
     condition_variable
     condition_variable_destructor
     system_error
+    error_category
     string
     stdexcept
     charconv
     vector
     algorithm
     new
+    new_helpers
+    verbose_abort
     hash
+    # __hash_memory moved here from hash.cpp in LLVM 21.
+    functional
+    # __rs_default/__rs_get - libSystem has always exported these.
+    random_shuffle
 )
 
 set(_cxx_objs "")

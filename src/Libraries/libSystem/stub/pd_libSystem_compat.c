@@ -1049,6 +1049,131 @@ __udivti3(unsigned __int128 a, unsigned __int128 b)
     return quotient;
 }
 
+/*
+ * __divti3: the signed counterpart, same reason. Divide the magnitudes with
+ * __udivti3 and apply the sign, which is what compiler-rt does.
+ */
+__int128
+__divti3(__int128 a, __int128 b)
+{
+    int negate = 0;
+
+    if (a < 0) { a = -a; negate ^= 1; }
+    if (b < 0) { b = -b; negate ^= 1; }
+
+    unsigned __int128 quotient =
+        __udivti3((unsigned __int128)a, (unsigned __int128)b);
+
+    return negate ? -(__int128)quotient : (__int128)quotient;
+}
+
+
+/*
+ * More compiler-rt 128-bit builtins, same reason as __udivti3 above: there is
+ * no prebuilt libclang_rt.builtins for this cross target. Written out rather
+ * than using the C operators, because the compiler lowers those right back
+ * into these functions.
+ */
+unsigned __int128
+__umodti3(unsigned __int128 a, unsigned __int128 b)
+{
+    if (b == 0) return 0;
+    return a - __udivti3(a, b) * b;
+}
+
+__int128
+__modti3(__int128 a, __int128 b)
+{
+    if (b == 0) return 0;
+    return a - __divti3(a, b) * b;
+}
+
+/* 2^64, the scale factor between the two halves of a 128-bit value. */
+#define PD_TWO64 18446744073709551616.0
+
+double
+__floattidf(__int128 a)
+{
+    if (a == 0) return 0.0;
+
+    int neg = a < 0;
+    unsigned __int128 u = neg ? -(unsigned __int128)a : (unsigned __int128)a;
+    /* uint64_t -> double is native, so split and recombine. */
+    double r = (double)(uint64_t)(u >> 64) * PD_TWO64 + (double)(uint64_t)u;
+
+    return neg ? -r : r;
+}
+
+__int128
+__fixdfti(double a)
+{
+    if (a != a) return 0;              /* NaN */
+
+    int neg = a < 0;
+    if (neg) a = -a;
+    if (a < 1.0) return 0;
+
+    unsigned __int128 r;
+    if (a < PD_TWO64) {
+        r = (unsigned __int128)(uint64_t)a;
+    } else {
+        double hi = a / PD_TWO64;
+        if (hi >= PD_TWO64) {          /* saturate, as compiler-rt does */
+            return neg ? -(((__int128)1) << 126) * 2 : ~(((__int128)1) << 127);
+        }
+        uint64_t h = (uint64_t)hi;
+        uint64_t l = (uint64_t)(a - (double)h * PD_TWO64);
+        r = ((unsigned __int128)h << 64) | l;
+    }
+
+    return neg ? -(__int128)r : (__int128)r;
+}
+
+/*
+ * libplatform already implements these as _platform_memset_pattern*, and
+ * libc/scripts/alias.list records the public names as aliases of them. Mirror
+ * that here
+ */
+extern void __pd_platform_memset_pattern4(void *b, const void *pattern4, size_t len)
+    __asm("__platform_memset_pattern4");
+void __pd_memset_pattern4(void *b, const void *pattern4, size_t len) __asm("_memset_pattern4");
+void
+__pd_memset_pattern4(void *b, const void *pattern4, size_t len)
+{
+    __pd_platform_memset_pattern4(b, pattern4, len);
+}
+
+extern void __pd_platform_memset_pattern8(void *b, const void *pattern8, size_t len)
+    __asm("__platform_memset_pattern8");
+void __pd_memset_pattern8(void *b, const void *pattern8, size_t len) __asm("_memset_pattern8");
+void
+__pd_memset_pattern8(void *b, const void *pattern8, size_t len)
+{
+    __pd_platform_memset_pattern8(b, pattern8, len);
+}
+
+extern void __pd_platform_memset_pattern16(void *b, const void *pattern16, size_t len)
+    __asm("__platform_memset_pattern16");
+void __pd_memset_pattern16(void *b, const void *pattern16, size_t len) __asm("_memset_pattern16");
+void
+__pd_memset_pattern16(void *b, const void *pattern16, size_t len)
+{
+    __pd_platform_memset_pattern16(b, pattern16, len);
+}
+
+
+/*
+ * ldexpl: openlibm defines it as __weak_reference(scalbnl, ldexpl) in
+ * s_scalbnl.c, but that alias is not emitted for Mach-O here - exporting
+ * _scalbnl pulls the object in and ldexpl still comes out undefined. They are
+ * the same operation for a binary-radix long double, which is what x86_64 has.
+ */
+long double
+ldexpl(long double x, int n)
+{
+    return scalbnl(x, n);
+}
+
 
 /*
  * slot_name (mach/mach_init.h): hostinfo(1)'s only non-MIG dependency.

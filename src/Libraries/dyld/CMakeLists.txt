@@ -170,6 +170,15 @@ if(TARGET libcxxabi_static)
     target_link_libraries(dyld PRIVATE $<TARGET_FILE:libcxxabi_static>)
 endif()
 # libunwind: the _Unwind_* EH machinery libc++abi's personality routine drives.
+# std::out_of_range (Loading.cpp) needs std::logic_error's constructor. Up to
+# libc++ 10 that lived in libc++abi's stdlib_stdexcept.cpp; LLVM 21 moved the
+# constructors to libc++'s own stdexcept.cpp, so the curated libcxx_static
+# subset has to be on dyld's link line too.
+if(TARGET libcxx_static)
+    add_dependencies(dyld libcxx_static_build)
+    target_link_libraries(dyld PRIVATE $<TARGET_FILE:libcxx_static>)
+endif()
+
 if(TARGET libunwind_static)
     add_dependencies(dyld libunwind_static_build)
     target_link_libraries(dyld PRIVATE $<TARGET_FILE:libunwind_static>)

@@ -114,6 +114,8 @@ let
     "src/Libraries/libSystem/libmalloc/compat-include"
     "src/Libraries/libSystem/libsystem_kernel/mach"
     "src/Libraries/libcxx/include"
+    # the hand-resolved __config_site every libc++ header needs
+    "src/Libraries/libcxxabi/config"
     "src/Libraries/libSystem/corecrypto/include"
     "src/Libraries/CommonCrypto/include"
     "src/Libraries/CommonCrypto/libcn/pd_cc_digest_bridge.c"
@@ -187,6 +189,7 @@ let
     "src/Libraries/libcxxabi"
     "src/Libraries/libcxx"
     "src/Libraries/libunwind"
+    "src/Libraries/llvm-libc"
   ];
   foundationSource = sourceWith "puredarwin-foundation-source" [
     "src/Libraries/Foundation"

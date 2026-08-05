@@ -115,7 +115,7 @@ target_compile_options(libdyld PRIVATE
 # INTERFACE include dirs don't leak onto the compile line (same rationale as dyld).
 add_dependencies(libdyld libsystem_kernel_static corecrypto_static libc_static libc_internal_static
     pthread_static libplatform_static libmalloc_static libcxxabi_static_build
-    CrashReporterClient dyld_availability_headers)
+    libcxx_static_build CrashReporterClient dyld_availability_headers)
 target_link_libraries(libdyld PRIVATE
     dyld_availability_headers
     $<TARGET_FILE:libsystem_kernel_static>
@@ -127,7 +127,11 @@ target_link_libraries(libdyld PRIVATE
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/syscalls.a
     $<TARGET_FILE:corecrypto_static>
     $<TARGET_FILE:CrashReporterClient>
-    $<TARGET_FILE:libcxxabi_static>)   # __cxa_atexit/__cxa_finalize[_ranges]
+    $<TARGET_FILE:libcxxabi_static>    # __cxa_atexit/__cxa_finalize[_ranges]
+    # std::out_of_range (dyld3/Loading.cpp) needs std::logic_error's ctor. Up to
+    # libc++ 10 that was in libc++abi's stdlib_stdexcept.cpp; LLVM 21 moved the
+    # constructors to libc++'s own stdexcept.cpp.
+    $<TARGET_FILE:libcxx_static>)
 
 target_link_options(libdyld PRIVATE
     -isysroot ${PUREDARWIN_MACOSX_SDK}

@@ -1056,9 +1056,12 @@
               libcxxabiDylib = libcxxabiDylibBuild;
               nativeMesonTools = nativeMesonToolsDir;
               glibNative = pkgs.glib.dev;
+              libxml2Native = pkgs.libxml2;
+              waylandScanner = waylandScannerBuild;
               inherit (pkgs) cmake ninja pkg-config python3 perl ruby gperf unifdef;
               webkitgtk = pkgs.webkitgtk_6_0;
               icu = icuCoreBuild;
+              mesa = mesaBuild;
               deps = [
                 glibBuild pcre2Build libffiBuild xvfbZlibBuild libiconvBuild
                 cairoBuild cairoGobjectBuild xvfbPixmanBuild
@@ -1194,6 +1197,34 @@
               };
               deps = [ glibBuild libxml2Build pcre2Build libffiBuild libiconvBuild xvfbZlibBuild ];
               configureFlags = [ "--disable-Werror" "--disable-Bsymbolic" ];
+            };
+
+          # Only gettext-runtime is built: it is what produces libintl, and the
+          # gettext-tools half is a build-host toolchain (msgfmt/xgettext) that
+          # nothing on the guest needs.
+          gettextBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              nativeMesonTools = nativeMesonToolsDir;
+              guestPrefix = true;
+              shared = true;
+              pname = "puredarwin-gettext";
+              version = pkgs.gettext.version;
+              src = pkgs.gettext.src;
+              deps = [ libiconvBuild ];
+              preConfigureExtra = ''
+                cd gettext-runtime
+              '';
+              configureFlags = [
+                "--with-included-libintl"
+                "--with-libiconv-prefix=${libiconvBuild}"
+                "--disable-java"
+                "--disable-csharp"
+                "--disable-libasprintf"
+                "--disable-rpath"
+                "--disable-dependency-tracking"
+              ];
             };
 
           librsvgBuild =
@@ -2523,6 +2554,7 @@
               libSystem = libSystemBuild;
               src = libcxxDylibSource;
             };
+
           libcxxDylibBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/libcxx-dylib.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -3050,7 +3082,9 @@
               xvfbLibXdamageBuild xvfbLibXdmcpBuild xvfbLibXextBuild xvfbLibXfixesBuild
               xvfbLibXineramaBuild xvfbLibXkbfileBuild xvfbLibXpresentBuild xvfbLibXrandrBuild
               xvfbLibXrenderBuild xvfbLibXresBuild xvfbLibxcvtBuild xvfbZlibBuild xxdBuild xzBuild
-              yajlBuild zshArm64Build zshBuild libcrocoBuild librsvgBuild
+              yajlBuild zshArm64Build zshBuild libcrocoBuild librsvgBuild gettextBuild
+              webkitgtkBuild libsoupBuild sqliteBuild libpslBuild nghttp2Build
+              libgcryptBuild libgpgErrorBuild libtasn1Build libjpegBuild libwebpBuild
               ;
           };
           inherit (imageContents)
@@ -3096,6 +3130,7 @@
             libpsl = libpslBuild;
             libsoup = libsoupBuild;
             webkitgtk = webkitgtkBuild;
+            gettext = gettextBuild;
             libtasn1 = libtasn1Build;
             sqlite = sqliteBuild;
             glib-networking = glibNetworkingBuild;

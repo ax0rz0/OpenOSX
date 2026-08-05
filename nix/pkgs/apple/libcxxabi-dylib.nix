@@ -69,7 +69,7 @@ stdenv.mkDerivation {
     # (vanilla nixpkgs clang) uses ordinary include ordering, so libcxx/include
     # is a plain -I (see the long comment in that CMakeLists).
     ABI_FLAGS="-isysroot $DARWIN_SDK_ROOT -I${libSystem}/usr/include \
-      -std=c++17 -nostdinc++ -funwind-tables -fexceptions -fPIC -Os -DNDEBUG \
+      -std=c++23 -nostdinc++ -funwind-tables -fexceptions -fPIC -Os -DNDEBUG \
       -I $CONFIG -I $ABI/include -I $ABI/src -I $CXX/src -I $CXX/include \
       -D_LIBCXXABI_BUILDING_LIBRARY -D_LIBCPP_BUILDING_LIBRARY \
       -DLIBCXX_BUILDING_LIBCXXABI"
@@ -98,7 +98,7 @@ stdenv.mkDerivation {
       -I $UW/include -I $UW/src -I $CONFIG -I $CXX/include \
       -D_LIBUNWIND_IS_NATIVE_ONLY -D_LIBUNWIND_BUILDING_LIBUNWIND=1"
 
-    ${cc} $UW_FLAGS -std=c++17 -fno-exceptions -fno-rtti -c "$UW/src/libunwind.cpp" -o "uw_libunwind.o"
+    ${cc} $UW_FLAGS -std=c++23 -fno-exceptions -fno-rtti -c "$UW/src/libunwind.cpp" -o "uw_libunwind.o"
     objs="$objs uw_libunwind.o"
     for s in UnwindLevel1 UnwindLevel1-gcc-ext; do
       ${cc} $UW_FLAGS -std=c11 -c "$UW/src/$s.c" -o "uw_$s.o"

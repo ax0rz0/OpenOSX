@@ -10,6 +10,8 @@
 , gperf
 , unifdef
 , glibNative
+, libxml2Native
+, waylandScanner
 , nativeMesonTools
 , darwinCrossToolchain
 , nativeLd
@@ -19,9 +21,10 @@
 , webkitgtk
 , deps
 , icu
+, mesa
 , targetTriple ? "x86_64-apple-darwin20.4"
 # Requires C++23, needs a port and a half
-, configureOnly ? true
+, configureOnly ? false
 }:
 
 let
@@ -42,26 +45,20 @@ stdenv.mkDerivation {
 
   nativeBuildInputs = [
     cmake ninja pkg-config python3 perl ruby gperf unifdef glibNative
+    waylandScanner
   ];
   buildInputs = deps;
 
   postPatch = ''
     patchShebangs .
 
-    # CMake sets APPLE from CMAKE_SYSTEM_NAME=Darwin, and WebKit's build files
-    # use APPLE to mean "the Cocoa port" - so a GTK build on Darwin tries to
-    # compile Cocoa sources the GTK tarball does not even ship
-    # (darwin/OSLogPrintStream.mm, cf/*, cocoa/*) and to pass Cocoa link flags
-    # (-sub_library libobjc -umbrella WebKit). Upstream already distinguishes
-    # the two elsewhere with a PORT STREQUAL "Mac" check; this makes the
-    # port-specific sites use that instead of APPLE. The C++ side needs no such
-    # patch - it is written for OS(DARWIN) independently of PLATFORM().
     patch -p1 < ${./webkitgtk-gtk-port-on-darwin.patch}
   '';
 
   configurePhase = ''
     runHook preConfigure
-    export PATH="${nativeMesonTools}/bin:${glibNative}/bin:$PATH"
+    export PATH="${nativeMesonTools}/bin:${glibNative}/bin:${libxml2Native}/bin:$PATH"
+    export XMLLINT="${libxml2Native}/bin/xmllint"
 
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
@@ -69,15 +66,18 @@ stdenv.mkDerivation {
     export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" depPcPaths}:${lib.makeSearchPath "share/pkgconfig" depPcPaths}:${lib.makeSearchPath "usr/lib/pkgconfig" deps}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
-    commonFlags="-isysroot $DARWIN_SDK_ROOT -mmacosx-version-min=11.0 -Qunused-arguments -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector -I${libSystem}/usr/include ${lib.concatMapStringsSep " " (dep: "-I${lib.getDev dep}/include") deps}"
-    linkFlags="-isysroot $DARWIN_SDK_ROOT -mmacosx-version-min=11.0 -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -L${libcxxDylib}/usr/lib -L${libcxxabiDylib}/usr/lib ${lib.concatMapStringsSep " " (dep: "-L${dep}/lib") deps} -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-platform_version,macos,11.0,11.5 -lc++ -lc++abi -lSystem"
+    # ENABLE_JIT=OFF / ENABLE_C_LOOP=ON: JSC's x86_64 JIT is Apple's own
+    # OS(DARWIN) code using HAVE(REMAP_JIT)/vm_remap, unverified against this
+    # XNU - and ExecutableAllocator.cpp's OS(DARWIN) path includes
+    # <wtf/spi/cocoa/MachVMSPI.h>, which the GTK release tarball does not ship
+    # at all (it strips spi/cocoa/ but keeps the include). CLoop is JSC's
+    # portable bytecode interpreter: slower, but it takes the whole JIT
+    # question off the critical path. WebKitFeatures.cmake:266-269 declares
+    # exactly three things as conflicting with C_LOOP - JIT, SAMPLING_PROFILER
+    # and WEBASSEMBLY - and all three are off below.
+    commonFlags="-DKERN_NOT_FOUND=56 -DUSE_TZONE_MALLOC=0 -DWL_EGL_PLATFORM=1 -I${mesa}/usr/include -isysroot $DARWIN_SDK_ROOT -mmacosx-version-min=11.0 -Qunused-arguments -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector -I${libSystem}/usr/include ${lib.concatMapStringsSep " " (dep: "-I${lib.getDev dep}/include") deps}"
+    linkFlags="-isysroot $DARWIN_SDK_ROOT -mmacosx-version-min=11.0 -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -L${libcxxDylib}/usr/lib -L${libcxxabiDylib}/usr/lib ${lib.concatMapStringsSep " " (dep: "-L${dep}/lib") deps} -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-platform_version,macos,11.0,11.5 -lc++ -lc++abi -lsharpyuv -lSystem"
 
-    # USE_APPLE_ICU defaults to CMake's APPLE variable, i.e. ON here, which
-    # sends ICU detection down the Mac port's path: a single libicucore, with
-    # headers expected in an Apple-internal staging dir. That branch also
-    # builds the ICU::data target from an unchecked find_library result, so a
-    # miss reaches the link line as the literal string ICU_DATA_LIBRARY-NOTFOUND
-    # instead of failing configure. Off gets CMake's normal FindICU.
     cmake -B build -G Ninja \
       -DCMAKE_SYSTEM_NAME=Darwin \
       -DCMAKE_SYSTEM_PROCESSOR=x86_64 \
@@ -100,12 +100,19 @@ stdenv.mkDerivation {
       -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
       -DCMAKE_FIND_ROOT_PATH_MODE_PACKAGE=BOTH \
       -DPORT=GTK \
+      -DWAYLAND_SCANNER=${waylandScanner}/bin/wayland-scanner \
       -DUSE_APPLE_ICU=OFF \
       -DUSE_GTK4=OFF \
+      -DENABLE_X11_TARGET=OFF \
+      -DENABLE_WAYLAND_TARGET=ON \
       -DENABLE_INTROSPECTION=OFF \
       -DENABLE_JOURNALD_LOG=OFF \
       -DENABLE_DOCUMENTATION=OFF \
       -DENABLE_BUBBLEWRAP_SANDBOX=OFF \
+      -DENABLE_JIT=OFF \
+      -DENABLE_C_LOOP=ON \
+      -DENABLE_SAMPLING_PROFILER=OFF \
+      -DENABLE_WEBASSEMBLY=OFF \
       -DUSE_GSTREAMER=OFF \
       -DENABLE_VIDEO=OFF \
       -DENABLE_WEB_AUDIO=OFF \

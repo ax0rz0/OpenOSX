@@ -1,4 +1,4 @@
-//===------------------------- cxa_exception.h ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -28,8 +28,13 @@ _LIBCXXABI_HIDDEN void     __setExceptionClass  (      _Unwind_Exception*, uint6
 _LIBCXXABI_HIDDEN bool     __isOurExceptionClass(const _Unwind_Exception*);
 
 struct _LIBCXXABI_HIDDEN __cxa_exception {
-#if defined(__LP64__) || defined(_LIBCXXABI_ARM_EHABI)
-    // This is a new field to support C++ 0x exception_ptr.
+#if defined(__LP64__) || defined(_WIN64) || defined(_LIBCXXABI_ARM_EHABI)
+    // Now _Unwind_Exception is marked with __attribute__((aligned)),
+    // which implies __cxa_exception is also aligned. Insert padding
+    // in the beginning of the struct, rather than before unwindHeader.
+    void *reserve;
+
+    // This is a new field to support C++11 exception_ptr.
     // For binary compatibility it is at the start of this
     // struct which is prepended to the object thrown in
     // __cxa_allocate_exception.
@@ -38,7 +43,12 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
 
     //  Manage the exception object itself.
     std::type_info *exceptionType;
-    void (*exceptionDestructor)(void *);
+#ifdef __wasm__
+    // In Wasm, a destructor returns its argument
+    void *(_LIBCXXABI_DTOR_FUNC *exceptionDestructor)(void *);
+#else
+    void (_LIBCXXABI_DTOR_FUNC *exceptionDestructor)(void *);
+#endif
     std::unexpected_handler unexpectedHandler;
     std::terminate_handler  terminateHandler;
 
@@ -57,10 +67,10 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
     void *adjustedPtr;
 #endif
 
-#if !defined(__LP64__) && !defined(_LIBCXXABI_ARM_EHABI)
-    // This is a new field to support C++ 0x exception_ptr.
+#if !defined(__LP64__) && !defined(_WIN64) && !defined(_LIBCXXABI_ARM_EHABI)
+    // This is a new field to support C++11 exception_ptr.
     // For binary compatibility it is placed where the compiler
-    // previously adding padded to 64-bit align unwindHeader.
+    // previously added padding to 64-bit align unwindHeader.
     size_t referenceCount;
 #endif
     _Unwind_Exception unwindHeader;
@@ -70,12 +80,13 @@ struct _LIBCXXABI_HIDDEN __cxa_exception {
 // The layout of this structure MUST match the layout of __cxa_exception, with
 // primaryException instead of referenceCount.
 struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
-#if defined(__LP64__) || defined(_LIBCXXABI_ARM_EHABI)
+#if defined(__LP64__) || defined(_WIN64) || defined(_LIBCXXABI_ARM_EHABI)
+    void* reserve; // padding.
     void* primaryException;
 #endif
 
     std::type_info *exceptionType;
-    void (*exceptionDestructor)(void *);
+    void (_LIBCXXABI_DTOR_FUNC *exceptionDestructor)(void *);
     std::unexpected_handler unexpectedHandler;
     std::terminate_handler terminateHandler;
 
@@ -94,11 +105,50 @@ struct _LIBCXXABI_HIDDEN __cxa_dependent_exception {
     void *adjustedPtr;
 #endif
 
-#if !defined(__LP64__) && !defined(_LIBCXXABI_ARM_EHABI)
+#if !defined(__LP64__) && !defined(_WIN64) && !defined(_LIBCXXABI_ARM_EHABI)
     void* primaryException;
 #endif
     _Unwind_Exception unwindHeader;
 };
+
+// Verify the negative offsets of different fields.
+static_assert(sizeof(_Unwind_Exception) +
+                      offsetof(__cxa_exception, unwindHeader) ==
+                  sizeof(__cxa_exception),
+              "unwindHeader has wrong negative offsets");
+static_assert(sizeof(_Unwind_Exception) +
+                      offsetof(__cxa_dependent_exception, unwindHeader) ==
+                  sizeof(__cxa_dependent_exception),
+              "unwindHeader has wrong negative offsets");
+
+#if defined(_LIBCXXABI_ARM_EHABI)
+static_assert(offsetof(__cxa_exception, propagationCount) +
+                      sizeof(_Unwind_Exception) + sizeof(void*) ==
+                  sizeof(__cxa_exception),
+              "propagationCount has wrong negative offset");
+static_assert(offsetof(__cxa_dependent_exception, propagationCount) +
+                      sizeof(_Unwind_Exception) + sizeof(void*) ==
+                  sizeof(__cxa_dependent_exception),
+              "propagationCount has wrong negative offset");
+#elif defined(__LP64__) || defined(_WIN64)
+static_assert(offsetof(__cxa_exception, adjustedPtr) +
+                      sizeof(_Unwind_Exception) + sizeof(void*) ==
+                  sizeof(__cxa_exception),
+              "adjustedPtr has wrong negative offset");
+static_assert(offsetof(__cxa_dependent_exception, adjustedPtr) +
+                      sizeof(_Unwind_Exception) + sizeof(void*) ==
+                  sizeof(__cxa_dependent_exception),
+              "adjustedPtr has wrong negative offset");
+#else
+static_assert(offsetof(__cxa_exception, referenceCount) +
+                      sizeof(_Unwind_Exception) + sizeof(void*) ==
+                  sizeof(__cxa_exception),
+              "referenceCount has wrong negative offset");
+static_assert(offsetof(__cxa_dependent_exception, primaryException) +
+                      sizeof(_Unwind_Exception) + sizeof(void*) ==
+                  sizeof(__cxa_dependent_exception),
+              "primaryException has wrong negative offset");
+#endif
 
 struct _LIBCXXABI_HIDDEN __cxa_eh_globals {
     __cxa_exception *   caughtExceptions;
@@ -116,4 +166,4 @@ extern "C" _LIBCXXABI_FUNC_VIS void __cxa_free_dependent_exception (void * depen
 
 }  // namespace __cxxabiv1
 
-#endif  // _CXA_EXCEPTION_H
+#endif // _CXA_EXCEPTION_H

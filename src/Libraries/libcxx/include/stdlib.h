@@ -1,26 +1,11 @@
 // -*- C++ -*-
-//===--------------------------- stdlib.h ---------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
-#if defined(__need_malloc_and_calloc) || defined(_LIBCPP_STDLIB_INCLUDE_NEXT)
-
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
-#endif
-
-#if defined(_LIBCPP_STDLIB_INCLUDE_NEXT)
-#undef _LIBCPP_STDLIB_INCLUDE_NEXT
-#endif
-
-#include_next <stdlib.h>
-
-#elif !defined(_LIBCPP_STDLIB_H)
-#define _LIBCPP_STDLIB_H
 
 /*
     stdlib.h synopsis
@@ -88,16 +73,63 @@ void *aligned_alloc(size_t alignment, size_t size);                       // C11
 
 */
 
-#include <__config>
+#if defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
+#  include <__cxx03/stdlib.h>
+#else
+#  include <__config>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#pragma GCC system_header
-#endif
+#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#    pragma GCC system_header
+#  endif
 
-#include_next <stdlib.h>
+// The inclusion of the system's <stdlib.h> is intentionally done once outside of any include
+// guards because some code expects to be able to include the underlying system header multiple
+// times to get different definitions based on the macros that are set before inclusion.
+#  if __has_include_next(<stdlib.h>)
+#    include_next <stdlib.h>
+#  endif
 
-#ifdef __cplusplus
-#include <math.h>
-#endif  // __cplusplus
+#  if !defined(_LIBCPP_STDLIB_H)
+#    define _LIBCPP_STDLIB_H
 
-#endif  // _LIBCPP_STDLIB_H
+#    ifdef __cplusplus
+extern "C++" {
+// abs
+
+#      ifdef abs
+#        undef abs
+#      endif
+#      ifdef labs
+#        undef labs
+#      endif
+#      ifdef llabs
+#        undef llabs
+#      endif
+
+#      include <__math/abs.h>
+using std::__math::abs;
+
+// div
+
+#      ifdef div
+#        undef div
+#      endif
+#      ifdef ldiv
+#        undef ldiv
+#      endif
+#      ifdef lldiv
+#        undef lldiv
+#      endif
+
+// MSVCRT already has the correct prototype in <stdlib.h> if __cplusplus is defined
+#      if !defined(_LIBCPP_MSVCRT)
+inline _LIBCPP_HIDE_FROM_ABI ldiv_t div(long __x, long __y) _NOEXCEPT { return ::ldiv(__x, __y); }
+#        if !(defined(__FreeBSD__) && !defined(__LONG_LONG_SUPPORTED))
+inline _LIBCPP_HIDE_FROM_ABI lldiv_t div(long long __x, long long __y) _NOEXCEPT { return ::lldiv(__x, __y); }
+#        endif
+#      endif // _LIBCPP_MSVCRT
+} // extern "C++"
+#    endif   // __cplusplus
+#  endif     // _LIBCPP_STDLIB_H
+
+#endif // defined(__cplusplus) && __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
