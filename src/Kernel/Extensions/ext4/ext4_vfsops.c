@@ -12,6 +12,7 @@
 #include <mach/kmod.h>
 #include <libkern/libkern.h>
 #include <IOKit/IOLocks.h>
+#include <IOKit/IOLib.h>
 #include <string.h>
 
 static vfstable_t ext4_vfsconf;
@@ -23,10 +24,37 @@ static vfstable_t ext4_vfsconf;
  * journal record.
  */
 void
-ext4_fs_lock(struct ext4mount *emp)
+ext4_fs_lock_tagged(struct ext4mount *emp, const char *who)
 {
-	IORecursiveLockLock((IORecursiveLock *)emp->em_fs_lock);
+	IORecursiveLock *l = (IORecursiveLock *)emp->em_fs_lock;
+
+	/*
+	 * Acquire by polling rather than blocking, so a thread that waits an
+	 * absurdly long time can say what it wanted and who is holding it. A
+	 * genuine deadlock here is silent otherwise: the mount just stops.
+	 * IORecursiveLockTryLock still succeeds for the thread that already
+	 * owns the lock, so re-entrant acquisition is unaffected.
+	 */
+	if (!IORecursiveLockTryLock(l)) {
+		unsigned waited = 0;
+		do {
+			IOSleep(100);
+			waited += 100;
+			if (waited % 5000 == 0) {
+				E4LOG("fs_lock: %s waiting %us; holder %s thread %p "
+				    "(self %p depth %d)", who, waited / 1000,
+				    emp->em_lock_owner_tag ? emp->em_lock_owner_tag : "?",
+				    emp->em_lock_owner, IOThreadSelf(),
+				    emp->em_lock_depth);
+			}
+		} while (!IORecursiveLockTryLock(l));
+	}
+
 	emp->em_lock_depth++;
+	if (emp->em_lock_depth == 1) {
+		emp->em_lock_owner = IOThreadSelf();
+		emp->em_lock_owner_tag = who;
+	}
 }
 
 void
@@ -35,6 +63,10 @@ ext4_fs_unlock(struct ext4mount *emp)
 	if (emp->em_lock_depth == 1 && ext4_jnl_should_commit(emp))
 		(void)ext4_jnl_commit(emp);
 	emp->em_lock_depth--;
+	if (emp->em_lock_depth == 0) {
+		emp->em_lock_owner = NULL;
+		emp->em_lock_owner_tag = NULL;
+	}
 	IORecursiveLockUnlock((IORecursiveLock *)emp->em_fs_lock);
 }
 

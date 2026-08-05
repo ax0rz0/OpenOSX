@@ -4492,7 +4492,9 @@ job_start(job_t j)
 
 		(void)job_assumes_zero(j, runtime_close(execspair[0]));
 		// wait for our parent to say they've attached a kevent to us
+		pd_core_phase("job_start(%s): child waiting for uncork", j->label);
 		read(_fd(execspair[1]), &c, sizeof(c));
+		pd_core_phase("job_start(%s): child uncorked", j->label);
 
 		if (sipc) {
 			(void)job_assumes_zero(j, runtime_close(spair[0]));
@@ -6932,6 +6934,7 @@ job_uncork_fork(job_t j)
 	pid_t c = j->p;
 
 	job_log(j, LOG_DEBUG, "Uncorking the fork().");
+	pd_core_phase("job_uncork_fork(%s): writing to fd %d", j->label, j->fork_fd);
 	/* this unblocks the child and avoids a race
 	 * between the above fork() and the kevent_mod() */
 	(void)job_assumes(j, write(j->fork_fd, &c, sizeof(c)) == sizeof(c));

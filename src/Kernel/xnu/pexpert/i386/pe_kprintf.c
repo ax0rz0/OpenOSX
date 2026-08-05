@@ -66,24 +66,6 @@ SECURITY_READ_ONLY_LATE(unsigned int) disable_serial_output = TRUE;
 
 static SIMPLE_LOCK_DECLARE(kprintf_lock, 0);
 
-/*
- * PD: kprintf (debug=... DB_KPRT boot-arg) picking pal_serial_putc means
- * kprintf output goes ONLY to the UART, never the video/GOP console, with
- * gopconsole=1 that leaves the on-screen console completely silent even
- * though serial is full of kprintf output. Mirror both here, scoped
- * strictly to this kprintf/PE_kputc path (NOT cnputc/_cnputs, which drive
- * interactive BSDConsole tty I/O and previously had its own separate
- * mirroring that caused doubled characters there, reverted).
- *
- * cons_ops_index (osfmk/console/serial_console.c) starts as SERIAL_CONS_OPS
- * whenever the "serial=" boot-arg is set, only flipping to VC_CONS_OPS once
- * IOFramebuffer::start() actually runs. Until then, cnputc_unbuffered()
- * ALSO routes to the same UART as pal_serial_putc(), mirroring
- * unconditionally double-wrote every character during all of early boot.
- * Only call cnputc_unbuffered() when the active console isn't already
- * serial.
- */
-
 __startup_func
 static void
 PE_init_kprintf(void)

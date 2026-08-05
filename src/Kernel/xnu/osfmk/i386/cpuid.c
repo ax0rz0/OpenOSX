@@ -672,7 +672,17 @@ cpuid_set_generic_info(i386_cpu_info_t *info_p)
 	 * the microcode version number a.k.a. signature a.k.a. BIOS ID
 	 */
 
-	wrmsr64(MSR_IA32_BIOS_SIGN_ID, 0);
+	/*
+	 * MSR_IA32_BIOS_SIGN_ID (0x8B) is a writable scratch register on Intel,
+	 * which is why the approved sequence zeroes it before CPUID.1 and reads
+	 * the signature back afterwards. On AMD the same MSR is PATCH_LEVEL and
+	 * is read-only: the write raises #GP, which this early in boot is
+	 * unhandled and hangs the machine. The value is still readable there, so
+	 * only the write needs to be Intel-only.
+	 */
+	if (info_p->cpuid_ven == CPUID_VEN_INTEL) {
+		wrmsr64(MSR_IA32_BIOS_SIGN_ID, 0);
+	}
 	cpuid_fn(1, reg);
 	info_p->cpuid_microcode_version =
 	    (uint32_t) (rdmsr64(MSR_IA32_BIOS_SIGN_ID) >> 32);

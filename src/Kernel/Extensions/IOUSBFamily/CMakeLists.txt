@@ -9,12 +9,16 @@ target_sources(IOUSBFamily PRIVATE
     IOUSBFamily/IOUSBDevice.cpp
     IOUSBFamily/IOUSBInterface.cpp
     IOUSBFamily/IOUSBPipe.cpp
+    IOUSBMassStorage/IOUSBMassStorageDisk.cpp
+    IOUSBMassStorage/IOUSBMassStorageClass.cpp
 )
 
 set_property(TARGET IOUSBFamily PROPERTY CXX_STANDARD 11)
 target_compile_options(IOUSBFamily PRIVATE
     -Wno-implicit-int-conversion -Wno-inconsistent-missing-override
     -Wno-sign-conversion -Wno-shadow -Wno-unused-parameter)
+target_include_directories(IOUSBFamily PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../IOStorageFamily/include)
 target_link_libraries(IOUSBFamily PRIVATE IOUSBFamilyHeaders)
 install(TARGETS IOUSBFamily DESTINATION System/Library/Extensions COMPONENT BaseSystem)
 

@@ -85,6 +85,7 @@ bool AppleUSBEHCI::start(IOService *provider)
     UInt16 version = capRead16(kEHCIHCIVersion);
     UInt32 hcs = capRead32(kEHCIHCSParams);
     UInt32 hcc = capRead32(kEHCIHCCParams);
+    _hccParams = hcc;
     _rootHubPorts = EHCI_HCS_N_PORTS(hcs);
 
     EHCI_Log("caplen=%u version=%04x hcs=%08x hcc=%08x ports=%u eecp=%02x",
@@ -116,6 +117,23 @@ bool AppleUSBEHCI::start(IOService *provider)
     EHCI_Log("after reset USBCMD=%08x USBSTS=%08x USBINTR=%08x CONFIGFLAG=%08x",
              opRead32(kEHCIUSBCmd), opRead32(kEHCIUSBSts),
              opRead32(kEHCIUSBIntr), opRead32(kEHCIConfigFlag));
+
+    /*
+     * When the controller advertises 64-bit addressing (HCCPARAMS bit 0), every
+     * QH and qTD pointer it follows is formed as {CTRLDSSEGMENT, 32-bit value},
+     * so this register supplies the upper half of all of them. All the schedule
+     * memory here is allocated below 4 GB, so the correct value is zero - but it
+     * has to be written, because whatever the firmware left behind is used
+     * otherwise and the controller then fetches queue heads from the wrong 4 GB
+     * region. It advances nothing, reports nothing, and every qTD stays Active.
+     *
+     * QEMU's EHCI does not set the 64-bit bit, so this is invisible there and
+     * only shows up on real hardware - Intel PCH parts do set it.
+     */
+    if (_hccParams & kEHCIHCCParams64Bit) {
+        opWrite32(kEHCICtrlDSegment, 0);
+        EHCI_Log("64-bit capable, CTRLDSSEGMENT=%08x", opRead32(kEHCICtrlDSegment));
+    }
 
     opWrite32(kEHCIConfigFlag, 1);
     if (!runController(true)) {
@@ -516,17 +534,27 @@ bool AppleUSBEHCI::runController(bool run)
     return false;
 }
 
+/*
+ * Every qTD pointer the controller follows has its low 5 bits reserved, so a
+ * qTD must start on a 32-byte boundary. The structure itself is 52 bytes (13
+ * dwords: the 8 hardware ones plus the five extended 64-bit buffer pointers),
+ * so spacing the pool by sizeof() puts every qTD after the first at an address
+ * the controller silently rounds down into the middle of its predecessor - it
+ * then finds an inactive descriptor there and the queue stops without error.
+ */
+#define kEHCIqTDStride 64U
+
 EHCIGeneralTransferDescriptorSharedPtr AppleUSBEHCI::qTDAt(UInt32 index)
 {
-    UInt32 count = kEHCIPageSize / sizeof(EHCIGeneralTransferDescriptorShared);
-    if (!_qTDPool || index >= count)
+    if (!_qTDPool || index >= (kEHCIPageSize / kEHCIqTDStride))
         return NULL;
-    return &_qTDPool[index];
+    return (EHCIGeneralTransferDescriptorSharedPtr)((UInt8 *)_qTDPool +
+                                                    index * kEHCIqTDStride);
 }
 
 USBPhysicalAddress32 AppleUSBEHCI::qTDPhys(UInt32 index)
 {
-    return _qTDPoolPhys + index * sizeof(EHCIGeneralTransferDescriptorShared);
+    return _qTDPoolPhys + index * kEHCIqTDStride;
 }
 
 void AppleUSBEHCI::setQTDBuffer(EHCIGeneralTransferDescriptorSharedPtr qtd,
@@ -654,7 +682,13 @@ IOReturn AppleUSBEHCI::controlTransfer(USBDeviceAddress address,
                                            kEHCIQHEndpointSpeedHigh |
                                            ((UInt32)address & 0x7fU) |
                                            (64U << kEHCIQHMaxPacketShift));
-    _asyncQH->endpointSplitCaps = 0;
+    /*
+     * Mult must be non-zero: EHCI 3.6.2 defines a value of zero as "do not
+     * execute transactions for this queue head", so leaving it clear lets the
+     * controller retire whatever qTD is already in the overlay and then stall
+     * before it ever advances to the next one.
+     */
+    _asyncQH->endpointSplitCaps = HostToUSBLong(1U << kEHCIQHMultShift);
     _asyncQH->currentqTDPtr = 0;
     _asyncQH->nextqTDPtr = HostToUSBLong(setupTDPhys);
     _asyncQH->altqTDPtr = HostToUSBLong(kEHCIqTDTerminate);
@@ -782,6 +816,170 @@ IOReturn AppleUSBEHCI::interruptTransfer(IOMemoryDescriptor *buffer,
             ret = kIOUSBTransactionTimeout;
         }
     }
+
+    dataMem->complete();
+    dataMem->release();
+    return ret;
+}
+
+#define kEHCIBulkBytesPerTD 16384U
+
+// The qTD pool is one page of 32-byte-aligned slots, so this is how many
+// transfers can be queued at once.
+static const UInt32 kEHCIBulkMaxTDs = kEHCIPageSize / kEHCIqTDStride;
+IOReturn AppleUSBEHCI::waitForBulkChain(const UInt32 *tdIndex, const UInt32 *tdLength,
+                                        UInt32 count, UInt32 timeoutMs, UInt32 *movedOut)
+{
+    if (movedOut)
+        *movedOut = 0;
+
+    for (UInt32 elapsed = 0; elapsed < timeoutMs; elapsed++) {
+        UInt32 moved = 0;
+        bool halted = false;
+        bool done = false;
+        bool shortPacket = false;
+
+        for (UInt32 i = 0; i < count; i++) {
+            EHCIGeneralTransferDescriptorSharedPtr td = qTDAt(tdIndex[i]);
+            UInt32 token = USBToHostLong(td->flags);
+
+            if (token & kEHCIqTDStatusActive) {
+                // Everything ahead of this qTD is untouched, so a short packet
+                // on the qTD just behind it is what stopped the queue.
+                done = shortPacket;
+                break;
+            }
+
+            UInt32 remaining = (token & kEHCIqTDBytesMask) >> kEHCIqTDBytesShift;
+            moved += tdLength[i] - remaining;
+
+            if (token & kEHCIqTDStatusHalted) {
+                halted = true;
+                done = true;
+                break;
+            }
+            if (remaining)
+                shortPacket = true;
+            if (i == count - 1)
+                done = true;
+        }
+
+        if (done) {
+            if (movedOut)
+                *movedOut = moved;
+            return halted ? kIOReturnIOError : kIOReturnSuccess;
+        }
+        IOSleep(1);
+    }
+    return kIOReturnTimeout;
+}
+
+IOReturn AppleUSBEHCI::bulkTransfer(IOMemoryDescriptor *buffer, USBDeviceAddress address,
+                                    Endpoint *endpoint, bool isWrite)
+{
+    if (!_asyncQH || !_qTDPool || !buffer || !endpoint)
+        return kIOReturnBadArgument;
+    if (endpoint->transferType != kUSBBulk)
+        return kIOReturnUnsupported;
+
+    UInt32 length = (UInt32)buffer->getLength();
+    if (!length)
+        return kIOReturnBadArgument;
+
+    UInt32 maxPacket = endpoint->maxPacketSize ? endpoint->maxPacketSize : 512;
+    UInt32 tdCount = (length + kEHCIBulkBytesPerTD - 1) / kEHCIBulkBytesPerTD;
+    if (tdCount > kEHCIBulkMaxTDs)
+        return kIOReturnNoResources;
+
+    IOBufferMemoryDescriptor *dataMem = IOBufferMemoryDescriptor::inTaskWithPhysicalMask(
+        kernel_task, kIOMemoryPhysicallyContiguous | kIODirectionInOut, length,
+        0x00000000ffffffffULL);
+    if (!dataMem || dataMem->prepare() != kIOReturnSuccess) {
+        if (dataMem)
+            dataMem->release();
+        return kIOReturnNoMemory;
+    }
+
+    UInt8 *data = (UInt8 *)dataMem->getBytesNoCopy();
+    if (isWrite)
+        buffer->readBytes(0, data, length);
+    else
+        bzero(data, length);
+
+    USBPhysicalAddress32 dataPhys = (USBPhysicalAddress32)dataMem->getPhysicalAddress();
+    UInt8 epNum = endpoint->number & 0x0fU;
+    UInt8 dirIndex = isWrite ? 1 : 0;
+    UInt8 toggle = _bulkDataToggle[address & 0x7fU][epNum][dirIndex];
+
+    UInt32 tdIndex[kEHCIBulkMaxTDs];
+    UInt32 tdLength[kEHCIBulkMaxTDs];
+    UInt32 offset = 0;
+
+    for (UInt32 i = 0; i < tdCount; i++) {
+        UInt32 chunk = length - offset;
+        if (chunk > kEHCIBulkBytesPerTD)
+            chunk = kEHCIBulkBytesPerTD;
+
+        tdIndex[i] = i;
+        tdLength[i] = chunk;
+
+        bool last = (i == tdCount - 1);
+        // The data toggle is left to the queue head (DTC=0 below), so the value
+        // handed to fillQTD here is ignored by the controller.
+        fillQTD(qTDAt(i), last ? 0 : qTDPhys(i + 1),
+                isWrite ? kEHCIqTDPIDOut : kEHCIqTDPIDIn, 0,
+                dataPhys + offset, chunk, last);
+        offset += chunk;
+    }
+
+    /*
+     * DTC is deliberately not set: with it clear the queue head owns the data
+     * toggle, so it carries correctly across every qTD of this transfer and is
+     * read back below to seed the next one. Mult must be non-zero or the
+     * controller will not issue any transactions for the queue head.
+     */
+    _asyncQH->endpointCaps = HostToUSBLong(kEHCIQHHead |
+                                           kEHCIQHEndpointSpeedHigh |
+                                           ((UInt32)address & 0x7fU) |
+                                           ((UInt32)epNum << 8) |
+                                           (maxPacket << kEHCIQHMaxPacketShift));
+    _asyncQH->endpointSplitCaps = HostToUSBLong(1U << kEHCIQHMultShift);
+    _asyncQH->currentqTDPtr = 0;
+    _asyncQH->nextqTDPtr = HostToUSBLong(qTDPhys(0));
+    _asyncQH->altqTDPtr = HostToUSBLong(kEHCIqTDTerminate);
+    _asyncQH->qTDFlags = HostToUSBLong(toggle ? kEHCIqTDDataToggle : 0);
+    for (int i = 0; i < 5; i++) {
+        _asyncQH->bufferPtr[i] = 0;
+        _asyncQH->extBufferPtr[i] = 0;
+    }
+    __sync_synchronize();
+
+    if (!runController(true)) {
+        EHCI_Log("bulk transfer: controller failed to run");
+        dataMem->complete();
+        dataMem->release();
+        return kIOReturnTimeout;
+    }
+    opWrite32(kEHCIConfigFlag, 1);
+
+    UInt32 moved = 0;
+    UInt32 timeoutMs = 1000 + length / 64;
+    IOReturn ret = enableAsyncSchedule(true)
+                       ? waitForBulkChain(tdIndex, tdLength, tdCount, timeoutMs, &moved)
+                       : kIOReturnTimeout;
+    enableAsyncSchedule(false);
+
+    if (ret == kIOReturnSuccess) {
+        _bulkDataToggle[address & 0x7fU][epNum][dirIndex] =
+            (USBToHostLong(_asyncQH->qTDFlags) & kEHCIqTDDataToggle) ? 1 : 0;
+        if (!isWrite && moved)
+            buffer->writeBytes(0, data, moved);
+    } else if (ret == kIOReturnTimeout) {
+        ret = kIOUSBTransactionTimeout;
+    }
+
+    _asyncQH->nextqTDPtr = HostToUSBLong(kEHCIqTDTerminate);
+    _asyncQH->qTDFlags = HostToUSBLong(kEHCIqTDStatusHalted);
 
     dataMem->complete();
     dataMem->release();
@@ -974,14 +1172,29 @@ void AppleUSBEHCI::releaseHardwareResources(void)
     _opRegs = NULL;
 }
 
-IOReturn AppleUSBEHCI::UIMOpenPipe(USBDeviceAddress, UInt8, Endpoint *endpoint)
+/*
+ * Opening a pipe is bookkeeping-free here: the queue heads are reprogrammed per
+ * transfer from the Endpoint the transfer call passes in. Accept everything the
+ * UIM can actually carry and let an unsupported direction fail at transfer
+ * time, which is where the caller can report it usefully.
+ */
+IOReturn AppleUSBEHCI::UIMOpenPipe(USBDeviceAddress address, UInt8 speed, Endpoint *endpoint)
 {
     if (!endpoint)
         return kIOReturnSuccess;
-    if (endpoint->transferType == kUSBInterrupt && endpoint->direction == kUSBIn)
+
+    switch (endpoint->transferType) {
+    case kUSBControl:
+    case kUSBBulk:
+    case kUSBInterrupt:
         return kIOReturnSuccess;
-    if (endpoint->transferType == kUSBControl)
-        return kIOReturnSuccess;
+    default:
+        break;
+    }
+
+    EHCI_Log("UIMOpenPipe refusing addr=%u speed=%u ep=%u type=%u dir=%u mps=%u",
+             address, speed, endpoint->number, endpoint->transferType,
+             endpoint->direction, endpoint->maxPacketSize);
     return kIOReturnUnsupported;
 }
 
@@ -995,9 +1208,20 @@ IOReturn AppleUSBEHCI::UIMAbortPipe(USBDeviceAddress, Endpoint *)
     return kIOReturnUnsupported;
 }
 
-IOReturn AppleUSBEHCI::UIMClearPipeStall(USBDeviceAddress, Endpoint *)
+/*
+ * CLEAR_FEATURE(ENDPOINT_HALT) resets the device's toggle to DATA0, so the host
+ * side has to follow or every transfer after a stall is answered with the wrong
+ * PID. Bulk-only mass storage leans on this for its error recovery.
+ */
+IOReturn AppleUSBEHCI::UIMClearPipeStall(USBDeviceAddress address, Endpoint *endpoint)
 {
-    return kIOReturnUnsupported;
+    if (!endpoint)
+        return kIOReturnBadArgument;
+    if (endpoint->transferType != kUSBBulk)
+        return kIOReturnSuccess;
+    _bulkDataToggle[address & 0x7fU][endpoint->number & 0x0fU]
+                   [(endpoint->direction == kUSBOut) ? 1 : 0] = 0;
+    return kIOReturnSuccess;
 }
 
 IOReturn AppleUSBEHCI::UIMDeviceRequest(IOUSBDevRequest *request, USBDeviceAddress address)
@@ -1008,6 +1232,10 @@ IOReturn AppleUSBEHCI::UIMDeviceRequest(IOUSBDevRequest *request, USBDeviceAddre
 IOReturn AppleUSBEHCI::UIMReadWrite(IOMemoryDescriptor *buffer, USBDeviceAddress address,
                                     Endpoint *endpoint, bool isWrite)
 {
+    if (!endpoint)
+        return kIOReturnBadArgument;
+    if (endpoint->transferType == kUSBBulk)
+        return bulkTransfer(buffer, address, endpoint, isWrite);
     if (isWrite)
         return kIOReturnUnsupported;
     return interruptTransfer(buffer, address, endpoint);
@@ -1034,10 +1262,20 @@ IOReturn AppleUSBEHCI::UIMCreateControlEndpoint(UInt8, UInt8, UInt16, UInt8,
     return kIOReturnUnsupported;
 }
 
-IOReturn AppleUSBEHCI::UIMCreateBulkEndpoint(UInt8, UInt8, UInt8, UInt8, UInt16,
+/*
+ * Endpoints are not tracked: the single async queue head is reprogrammed per
+ * transfer from the Endpoint passed to UIMReadWrite. All that is needed here is
+ * to start the endpoint on DATA0, as the USB spec requires after configuration.
+ */
+IOReturn AppleUSBEHCI::UIMCreateBulkEndpoint(UInt8 functionAddress, UInt8 endpointNumber,
+                                             UInt8 direction, UInt8, UInt16,
                                              USBDeviceAddress, int)
 {
-    return kIOReturnUnsupported;
+    if ((direction != kUSBOut) && (direction != kUSBIn))
+        return kIOReturnBadArgument;
+    _bulkDataToggle[functionAddress & 0x7fU][endpointNumber & 0x0fU]
+                   [(direction == kUSBOut) ? 1 : 0] = 0;
+    return kIOReturnSuccess;
 }
 
 IOReturn AppleUSBEHCI::UIMCreateInterruptEndpoint(short, short, UInt8, short,

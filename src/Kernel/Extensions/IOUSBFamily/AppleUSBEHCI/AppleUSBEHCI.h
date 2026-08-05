@@ -116,6 +116,8 @@ protected:
     UInt32 _bandwidthAvailable;
     UInt8 _capLength;
     UInt8 _rootHubPorts;
+    // HCCPARAMS, kept because bit 0 decides whether CTRLDSSEGMENT is live.
+    UInt32 _hccParams;
     bool _uimInitialized;
     IOBufferMemoryDescriptor *_asyncQHMem;
     EHCIAsyncQueueHeadPtr _asyncQH;
@@ -135,6 +137,9 @@ protected:
     IOUSBDevice *_portDevices[16];
     UInt8 _addrMaxPacket[128];
     UInt8 _intrDataToggle[128][16];
+    // Bulk IN and OUT with the same endpoint number are distinct endpoints with
+    // independent toggles, so the direction is part of the key.
+    UInt8 _bulkDataToggle[128][16][2];
     UInt8 _nextAddress;
     bool _enumRunning;
 
@@ -164,6 +169,10 @@ protected:
     IOReturn controlTransfer(USBDeviceAddress address, IOUSBDevRequest *request);
     IOReturn interruptTransfer(IOMemoryDescriptor *buffer, USBDeviceAddress address,
                                Endpoint *endpoint);
+    IOReturn bulkTransfer(IOMemoryDescriptor *buffer, USBDeviceAddress address,
+                          Endpoint *endpoint, bool isWrite);
+    IOReturn waitForBulkChain(const UInt32 *tdIndex, const UInt32 *tdLength,
+                              UInt32 count, UInt32 timeoutMs, UInt32 *movedOut);
     static void enumThreadEntry(void *arg, wait_result_t);
     void enumThreadLoop(void);
     void enumeratePort(UInt32 port);

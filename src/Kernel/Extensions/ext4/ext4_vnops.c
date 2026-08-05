@@ -326,6 +326,7 @@ ext4_vnop_read_impl(struct vnop_read_args *ap)
 	struct ext4node *ep = VTOE(vp);
 	uint32_t bs = ep->e_mount->em_blocksize;
 	char *buf;
+	uint64_t file_size;
 	int error = 0;
 
 	if (vnode_isdir(vp))
@@ -346,21 +347,36 @@ ext4_vnop_read_impl(struct vnop_read_args *ap)
 	if (buf == NULL)
 		return ENOMEM;
 
+	/* Snapshot e_size under the node lock, as ext4_read_range does: the
+	 * fs lock is no longer held for the whole loop, so ext4_vget()'s
+	 * cache-hit refresh can rewrite it underneath us. */
+	IOLockLock((IOLock *)ep->e_lock);
+	file_size = ep->e_size;
+	IOLockUnlock((IOLock *)ep->e_lock);
+
 	while (uio_resid(uio) > 0) {
 		off_t foff = uio_offset(uio);
 		size_t want;
 
-		if (foff >= (off_t)ep->e_size)
+		if (foff >= (off_t)file_size)
 			break;
 		want = bs - (foff % bs);
 		if (want > (size_t)uio_resid(uio))
 			want = (size_t)uio_resid(uio);
-		if (foff + (off_t)want > (off_t)ep->e_size)
-			want = (size_t)(ep->e_size - foff);
+		if (foff + (off_t)want > (off_t)file_size)
+			want = (size_t)(file_size - foff);
 
+		ext4_fs_lock(ep->e_mount);
 		error = ext4_read_range(ep, foff, buf, want);
+		ext4_fs_unlock(ep->e_mount);
 		if (error)
 			break;
+		/*
+		 * uiomove runs unlocked on purpose. The destination is a user
+		 * buffer that can itself be a page of a file on this mount, so
+		 * the copy can fault; holding em_fs_lock across it deadlocks
+		 * the whole mount against the VNOP_PAGEIN servicing that fault.
+		 */
 		error = uiomove(buf, (int)want, uio);
 		if (error)
 			break;
@@ -2179,17 +2195,19 @@ ext4_vnop_setattr(struct vnop_setattr_args *ap)
 	return error;
 }
 
+/*
+ * Read takes em_fs_lock itself, per block read, rather than across the whole
+ * call: it must not hold it over uiomove. See ext4_vnop_read_impl.
+ */
 static int
 ext4_vnop_read(struct vnop_read_args *ap)
 {
 	struct ext4mount *emp = VTOE(ap->a_vp)->e_mount;
-	int error;
 
 	ext4_fs_lock(emp);
 	emp->em_stats.reads++;
-	error = ext4_vnop_read_impl(ap);
 	ext4_fs_unlock(emp);
-	return error;
+	return ext4_vnop_read_impl(ap);
 }
 
 static int

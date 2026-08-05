@@ -50,7 +50,11 @@ enum {
 
     kEHCIUSBStsHalted = 1U << 12,
     kEHCIUSBStsPeriodicStatus = 1U << 14,
-    kEHCIUSBStsAsyncStatus = 1U << 15
+    kEHCIUSBStsAsyncStatus = 1U << 15,
+
+    // HCCPARAMS bit 0: data structure pointers are 64-bit, upper half coming
+    // from CTRLDSSEGMENT. Set on Intel PCH parts, clear on QEMU's EHCI.
+    kEHCIHCCParams64Bit = 1U << 0
 };
 
 enum {

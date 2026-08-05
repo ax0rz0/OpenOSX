@@ -297,6 +297,26 @@ let
       rm -rf "$out/pd-sbin"
     fi
   '');
+  splitBaseSystemStrippedDebug = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } (''
+    mkdir -p "$out"
+    cp -a ${kernelDebugBuild}/. "$out/"
+    chmod -R u+w "$out"
+    cp -a ${kextsBuild}/. "$out/"
+    chmod -R u+w "$out"
+    cp -a ${libSystemBuild}/. "$out/"
+  '' + lib.optionalString (!isDarwin && launchdBuild != null) ''
+    chmod -R u+w "$out"
+    cp -a ${launchdBuild}/. "$out/"
+    chmod -R u+w "$out"
+  '' + lib.optionalString (!isDarwin && launchctlBuild != null) ''
+    cp -a ${launchctlBuild}/. "$out/"
+    chmod -R u+w "$out"
+    if [ -e "$out/pd-sbin/launchd" ]; then
+      mkdir -p "$out/sbin"
+      cp "$out/pd-sbin/launchd" "$out/sbin/launchd"
+      rm -rf "$out/pd-sbin"
+    fi
+  '');
 
   # Stripped base plus the CLI userland (sw_vers, mount, virgl-smoke,
   # etc.) - a lean image that still has usable tools, without the heavy
@@ -307,6 +327,14 @@ let
   splitBaseSystemMinimal = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } ''
     mkdir -p "$out"
     cp -a ${splitBaseSystemStripped}/. "$out/"
+    chmod -R u+w "$out"
+    cp -a ${userlandBuild}/. "$out/"
+  '';
+
+
+  splitBaseSystemMinimalDebug = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } ''
+    mkdir -p "$out"
+    cp -a ${splitBaseSystemStrippedDebug}/. "$out/"
     chmod -R u+w "$out"
     cp -a ${userlandBuild}/. "$out/"
   '';
@@ -676,7 +704,7 @@ let
         imageFileName = "puredarwin-arm64-virt-minimal-release.img";
         bootArgs = "serial=3 -noprogress ahci_debug=1 kext=0xffff io=0xffff";
       };
-      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild libffiBuild xvfbFontsBuild cursorThemeBuild waylandBuild wlrootsBuild swayBuild cairoBuild glibBuild fribidiBuild harfbuzzBuild pangoBuild pcre2Build xvfbPixmanBuild jsoncBuild libdrmBuild pdsurfaceBuild libgbmBuild xkbcommonBuild fontconfigBuild freetype2Build expatBuild xkeyboardConfigBuild xkbcompBuild xwaylandBuild xvfbLibxcvtBuild libxshmfenceSharedBuild xeyesBuild mesaBuild pdVirglShimBuild mesaDemosBuild llvmCrossBuild ];
+      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild gsbaseTestBuild ];
       imageStrippedBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystemStripped;
         extraPackages = strippedExtraPackages;
@@ -692,6 +720,20 @@ let
         xnuLoader = xnu-loader.packages.${system}.default;
         apfsprogs = pkgs.apfsprogs;
         imageFileName = "puredarwin-minimal.img";
+        espMB = 64;
+        rootMB = 384;
+        bootArgs = "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 -noprogress gen9_debug=1";
+      };
+      imageMinimalBuildDebug = pkgs.callPackage ../image.nix {
+        baseSystem = splitBaseSystemMinimalDebug;
+        extraPackages = strippedExtraPackages;
+        kc = kcDebugBuild;
+        xnuLoader = xnu-loader.packages.${system}.default;
+        apfsprogs = pkgs.apfsprogs;
+        imageFileName = "puredarwin-minimal-debug.img";
+        espMB = 64;
+        rootMB = 384;
+        bootArgs = "-v debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 -noprogress gen9_debug=1 serial_video_mirror=1 pdtrace=1";
       };
       runVm = pkgs.writeShellApplication {
         name = "puredarwin-vm";
@@ -803,8 +845,6 @@ let
             -device hda-duplex,audiodev=snd0 \
             -audiodev "''${PUREDARWIN_VM_AUDIODEV:-none},id=snd0" \
             -serial mon:stdio \
-            -no-reboot \
-            -no-shutdown \
             "$@"
         '';
       };
@@ -970,6 +1010,7 @@ let
       image-debug = imageDebugBuild;
       image-stripped = imageStrippedBuild;
       image-minimal = imageMinimalBuild;
+      image-minimal-debug = imageMinimalBuildDebug;
       xorg = xorgBuild;
       libxcvt = xvfbLibxcvtBuild;
       userland = userlandBuild;

@@ -317,6 +317,11 @@ struct ext4mount {
 	 * outermost hold is released, so a whole (possibly re-entrant) vnop
 	 * is one atomic journal transaction. */
 	int              em_lock_depth;
+	/* Who holds em_fs_lock, so a thread that blocks acquiring it can name
+	 * the holder. Written by the outermost holder, read racily by waiters -
+	 * diagnostics only. */
+	void            *em_lock_owner;
+	const char      *em_lock_owner_tag;
 };
 
 /* in-core inode (attached to vnode fsnode) */
@@ -405,7 +410,8 @@ int  ext4_init_block_bitmap(struct ext4mount *emp, uint32_t grp,
                uint32_t *free_out);
 
 /* mount-wide metadata lock (ext4_vfsops.c) */
-void ext4_fs_lock(struct ext4mount *emp);
+void ext4_fs_lock_tagged(struct ext4mount *emp, const char *who);
+#define ext4_fs_lock(emp) ext4_fs_lock_tagged((emp), __func__)
 void ext4_fs_unlock(struct ext4mount *emp);
 
 /* Validate a directory block's rec_len chain. Returns 0 if walkable. */

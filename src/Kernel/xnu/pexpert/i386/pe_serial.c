@@ -35,6 +35,8 @@
 #include <pexpert/protos.h>
 #include <pexpert/pexpert.h>
 
+extern void vc_serial_record_early(char c);
+
 struct pe_serial_functions {
 	void            (*uart_init) (void);
 	void            (*uart_set_baud_rate) (int unit, uint32_t baud_rate);
@@ -656,6 +658,14 @@ void
 serial_putc( char c )
 {
 	uart_putc(c);
+
+	/*
+	 * Every serial write funnels through here, including kprintf's early
+	 * bypass straight to pal_serial_putc(), so this is the only point that
+	 * sees output emitted before the graphics console exists. It is recorded
+	 * and replayed onto the screen when the console comes up.
+	 */
+	//vc_serial_record_early(c);
 }
 
 int

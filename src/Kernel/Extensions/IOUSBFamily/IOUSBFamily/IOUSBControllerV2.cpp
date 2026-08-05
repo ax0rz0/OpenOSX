@@ -70,7 +70,7 @@ IOUSBControllerV2::UpdateTopology(USBDeviceAddress deviceAddress, UInt8 speed,
 IOReturn
 IOUSBControllerV2::OpenPipe(USBDeviceAddress address, UInt8 speed, Endpoint *endpoint)
 {
-    return kIOReturnUnsupported;
+    return IOUSBController::OpenPipe(address, speed, endpoint);
 }
 
 IOReturn
