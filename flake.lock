@@ -7,13 +7,13 @@
       "locked": {
         "lastModified": 1785848761,
         "narHash": "sha256-lAjlFkO+qnuADUFJzi0AjVM4iz6bxcYDrLW+ypTrc7c=",
-        "owner": "PureDarwin",
+        "owner": "OpenOSX",
         "repo": "iig-tools",
         "rev": "8d6651f5f1417820783e3b3eb38df8e481d0a2fb",
         "type": "github"
       },
       "original": {
-        "owner": "PureDarwin",
+        "owner": "OpenOSX",
         "repo": "iig-tools",
         "type": "github"
       }
@@ -25,13 +25,13 @@
       "locked": {
         "lastModified": 1785848791,
         "narHash": "sha256-Kg8GfCsiw/1vM6aaA35wYx5dbpyWMJs7ivpJTREPcEA=",
-        "owner": "PureDarwin",
+        "owner": "OpenOSX",
         "repo": "kc-tools",
         "rev": "4e82242d16f9af7abcb8c5e9c973cab81d6d88df",
         "type": "github"
       },
       "original": {
-        "owner": "PureDarwin",
+        "owner": "OpenOSX",
         "repo": "kc-tools",
         "type": "github"
       }
@@ -115,13 +115,13 @@
       "locked": {
         "lastModified": 1785947829,
         "narHash": "sha256-9DPWJlg1/DQlXDKDL5Zi8NKdrpaxtxZRYrk9xVetRD8=",
-        "owner": "PureDarwin",
+        "owner": "OpenOSX",
         "repo": "xnu-loader",
         "rev": "58197b99faefd2ae438f62b62060ee48d361f2de",
         "type": "github"
       },
       "original": {
-        "owner": "PureDarwin",
+        "owner": "OpenOSX",
         "repo": "xnu-loader",
         "type": "github"
       }

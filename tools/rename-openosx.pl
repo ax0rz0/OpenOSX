@@ -36,6 +36,11 @@ sub excluded {
 sub apply_rules {
     my ($s) = @_;
     $s =~ s/-DPUREDARWIN_/-DOPENOSX_/g;
+    # fastfetch generates FASTFETCH_DATATEXT_LOGO_<NAME> from the ascii logo
+    # FILENAME, so renaming the file desyncs this reference. Targeted rather
+    # than a blanket /_PUREDARWIN/ rule: the other underscore-glued names are
+    # self-consistent header guards, and rewriting them would churn rebuilds.
+    $s =~ s/DATATEXT_LOGO_PUREDARWIN/DATATEXT_LOGO_OPENOSX/g;
     $s =~ s/-DPUREDARWIN\b/-DOPENOSX/g;
     $s =~ s/__PUREDARWIN__/__OPENOSX__/g;
     $s =~ s/org\.puredarwin\./org.openosx./g;
