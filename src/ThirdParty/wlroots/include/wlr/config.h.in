@@ -18,7 +18,7 @@
 /**
  * Whether the OpenOSX IOGOP backend is compile-time enabled.
  */
-#mesondefine WLR_HAS_PUREDARWIN_BACKEND
+#mesondefine WLR_HAS_OPENOSX_BACKEND
 /**
  * Whether the X11 backend is compile-time enabled. Equivalent to the
  * pkg-config "have_x11_backend" variable.

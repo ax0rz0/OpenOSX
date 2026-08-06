@@ -46,6 +46,11 @@ sub apply_rules {
     # than a blanket /_PUREDARWIN/ rule: the other underscore-glued names are
     # self-consistent header guards, and rewriting them would churn rebuilds.
     $s =~ s/DATATEXT_LOGO_PUREDARWIN/DATATEXT_LOGO_OPENOSX/g;
+    # Same hazard: meson derives WLR_HAS_<BACKEND>_BACKEND from the backend
+    # option name ('openosx-backend' after the rename), so the hand-written
+    # #if in backend.c must follow. Glued between underscores, so the \b
+    # rules cannot see it.
+    $s =~ s/WLR_HAS_PUREDARWIN_BACKEND/WLR_HAS_OPENOSX_BACKEND/g;
     $s =~ s/-DPUREDARWIN\b/-DOPENOSX/g;
     $s =~ s/__PUREDARWIN__/__OPENOSX__/g;
     $s =~ s/org\.puredarwin\./org.openosx./g;
