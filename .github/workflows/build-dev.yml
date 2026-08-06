@@ -6,9 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  kernel:
     runs-on: macos-latest
-
     steps:
       - name: Clone
         uses: actions/checkout@v4
@@ -33,18 +32,96 @@ jobs:
         run: |
           mkdir -p out
           cp configure.log build.log out/ 2>/dev/null || true
-          find build -type f -name 'kernel*' -not -path '*CMakeFiles*' -not -name '*.o' -exec cp {} out/ \; 2>/dev/null || true
+          KERNEL=$(find build -type f -name 'kernel' -not -path '*CMakeFiles*' | head -1)
+          if [ -n "$KERNEL" ]; then cp "$KERNEL" out/kernel; fi
+          find build -type f \( -name 'kernel*' -o -name '*.kernel' \) -not -path '*CMakeFiles*' -not -name '*.o' \
+            -exec cp {} out/ \; 2>/dev/null || true
+          mkdir -p out/kexts
           find build -type d -name '*.kext' -not -path '*CMakeFiles*' | while read -r k; do
-            tar -C "$(dirname "$k")" -czf "out/$(basename "$k").tgz" "$(basename "$k")"
+            tar -C "$(dirname "$k")" -czf "out/kexts/$(basename "$k").tgz" "$(basename "$k")"
           done
           find build -maxdepth 5 -type f -name '*.dylib' -not -path '*CMakeFiles*' -exec cp {} out/ \; 2>/dev/null || true
           echo "=== Artifact inventory ==="
-          ls -la out/
+          ls -laR out/
 
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: openosx-build-${{ github.run_number }}
+          name: kernel-build
           path: out/
+          retention-days: 14
+
+  bootchain:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+
+      - name: Build xnu-loader
+        run: nix build ./tools/xnu-loader -o loader-out --print-build-logs
+
+      - name: Build kc-tools
+        run: nix build ./tools/kc-tools -o kc-out --print-build-logs
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p out/kc-tools
+          cp -rL loader-out/. out/ || true
+          cp -rL kc-out/. out/kc-tools/ || true
+          echo "=== Artifact inventory ==="
+          ls -laR out/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: bootchain
+          path: out/
+          retention-days: 14
+
+  esp:
+    runs-on: ubuntu-latest
+    needs: [kernel, bootchain]
+    steps:
+      - name: Download kernel
+        uses: actions/download-artifact@v4
+        with:
+          name: kernel-build
+          path: kernel-build
+
+      - name: Download bootchain
+        uses: actions/download-artifact@v4
+        with:
+          name: bootchain
+          path: bootchain
+
+      - name: Install mtools
+        run: sudo apt-get update && sudo apt-get install -y mtools dosfstools
+
+      - name: Assemble ESP image
+        run: |
+          set -e
+          LOADER=$(find bootchain -name '*.efi' | head -1)
+          KERNEL=$(ls kernel-build/kernel 2>/dev/null || find kernel-build -maxdepth 1 -type f -name 'kernel*' -not -name '*.log' | head -1)
+          echo "loader: $LOADER"
+          echo "kernel: $KERNEL"
+          test -n "$LOADER" && test -n "$KERNEL"
+          truncate -s 64M esp.img
+          mkfs.vfat -F 32 esp.img
+          mmd -i esp.img ::/EFI ::/EFI/BOOT
+          mcopy -i esp.img "$LOADER" ::/EFI/BOOT/BOOTX64.EFI
+          mcopy -i esp.img "$KERNEL" ::/EFI/BOOT/kernel
+          printf -- '-v serial=3 debug=0x8 keepsyms=1' > boot-args.txt
+          mcopy -i esp.img boot-args.txt ::/EFI/BOOT/boot-args.txt
+          echo "=== ESP contents ==="
+          mdir -i esp.img -/ ::/
+
+      - name: Upload ESP image
+        uses: actions/upload-artifact@v4
+        with:
+          name: esp-image
+          path: esp.img
           retention-days: 14
