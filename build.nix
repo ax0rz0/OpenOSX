@@ -189,19 +189,19 @@ EOF
       -DZLIB_LIBRARY_RELEASE=${zlibLibrary} \
       -DLIBXML2_INCLUDE_DIR=${libxml2Include} \
       -DLIBXML2_LIBRARY=${libxml2Library} \
-      -DPUREDARWIN_MACOSX_SDK="$DARWIN_SDK_ROOT" \
-      -DPUREDARWIN_ARCH=${puredarwinArch} \
-      -DPUREDARWIN_ENABLE_PROJECTS=${if enableProjects then "ON" else "OFF"} \
-      -DPUREDARWIN_ENABLE_KERNEL=${if enableKernel then "ON" else "OFF"} \
-      -DPUREDARWIN_ENABLE_LIBRARIES=${if enableLibraries then "ON" else "OFF"} \
-      -DPUREDARWIN_ENABLE_USERSPACE=${if enableUserspace then "ON" else "OFF"} \
-      -DPUREDARWIN_ENABLE_TOOLS=${if enableTools then "ON" else "OFF"} \
-      -DPUREDARWIN_ENABLE_TCC=${if enableTcc then "ON" else "OFF"} \
-      -DPUREDARWIN_ENABLE_IOGRAPHICS_FAMILY=${if enableIOGraphicsFamily then "ON" else "OFF"} \
-      -DPUREDARWIN_XNU_KERNEL_CONFIG=${lib.escapeShellArg xnuKernelConfig} \
-      -DPUREDARWIN_TCC_SOURCE=${tinycc.src} \
-      ${lib.optionalString (xorgDriverIncludes != null) "-DPUREDARWIN_XORG_INCLUDE_DIRS=${lib.escapeShellArg (lib.concatStringsSep ";" xorgDriverIncludes)}"} \
-      ${lib.optionalString (prebuiltLibSystem != null) "-DPUREDARWIN_PREBUILT_LIBSYSTEM_ROOT=${prebuiltLibSystem}"} \
+      -DOPENOSX_MACOSX_SDK="$DARWIN_SDK_ROOT" \
+      -DOPENOSX_ARCH=${puredarwinArch} \
+      -DOPENOSX_ENABLE_PROJECTS=${if enableProjects then "ON" else "OFF"} \
+      -DOPENOSX_ENABLE_KERNEL=${if enableKernel then "ON" else "OFF"} \
+      -DOPENOSX_ENABLE_LIBRARIES=${if enableLibraries then "ON" else "OFF"} \
+      -DOPENOSX_ENABLE_USERSPACE=${if enableUserspace then "ON" else "OFF"} \
+      -DOPENOSX_ENABLE_TOOLS=${if enableTools then "ON" else "OFF"} \
+      -DOPENOSX_ENABLE_TCC=${if enableTcc then "ON" else "OFF"} \
+      -DOPENOSX_ENABLE_IOGRAPHICS_FAMILY=${if enableIOGraphicsFamily then "ON" else "OFF"} \
+      -DOPENOSX_XNU_KERNEL_CONFIG=${lib.escapeShellArg xnuKernelConfig} \
+      -DOPENOSX_TCC_SOURCE=${tinycc.src} \
+      ${lib.optionalString (xorgDriverIncludes != null) "-DOPENOSX_XORG_INCLUDE_DIRS=${lib.escapeShellArg (lib.concatStringsSep ";" xorgDriverIncludes)}"} \
+      ${lib.optionalString (prebuiltLibSystem != null) "-DOPENOSX_PREBUILT_LIBSYSTEM_ROOT=${prebuiltLibSystem}"} \
       ${lib.concatStringsSep " \\\n      " extraCmakeFlags}
     runHook postConfigure
   '';

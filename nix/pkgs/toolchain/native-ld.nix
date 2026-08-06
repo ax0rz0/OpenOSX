@@ -129,9 +129,9 @@ EOF
       -DZLIB_LIBRARY=${zlib.out}/lib/libz.so \
       -DLIBXML2_INCLUDE_DIR=${libxml2.dev}/include/libxml2 \
       -DLIBXML2_LIBRARY=${libxml2.out}/lib/libxml2.so \
-      -DPUREDARWIN_MACOSX_SDK="$DARWIN_SDK_ROOT" \
-      -DPUREDARWIN_LIBTAPI_INCLUDE_DIR=${lib.getDev libtapi}/include \
-      -DPUREDARWIN_LIBTAPI_LIBRARY=${lib.getLib libtapi}/lib/libtapi.so
+      -DOPENOSX_MACOSX_SDK="$DARWIN_SDK_ROOT" \
+      -DOPENOSX_LIBTAPI_INCLUDE_DIR=${lib.getDev libtapi}/include \
+      -DOPENOSX_LIBTAPI_LIBRARY=${lib.getLib libtapi}/lib/libtapi.so
     runHook postConfigure
   '';
 

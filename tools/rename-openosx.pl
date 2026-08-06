@@ -5,12 +5,20 @@
 # exact same substitution rules to each tracked path — so on-disk names always
 # match what pass 1 turned the references into.
 #
-# Guards (lines NEVER touched):
-#   - copyright/attribution lines
-#   - live external references (github PureDarwin org, puredarwin.org, discord)
-#   - the PUREDARWIN_LICENSE filename (lookahead below)
-# Excluded paths entirely: license files (incl. PUREDARWIN-LICENSES.md),
-# vendored subtrees (tools/xnu-loader, tools/kc-tools), this script.
+# The -D rules exist because CMake/meson define flags glue "-D" onto the macro
+# name, defeating the \b word-boundary rules (found the hard way: ld64 built
+# without TAPI because -DPUREDARWIN_LIBTAPI_* was not renamed while its
+# consumer was).
+#
+# Guards (lines NEVER touched): copyright/attribution lines, live external
+# references (github PureDarwin org, puredarwin.org, discord). Excluded paths:
+# license files (incl. PUREDARWIN-LICENSES.md), vendored subtrees
+# (tools/xnu-loader, tools/kc-tools), this script.
+#
+# Known intentionally-unrenamed internal identifiers (glued camelCase, fully
+# consistent on both definition and use sites): mkPureDarwinBuild,
+# puredarwinArch, puredarwinSource, and file basenames like
+# puredarwininput_drv / virgl_puredarwin_* / *_PureDarwin.c / xf86drmPuredarwin.
 use strict; use warnings;
 use File::Path qw(make_path);
 use File::Basename qw(dirname);
@@ -27,6 +35,8 @@ sub excluded {
 
 sub apply_rules {
     my ($s) = @_;
+    $s =~ s/-DPUREDARWIN_/-DOPENOSX_/g;
+    $s =~ s/-DPUREDARWIN\b/-DOPENOSX/g;
     $s =~ s/__PUREDARWIN__/__OPENOSX__/g;
     $s =~ s/org\.puredarwin\./org.openosx./g;
     $s =~ s/\bPUREDARWIN_(?!LICENSE)/OPENOSX_/g;
