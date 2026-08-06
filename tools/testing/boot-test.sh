@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Headless boot test of a built OpenOSX/PureDarwin image inside WSL.
+# Headless boot test of a built OpenOSX/OpenOSX image inside WSL.
 # Usage: boot-test.sh <image> [timeout_sec] [pass_regex]
 set -u
 IMG="${1:?usage: boot-test.sh <image> [timeout] [pass_regex]}"

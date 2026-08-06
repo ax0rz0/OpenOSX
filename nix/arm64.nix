@@ -1127,7 +1127,7 @@ let
     xnuKernelConfig = "RELEASE";
     puredarwinArch = "arm64";
     inherit arm64CrossToolchain;
-    extraCmakeFlags = [ "-DPUREDARWIN_ARM64_MACHINE_CONFIG=VIRT" ];
+    extraCmakeFlags = [ "-DOPENOSX_ARM64_MACHINE_CONFIG=VIRT" ];
   };
   kernelArm64VirtDebugBuild = mkPureDarwinBuild {
     pname = "openosx-kernel-arm64-virt-debug";
@@ -1139,7 +1139,7 @@ let
     xnuKernelConfig = "DEBUG";
     puredarwinArch = "arm64";
     inherit arm64CrossToolchain;
-    extraCmakeFlags = [ "-DPUREDARWIN_ARM64_MACHINE_CONFIG=VIRT" ];
+    extraCmakeFlags = [ "-DOPENOSX_ARM64_MACHINE_CONFIG=VIRT" ];
   };
   kextsArm64Build = mkPureDarwinBuild {
     pname = "openosx-kexts-arm64";

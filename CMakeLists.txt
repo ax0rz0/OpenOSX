@@ -72,7 +72,7 @@ endif()
 
 # Target CPU architecture. x86_64 is the primary/working target (QEMU boot,
 # loader, dyld). arm64 is an opt-in in progress: configure with
-# -DPUREDARWIN_ARCH=arm64. Falls back to CMAKE_OSX_ARCHITECTURES if that's set.
+# -DOPENOSX_ARCH=arm64. Falls back to CMAKE_OSX_ARCHITECTURES if that's set.
 if(NOT OPENOSX_ARCH)
     if(CMAKE_OSX_ARCHITECTURES)
         set(OPENOSX_ARCH "${CMAKE_OSX_ARCHITECTURES}")

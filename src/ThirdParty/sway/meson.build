@@ -76,7 +76,7 @@ if host_machine.system() == 'darwin'
 	libevdev = declare_dependency(
 		include_directories: include_directories('openosx'),
 	)
-	add_project_arguments('-DPUREDARWIN', language: 'c')
+	add_project_arguments('-DOPENOSX', language: 'c')
 else
 	libevdev = dependency('libevdev')
 endif

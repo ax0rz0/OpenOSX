@@ -4,13 +4,13 @@ set -u
 W=/root/boottest
 LOG=$W/serial3.log
 FIFO=$W/in
-IMG="${1:-/root/openosx/result/puredarwin-minimal.img}"
+IMG="${1:-/root/openosx/result/openosx-minimal.img}"
 mkdir -p "$W"
 rm -f "$FIFO"; mkfifo "$FIFO"
 : > "$LOG"
 
-PUREDARWIN_IMAGE="$IMG" PUREDARWIN_VM_STATE_DIR=$W/state \
-  timeout 480 /root/vmrun/bin/puredarwin-vm -display none \
+OPENOSX_IMAGE="$IMG" OPENOSX_VM_STATE_DIR=$W/state \
+  timeout 480 /root/vmrun/bin/openosx-vm -display none \
   < "$FIFO" > "$LOG" 2>&1 &
 VMPID=$!
 exec 3> "$FIFO"   # hold writer open so qemu's stdin stays alive

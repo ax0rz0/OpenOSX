@@ -206,8 +206,8 @@
             installKernel = false;
             prebuiltLibSystem = libSystemBuild;
             extraCmakeFlags = [
-              "-DPUREDARWIN_ENABLE_SELFHOST_CCTOOLS=ON"
-              "-DPUREDARWIN_IIG_SOURCE=${iig-tools}"
+              "-DOPENOSX_ENABLE_SELFHOST_CCTOOLS=ON"
+              "-DOPENOSX_IIG_SOURCE=${iig-tools}"
             ];
           };
           xvfbPixmanBuild =
@@ -2818,10 +2818,10 @@
               installUserland = false;
               installKernel = false;
               extraCmakeFlags = [
-                "-DPUREDARWIN_ENABLE_SYSTEMCONFIGURATION=ON"
-                "-DPUREDARWIN_COREFOUNDATION_PREFIX=${corefoundation}"
-                "-DPUREDARWIN_LIBOBJC_PREFIX=${libobjc}"
-                "-DPUREDARWIN_SECURITY_PREFIX=${security}"
+                "-DOPENOSX_ENABLE_SYSTEMCONFIGURATION=ON"
+                "-DOPENOSX_COREFOUNDATION_PREFIX=${corefoundation}"
+                "-DOPENOSX_LIBOBJC_PREFIX=${libobjc}"
+                "-DOPENOSX_SECURITY_PREFIX=${security}"
               ];
             }).overrideAttrs (old: {
               installPhase = ''
@@ -2871,8 +2871,8 @@
               installUserland = false;
               installKernel = false;
               extraCmakeFlags = [
-                "-DPUREDARWIN_ENABLE_IOKITCF=ON"
-                "-DPUREDARWIN_COREFOUNDATION_PREFIX=${coreFoundationBuild}"
+                "-DOPENOSX_ENABLE_IOKITCF=ON"
+                "-DOPENOSX_COREFOUNDATION_PREFIX=${coreFoundationBuild}"
               ];
             }).overrideAttrs (old: {
               installPhase = ''
@@ -2905,11 +2905,11 @@
               installUserland = false;
               installKernel = false;
               extraCmakeFlags = [
-                "-DPUREDARWIN_ENABLE_DISKARBITRATION=ON"
-                "-DPUREDARWIN_COREFOUNDATION_PREFIX=${coreFoundationBuild}"
-                "-DPUREDARWIN_IOKIT_PREFIX=${iokitBuild}"
-                "-DPUREDARWIN_SECURITY_PREFIX=${securityBuild}"
-                "-DPUREDARWIN_SYSTEMCONFIGURATION_PREFIX=${systemConfigurationBuild}"
+                "-DOPENOSX_ENABLE_DISKARBITRATION=ON"
+                "-DOPENOSX_COREFOUNDATION_PREFIX=${coreFoundationBuild}"
+                "-DOPENOSX_IOKIT_PREFIX=${iokitBuild}"
+                "-DOPENOSX_SECURITY_PREFIX=${securityBuild}"
+                "-DOPENOSX_SYSTEMCONFIGURATION_PREFIX=${systemConfigurationBuild}"
               ];
             }).overrideAttrs (old: {
               installPhase = ''
@@ -2985,9 +2985,9 @@
             installUserland = false;
             installKernel = false;
             extraCmakeFlags = [
-              "-DPUREDARWIN_ENABLE_FBDOOM=ON"
-              "-DPUREDARWIN_FBDOOM_SOURCE=${fbdoomExternalSrc}"
-              "-DPUREDARWIN_CHOCOLATE_DOOM_SOURCE=${chocolateDoomPatchedSrc}"
+              "-DOPENOSX_ENABLE_FBDOOM=ON"
+              "-DOPENOSX_FBDOOM_SOURCE=${fbdoomExternalSrc}"
+              "-DOPENOSX_CHOCOLATE_DOOM_SOURCE=${chocolateDoomPatchedSrc}"
             ];
           }).overrideAttrs (old: {
             installPhase = ''

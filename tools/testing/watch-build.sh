@@ -6,7 +6,7 @@ while pgrep -f "nix build" >/dev/null; do
   cur=$(grep -oE "building '/nix/store/[a-z0-9]{32}-[A-Za-z0-9._-]+\.drv'" "$LOG" 2>/dev/null \
         | tail -1 | sed -E "s/^building '\/nix\/store\/[a-z0-9]{32}-//; s/\.drv'$//")
   case "$cur" in
-    *puredarwin*|*openosx*|*apple*|*xnu*|*kc-*|*clang-cross*|*cctools*|*tcc*|*image*)
+    *openosx*|*openosx*|*apple*|*xnu*|*kc-*|*clang-cross*|*cctools*|*tcc*|*image*)
       if [ -n "$cur" ] && [ "$cur" != "$last" ]; then
         echo "BUILDING: $cur"
         last="$cur"
