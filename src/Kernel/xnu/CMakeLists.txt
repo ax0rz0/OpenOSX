@@ -14,7 +14,7 @@ externalproject_add(xnu_headers.extproj
             -D CTFMERGE_PATH=$<TARGET_FILE:host_ctfmerge>
             -D CTFINSERT_PATH=$<TARGET_FILE:host_ctf_insert>
             -D AVAILABILITY_PL_PATH=$<TARGET_FILE:availability.pl>
-            -D MIG_PATH=${PUREDARWIN_SOURCE_DIR}/tools/mig/mig.sh
+            -D MIG_PATH=${CMAKE_SOURCE_DIR}/tools/mig/mig.sh
             -D MIGCOM_PATH=$<TARGET_FILE:migcom>
             -D STRIP_PATH=$<TARGET_FILE:host_strip>
             -D LIPO_PATH=$<TARGET_FILE:host_lipo>
@@ -78,7 +78,7 @@ externalproject_add(xnu
             -D CTFINSERT_PATH=$<TARGET_FILE:host_ctf_insert>
             -D AVAILABILITY_PL_PATH=$<TARGET_FILE:availability.pl>
             -D LD_PATH=$<TARGET_FILE:host_ld>
-            -D MIG_PATH=${PUREDARWIN_SOURCE_DIR}/tools/mig/mig.sh
+            -D MIG_PATH=${CMAKE_SOURCE_DIR}/tools/mig/mig.sh
             -D MIGCOM_PATH=$<TARGET_FILE:migcom>
             -D STRIP_PATH=$<TARGET_FILE:host_strip>
             -D LIPO_PATH=$<TARGET_FILE:host_lipo>

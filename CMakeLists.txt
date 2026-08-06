@@ -3,7 +3,7 @@ if(CMAKE_GENERATOR STREQUAL "Xcode")
 endif()
 
 cmake_minimum_required(VERSION 3.15.1)
-project(PUREDARWIN)
+project(OPENOSX)
 
 if((NOT CMAKE_C_COMPILER_ID MATCHES "AppleClang") AND (NOT CMAKE_C_COMPILER_ID MATCHES "Clang"))
     message(FATAL_ERROR "PureDarwin must be compiled with clang.")
