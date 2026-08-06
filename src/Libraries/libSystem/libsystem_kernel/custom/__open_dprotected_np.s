@@ -1,5 +1,5 @@
 /*
- * PureDarwin: open_dprotected_np(2) is marked NO_SYSCALL_STUB in
+ * OpenOSX: open_dprotected_np(2) is marked NO_SYSCALL_STUB in
  * syscalls.master, so no stub is generated for it even though the kernel trap
  * exists. configd's SCPCommit.c calls it to create preference files with a
  * data-protection class.

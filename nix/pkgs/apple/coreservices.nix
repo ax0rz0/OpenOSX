@@ -23,7 +23,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-coreservices";
+  pname = "openosx-coreservices";
   version = "0.1";
 
   inherit src;

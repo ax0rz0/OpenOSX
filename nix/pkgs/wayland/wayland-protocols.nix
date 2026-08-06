@@ -4,7 +4,7 @@
 }:
 
 stdenv.mkDerivation {
-  pname = "puredarwin-wayland-protocols";
+  pname = "openosx-wayland-protocols";
   version = "1.48";
   inherit src;
 
@@ -32,7 +32,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "Wayland protocol XML descriptions for PureDarwin compositor builds";
+    description = "Wayland protocol XML descriptions for OpenOSX compositor builds";
     homepage = "https://gitlab.freedesktop.org/wayland/wayland-protocols";
     license = licenses.mit;
     platforms = platforms.linux;

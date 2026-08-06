@@ -1,5 +1,5 @@
 /*
- * xf86-video-puredarwingop: minimal Xorg video driver for PureDarwin's
+ * xf86-video-puredarwingop: minimal Xorg video driver for OpenOSX's
  * IOGOPFramebuffer.
  *
  * This is a busless (no PCI/platform bus) framebuffer driver. It uses PDGOP
@@ -170,7 +170,7 @@ static void
 PDGOPIdentify(int flags)
 {
     (void)flags;
-    xf86PrintChipsets(PDGOP_NAME, "Driver for PureDarwin IOGOPFramebuffer",
+    xf86PrintChipsets(PDGOP_NAME, "Driver for OpenOSX IOGOPFramebuffer",
                       PDGOPChipsets);
 }
 

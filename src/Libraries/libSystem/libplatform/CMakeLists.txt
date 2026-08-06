@@ -9,10 +9,10 @@ target_include_directories(libplatform_private_headers INTERFACE ${CMAKE_CURRENT
 # Static archive of the freestanding libplatform routines dyld needs when linked
 # -nostdlib: the string/mem primitives (memcpy/memset/memmove/strlen/strcmp/...),
 # the _simple_* buffered-I/O helpers, OSAtomic, and os_unfair_lock. Arch-specific
-# atomics follow PUREDARWIN_ARCH.
-if(PUREDARWIN_ARM64)
+# atomics follow OPENOSX_ARCH.
+if(OPENOSX_ARM64)
     # The upstream ARM64 file only contains the commpage FIFO entry points.
-    # PureDarwin's merged libSystem also needs the ordinary OSAtomic API used
+    # OpenOSX's merged libSystem also needs the ordinary OSAtomic API used
     # by libc and malloc; keep those portable ARM implementations in the
     # archive as well.
     set(_libplatform_atomics

@@ -22,7 +22,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-systemstarter";
+  pname = "openosx-systemstarter";
   version = "0.1";
 
   dontUnpack = true;
@@ -72,7 +72,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "Real PureDarwin/XPC SystemStarter + classic StartupItems support";
+    description = "Real OpenOSX/XPC SystemStarter + classic StartupItems support";
     platforms = platforms.linux;
   };
 }

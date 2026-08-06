@@ -1,5 +1,5 @@
 /*
- * PureDarwin: see System-compat/sandbox.h for why this exists - real
+ * OpenOSX: see System-compat/sandbox.h for why this exists - real
  * sandbox_check() needs a kernel Sandbox.kext MAC-framework policy PD
  * doesn't run. Returning 0 (allowed) unconditionally is the real,
  * documented sandbox_check() behavior for "no active sandbox profile",

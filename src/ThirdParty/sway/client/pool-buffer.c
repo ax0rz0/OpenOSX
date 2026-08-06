@@ -15,7 +15,7 @@
 #include "util.h"
 
 static int anonymous_shm_open(void) {
-	#ifdef PUREDARWIN
+	#ifdef OPENOSX
 	char name[] = "/tmp/sway-XXXXXX";
 	int fd = mkstemp(name);
 	if (fd >= 0) {

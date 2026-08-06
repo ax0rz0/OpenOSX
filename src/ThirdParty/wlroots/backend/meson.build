@@ -1,6 +1,6 @@
 wlr_files += files('backend.c')
 
-all_backends = ['drm', 'libinput', 'puredarwin', 'x11']
+all_backends = ['drm', 'libinput', 'openosx', 'x11']
 backends = get_option('backends')
 if 'auto' in backends and get_option('auto_features').enabled()
 	backends = all_backends

@@ -5,7 +5,7 @@
 # not an IOService (each concrete driver already subclasses its own
 # Apple family base class).
 add_kext_bundle(IOVirtIOFamily.kext INFO_PLIST Info.plist KERNEL_PRIVATE
-    BUNDLE_IDENTIFIER org.puredarwin.iokit.IOVirtIOFamily BUNDLE_VERSION 1.0.0)
+    BUNDLE_IDENTIFIER org.openosx.iokit.IOVirtIOFamily BUNDLE_VERSION 1.0.0)
 set_property(TARGET IOVirtIOFamily.kext PROPERTY OUTPUT_NAME IOVirtIOFamily)
 
 target_sources(IOVirtIOFamily.kext PRIVATE

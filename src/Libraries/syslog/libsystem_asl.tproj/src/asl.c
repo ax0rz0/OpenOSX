@@ -57,7 +57,7 @@
 #include <asl_ipc.h>
 
 /*
- * PureDarwin: asl.c calls os_log_shim_enabled(addr) with a code address, but
+ * OpenOSX: asl.c calls os_log_shim_enabled(addr) with a code address, but
  * the os_log_shim_enabled() libsystem_trace declares takes (os_log_t, type) -
  * a different function that happens to share the name. Apple's real one maps
  * the address to its Mach-O image and consults that image's logging

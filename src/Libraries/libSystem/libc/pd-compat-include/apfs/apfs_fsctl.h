@@ -1,15 +1,15 @@
 /*
- * apfs/apfs_fsctl.h  (PureDarwin reconstruction)
+ * apfs/apfs_fsctl.h  (OpenOSX reconstruction)
  *
  * Apple ships <apfs/apfs_fsctl.h> only in its internal SDK. libc's getcwd.c uses
  * exactly one thing from it: the firmlink-probe fsctl (APFSIOC_FIRMLINK_CTL with
  * an apfs_firmlink_control_t). getcwd's __check_for_firmlink() treats ANY fsctl
  * error as "assume firmlink" and falls back to lstat()-based path building, so a
- * kernel that doesn't implement this ioctl (PureDarwin is not APFS-rooted at
+ * kernel that doesn't implement this ioctl (OpenOSX is not APFS-rooted at
  * bring-up) degrades safely to the slow, correct path.
  *
  * NB: the APFSIOC_FIRMLINK_CTL encoding below is reconstructed; if/when
- * PureDarwin runs on real APFS this must be reconciled with the apfs kext's
+ * OpenOSX runs on real APFS this must be reconciled with the apfs kext's
  * definition so the firmlink fast-path actually engages.
  */
 #ifndef _APFS_APFS_FSCTL_H_

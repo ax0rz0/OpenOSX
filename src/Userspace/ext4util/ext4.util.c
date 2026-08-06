@@ -1,5 +1,5 @@
 /*
- * ext4.util - the loadable_fs(5) utility for PureDarwin's ext4.kext.
+ * ext4.util - the loadable_fs(5) utility for OpenOSX's ext4.kext.
  *
  * diskarbitrationd identifies a volume by running the .util named in its
  * filesystem bundle's FSProbeExecutable:

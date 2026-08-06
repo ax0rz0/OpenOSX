@@ -269,7 +269,7 @@ name:
 
 #if defined(__DYNAMIC__)
 /*
- * PureDarwin fix: load the ADDRESS of var, not its contents.  The original
+ * OpenOSX fix: load the ADDRESS of var, not its contents.  The original
  * `movq var(%rip),%rdx` dereferenced the target, so BRANCH_EXTERN/CALL_EXTERN
  * jumped/called through the first 8 bytes of the callee's code when the symbol
  * resolved locally (e.g. cerror inside dyld), producing a non-canonical RIP.

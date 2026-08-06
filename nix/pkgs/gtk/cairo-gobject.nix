@@ -23,7 +23,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-cairo-gobject";
+  pname = "openosx-cairo-gobject";
   inherit (cairoReal) version;
   src = cairoReal.src;
 
@@ -79,7 +79,7 @@ stdenv.mkDerivation {
     # CAIRO_HAS_GOBJECT_FUNCTIONS must reach consumers, not just this build:
     # all of cairo-gobject.h sits behind "#if CAIRO_HAS_GOBJECT_FUNCTIONS", and
     # upstream cairo defines it in cairo-features.h when gobject support is built
-    # in. PureDarwin builds cairo-gobject as its own derivation, so cairo never
+    # in. OpenOSX builds cairo-gobject as its own derivation, so cairo never
     # defines it and the installed header is inert - including it succeeds and
     # then every CAIRO_GOBJECT_TYPE_* use fails as undeclared (first seen in
     # xfce4-appfinder).
@@ -102,7 +102,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "cairo-gobject, cross-built standalone for PureDarwin";
+    description = "cairo-gobject, cross-built standalone for OpenOSX";
     platforms = platforms.linux;
   };
 }

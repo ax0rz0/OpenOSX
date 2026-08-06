@@ -1,5 +1,5 @@
 /*
- * USB.h - PureDarwin minimal replacement.
+ * USB.h - OpenOSX minimal replacement.
  *
  * The real SDK USB.h (from a much newer macOS release than this kext build
  * targets) gates every descriptor/request struct definition behind

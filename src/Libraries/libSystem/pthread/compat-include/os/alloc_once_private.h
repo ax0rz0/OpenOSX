@@ -1,5 +1,5 @@
 /*
- * os/alloc_once_private.h  (PureDarwin reconstruction)
+ * os/alloc_once_private.h  (OpenOSX reconstruction)
  *
  * Apple ships <os/alloc_once_private.h> only in its internal SDK; the open
  * libplatform drop contains os/alloc_once_impl.h (which #errors unless included

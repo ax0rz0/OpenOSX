@@ -47,7 +47,7 @@ PDSurfaceDeviceOpen(PDSurfaceDeviceRef *outDevice)
     for (size_t i = 0;
          i < sizeof(kSurfaceProviderClasses) / sizeof(kSurfaceProviderClasses[0]);
          i++) {
-        /* PureDarwin's IOKitLib and Apple's disagree on both the matching
+        /* OpenOSX's IOKitLib and Apple's disagree on both the matching
          * dictionary's type and this call's signature, and which one is in
          * scope depends on the include path. PDGOP splits the same way. */
 #ifdef _PD_IOKITLIB_H

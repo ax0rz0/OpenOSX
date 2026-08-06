@@ -3,7 +3,7 @@
 # 1.1 spec. Polling-only, no MSI-X/interrupts, command completion and screen refresh are both
 # polled (see IOVirtIOGPU.cpp for details).
 add_kext_bundle(IOVirtIOGPU.kext INFO_PLIST Info.plist KERNEL_PRIVATE
-    BUNDLE_IDENTIFIER org.puredarwin.driver.IOVirtIOGPU BUNDLE_VERSION 1.0.0)
+    BUNDLE_IDENTIFIER org.openosx.driver.IOVirtIOGPU BUNDLE_VERSION 1.0.0)
 set_property(TARGET IOVirtIOGPU.kext PROPERTY OUTPUT_NAME IOVirtIOGPU)
 
 target_sources(IOVirtIOGPU.kext PRIVATE

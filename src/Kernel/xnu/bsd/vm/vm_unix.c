@@ -1692,7 +1692,7 @@ out:
  * When a process is specified, this call is blocking, otherwise we wake up the
  * freezer thread and do not block on a process being frozen.
  *
- * PureDarwin: gate on CONFIG_EMBEDDED, matching syscalls.master, which
+ * OpenOSX: gate on CONFIG_EMBEDDED, matching syscalls.master, which
  * swaps this whole entry for `nosys` (not `pid_hibernate`) when
  * CONFIG_EMBEDDED is off - makesyscalls.sh then never emits
  * `struct pid_hibernate_args` into sysproto.h, so a build with

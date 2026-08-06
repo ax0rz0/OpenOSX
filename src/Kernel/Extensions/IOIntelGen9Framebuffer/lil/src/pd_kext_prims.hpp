@@ -1,6 +1,6 @@
 #pragma once
 /*
- * pd_kext_prims.hpp - PureDarwin de-STL primitives for building `lil` inside a
+ * pd_kext_prims.hpp - OpenOSX de-STL primitives for building `lil` inside a
  * Darwin kext (freestanding libkern C++, no libc++/STL). Replaces the compile-
  * time and lightweight container std:: facilities lil's gen9 path relies on with
  * header-only equivalents (clang builtins + tiny types). No exceptions, no RTTI,

@@ -30,8 +30,8 @@ if(_libsystem_b_copts)
     list(REMOVE_ITEM _libsystem_b_copts -nostdinc)
     set_target_properties(libSystem_B_stub PROPERTIES COMPILE_OPTIONS "${_libsystem_b_copts}")
 endif()
-target_compile_options(libSystem_B_stub PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
-target_link_options(libSystem_B_stub PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
+target_compile_options(libSystem_B_stub PRIVATE -isysroot ${OPENOSX_MACOSX_SDK})
+target_link_options(libSystem_B_stub PRIVATE -isysroot ${OPENOSX_MACOSX_SDK})
 target_include_directories(libSystem_B_stub PRIVATE
     ${CMAKE_SOURCE_DIR}/src/Libraries/XPC/launchd/System-compat
     # libmacho/arch.c reaches for cctools' own stuff/openstep_mach.h
@@ -41,7 +41,7 @@ set(LIBSYSTEM_EXPORTS ${CMAKE_CURRENT_SOURCE_DIR}/libSystem.exports)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${LIBSYSTEM_EXPORTS})
 file(STRINGS ${LIBSYSTEM_EXPORTS} _libsystem_export_lines)
 set(_libsystem_exports_for_link ${LIBSYSTEM_EXPORTS})
-if(PUREDARWIN_ARM64)
+if(OPENOSX_ARM64)
     # Drop only the legacy x86 ABI suffixes. Modern ARM64 APIs still use
     # Darwin extension/versioned names such as $DARWIN_EXTSN and $V2.
     list(FILTER _libsystem_export_lines EXCLUDE REGEX "\\$(UNIX2003|INODE64|1050)$")
@@ -100,7 +100,7 @@ target_link_options(libSystem_B_stub PRIVATE
     -Wl,-force_load,$<TARGET_FILE:XPC_libxpc_static>
     $<TARGET_FILE:XPC_notifyd_mig_static>
     $<TARGET_FILE:XPC_launchd_mig_static>)
-if(PUREDARWIN_USE_LD64_LLD)
+if(OPENOSX_USE_LD64_LLD)
     target_link_libraries(libSystem_B_stub PRIVATE
         $<TARGET_FILE:libplatform_static>
         $<TARGET_FILE:pthread_full_static>
@@ -198,7 +198,7 @@ target_link_options(libSystem_B_stub PRIVATE
     -Wl,-dead_strip
     -Wl,-fixup_chains
     -Wl,-exported_symbols_list,${_libsystem_exports_for_link})
-if(PUREDARWIN_USE_LD64_LLD)
+if(OPENOSX_USE_LD64_LLD)
     # ld64.lld diagnoses duplicate archive members before ordinary dead_strip
     # can discard them; Apple's ld64 accepts this link. Keep the compatibility
     # switch scoped to the Nix/LLVM linker path.

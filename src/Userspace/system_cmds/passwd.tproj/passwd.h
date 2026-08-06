@@ -25,11 +25,11 @@
 #include <TargetConditionals.h>
 
 #define INFO_FILE 1
-/* PureDarwin: no NIS, no OpenDirectory, no PAM, so those three backends have
+/* OpenOSX: no NIS, no OpenDirectory, no PAM, so those three backends have
  * nothing to talk to and their sources (nis_passwd.c, od_passwd.c,
  * pam_passwd.c) are not built. Leaving the macros undefined is what selects
  * the file backend throughout passwd.c. */
-#if !(TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR) && !defined(__PUREDARWIN__)
+#if !(TARGET_OS_IPHONE && !TARGET_OS_SIMULATOR) && !defined(__OPENOSX__)
 #define INFO_NIS 2
 #define INFO_OPEN_DIRECTORY 3
 #define INFO_PAM 4

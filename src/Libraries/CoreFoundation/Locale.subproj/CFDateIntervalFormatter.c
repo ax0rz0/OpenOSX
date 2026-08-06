@@ -165,7 +165,7 @@ static void updateFormatter(CFDateIntervalFormatterRef dif) {
         }
 
         /*
-         * PureDarwin: UDateIntervalFormatAttributeValue, UDTITVFMT_MINIMIZE_*
+         * OpenOSX: UDateIntervalFormatAttributeValue, UDTITVFMT_MINIMIZE_*
          * and udtitvfmt_setAttribute are Apple-private ICU extensions not
          * present in vanilla ICU (nixpkgs' icu4c headers, which is what we
          * build CoreFoundation's ICU calls against here) - this whole block

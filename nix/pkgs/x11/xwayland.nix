@@ -64,7 +64,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xwayland";
+  pname = "openosx-xwayland";
   version = xwayland.version;
   src = xwayland.src;
 
@@ -72,7 +72,7 @@ stdenv.mkDerivation {
   buildInputs = deps;
 
   postPatch = ''
-    # PureDarwin's Wayland path does not expose Linux DRM/GBM yet. Keep the
+    # OpenOSX's Wayland path does not expose Linux DRM/GBM yet. Keep the
     # generic glamor/EGL sources buildable while leaving the GBM compositor
     # integration optional until the native buffer allocator is available.
     substituteInPlace meson.build \
@@ -81,8 +81,8 @@ stdenv.mkDerivation {
 
     mkdir -p compat/linux
     cat > compat/linux/input.h <<EOF
-#ifndef PUREDARWIN_LINUX_INPUT_H
-#define PUREDARWIN_LINUX_INPUT_H
+#ifndef OPENOSX_LINUX_INPUT_H
+#define OPENOSX_LINUX_INPUT_H
 #define KEY_LEFTCTRL 29
 #define KEY_LEFTSHIFT 42
 #define KEY_RIGHTCTRL 97
@@ -94,8 +94,8 @@ stdenv.mkDerivation {
 #endif
 EOF
     cat > compat/xf86drm.h <<EOF
-#ifndef PUREDARWIN_XF86DRM_H
-#define PUREDARWIN_XF86DRM_H
+#ifndef OPENOSX_XF86DRM_H
+#define OPENOSX_XF86DRM_H
 typedef struct _drmDevice drmDevice;
 #endif
 EOF
@@ -128,7 +128,7 @@ EOF
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = ['${darwinCrossToolchain}/bin/${targetTriple}-clang', '-isysroot', '$DARWIN_SDK_ROOT']
 ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
@@ -172,7 +172,7 @@ EOF
     # path - and pointless anyway with glx, dri3 and drm all off, which leave it
     # nothing to accelerate.
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=/usr \
       --bindir=bin \
       --libdir=lib \
@@ -208,7 +208,7 @@ EOF
   dontStrip = true;
 
   meta = with lib; {
-    description = "X11 server running as a Wayland client on PureDarwin";
+    description = "X11 server running as a Wayland client on OpenOSX";
     license = licenses.mit;
     platforms = platforms.linux;
   };

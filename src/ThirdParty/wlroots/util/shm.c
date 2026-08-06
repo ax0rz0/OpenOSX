@@ -1,6 +1,6 @@
 #include <errno.h>
 #include <fcntl.h>
-#ifdef PUREDARWIN
+#ifdef OPENOSX
 #include <stdlib.h>
 #endif
 #include <string.h>
@@ -11,13 +11,13 @@
 #include <wlr/config.h>
 #include "util/shm.h"
 
-#ifdef PUREDARWIN
+#ifdef OPENOSX
 #define RANDNAME_PATTERN "/tmp/wlroots-XXXXXX"
 #else
 #define RANDNAME_PATTERN "/wlroots-XXXXXX"
 #endif
 
-#ifndef PUREDARWIN
+#ifndef OPENOSX
 static void randname(char *buf) {
 	struct timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
@@ -30,7 +30,7 @@ static void randname(char *buf) {
 #endif
 
 static int excl_shm_open(char *name) {
-	#ifdef PUREDARWIN
+	#ifdef OPENOSX
 	int fd = mkstemp(name);
 	if (fd >= 0) {
 		(void)fcntl(fd, F_SETFD, FD_CLOEXEC);
@@ -60,7 +60,7 @@ int allocate_shm_file(size_t size) {
 		return -1;
 	}
 	unlink(name);
-#ifndef PUREDARWIN
+#ifndef OPENOSX
 	shm_unlink(name);
 #endif
 
@@ -83,7 +83,7 @@ bool allocate_shm_file_pair(size_t size, int *rw_fd_ptr, int *ro_fd_ptr) {
 		return false;
 	}
 
-	#ifdef PUREDARWIN
+	#ifdef OPENOSX
 	// Darwin's shm_open namespace is unavailable in the guest. A duplicated
 	// descriptor is still read-only in wlroots' use of this pair; the server
 	// keeps the writable descriptor and the client only maps the duplicate.
@@ -97,7 +97,7 @@ bool allocate_shm_file_pair(size_t size, int *rw_fd_ptr, int *ro_fd_ptr) {
 	#endif
 	if (ro_fd < 0) {
 		unlink(name);
-#ifndef PUREDARWIN
+#ifndef OPENOSX
 		shm_unlink(name);
 #endif
 		close(rw_fd);
@@ -105,7 +105,7 @@ bool allocate_shm_file_pair(size_t size, int *rw_fd_ptr, int *ro_fd_ptr) {
 	}
 
 	unlink(name);
-	#ifndef PUREDARWIN
+	#ifndef OPENOSX
 	shm_unlink(name);
 	#endif
 

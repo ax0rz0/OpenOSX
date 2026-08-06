@@ -25,7 +25,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libdom";
+  pname = "openosx-libdom";
   inherit (libdom) version src;
 
   buildPhase = ''
@@ -90,7 +90,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libdom (NetSurf DOM implementation), cross-built for PureDarwin";
+    description = "libdom (NetSurf DOM implementation), cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

@@ -1,5 +1,5 @@
 /*
- * PureDarwin: fills genuine link-time gaps between real libdispatch and
+ * OpenOSX: fills genuine link-time gaps between real libdispatch and
  * what this tree's from-scratch pthread/xnu actually implement, rather
  * than pretending those subsystems exist:
  *

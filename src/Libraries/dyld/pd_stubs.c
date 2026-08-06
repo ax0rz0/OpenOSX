@@ -1,8 +1,8 @@
 /*
- * pd_stubs.c - permissive PureDarwin implementations of the Apple
+ * pd_stubs.c - permissive OpenOSX implementations of the Apple
  * source-available policy hooks that dyld calls but for which there is no open
  * implementation (AMFI, libsandbox). These match the declarations in
- * compat-include/{libamfi.h,sandbox/private.h}. PureDarwin has no AMFI or
+ * compat-include/{libamfi.h,sandbox/private.h}. OpenOSX has no AMFI or
  * sandbox, so both are fully permissive.
  */
 #include <stdint.h>
@@ -178,7 +178,7 @@ int sandbox_check(int pid, const char *operation, unsigned int type, ...)
 }
 
 /* voucher_mach_msg_{adopt,revert}: libdispatch's mach-voucher hooks. dyld's
- * mach_msg wrappers reference them, but PureDarwin has no libdispatch voucher
+ * mach_msg wrappers reference them, but OpenOSX has no libdispatch voucher
  * machinery; no-op them (adopt returns "no previous voucher"). */
 typedef unsigned int mach_voucher_t;
 typedef struct mach_msg_header_t mach_msg_header_t;

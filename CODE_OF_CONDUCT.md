@@ -1,4 +1,4 @@
-## Contributor PureDarwin Code of Conduct
+## Contributor OpenOSX Code of Conduct
 
 ### Our Pledge
 

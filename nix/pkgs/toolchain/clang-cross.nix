@@ -29,7 +29,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-clang";
+  pname = "openosx-clang";
   version = llvmVersion;
 
   src = llvmSrc;
@@ -139,7 +139,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "clang, cross-built to run on PureDarwin (links the cross-built libLLVM, drives cctools ld)";
+    description = "clang, cross-built to run on OpenOSX (links the cross-built libLLVM, drives cctools ld)";
     platforms = platforms.linux;
   };
 }

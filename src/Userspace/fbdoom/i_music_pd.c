@@ -13,7 +13,7 @@
 // GNU General Public License for more details.
 //
 // DESCRIPTION:
-//	Music for PureDarwin: a real MUS-format parser (the lump format
+//	Music for OpenOSX: a real MUS-format parser (the lump format
 //	DOOM's music actually ships in) driving a simple square-wave
 //	synthesizer per MIDI channel, mixed into the same /dev/dsp0 stream
 //	i_sound_pd.c's sfx mixer writes. This is not trying to emulate the
@@ -110,7 +110,7 @@ static unsigned mus_tic_accum_milli;  /* fractional output-samples-per-mus-tic c
  *
  * Computed from an exact integer table (equal-tempered octave 4 in mHz,
  * A4=440Hz at MIDI note 69) shifted by octave, deliberately NOT via
- * pow(2.0, (note-69)/12.0): PureDarwin's hand-rolled libm pow() is
+ * pow(2.0, (note-69)/12.0): OpenOSX's hand-rolled libm pow() is
  * inaccurate for fractional exponents, which detuned every melody note
  * audibly (low bass octaves, nearer integer exponents, survived). */
 static const unsigned note_mhz_octave4[12] = {

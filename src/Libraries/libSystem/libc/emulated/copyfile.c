@@ -1,5 +1,5 @@
 /*
- * copyfile(3) for PureDarwin.
+ * copyfile(3) for OpenOSX.
  *
  * What is carried out, and what is not:
  *

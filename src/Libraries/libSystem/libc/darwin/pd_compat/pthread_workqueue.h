@@ -1,5 +1,5 @@
 /*
- * PureDarwin compat: <pthread_workqueue.h> as a top-level public header does
+ * OpenOSX compat: <pthread_workqueue.h> as a top-level public header does
  * not exist in this SDK drop or in PD's own tree -- only the differently-named
  * private/pthread/workqueue_private.h. abort.c's only use is
  * __pthread_workqueue_setkill(1), to stop workqueue threads from picking up

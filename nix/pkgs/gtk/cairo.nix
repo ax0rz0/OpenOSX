@@ -42,7 +42,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-cairo";
+  pname = "openosx-cairo";
   version = cairo.version;
 
   src = cairo.src;
@@ -65,7 +65,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" depPcPaths}:${lib.makeSearchPath "share/pkgconfig" depPcPaths}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
@@ -85,7 +85,7 @@ endian = '${targetInfo.mesonEndian}'
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \

@@ -22,7 +22,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-perl";
+  pname = "openosx-perl";
   inherit (perl) version src;
 
   nativeBuildInputs = [ gnumake perl ];
@@ -86,7 +86,7 @@ stdenv.mkDerivation {
   dontStrip = true;
 
   meta = with lib; {
-    description = "Perl, cross-built for PureDarwin";
+    description = "Perl, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

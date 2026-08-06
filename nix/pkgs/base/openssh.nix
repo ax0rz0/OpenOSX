@@ -22,7 +22,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-openssh";
+  pname = "openosx-openssh";
   inherit (openssh) version;
   src = openssh.src;
 
@@ -157,7 +157,7 @@ int	setresuid(uid_t, uid_t, uid_t);
     make install-nokeys DESTDIR=$out STRIP_OPT=
     cat >> $out/etc/ssh/sshd_config <<'EOF'
 
-# Root is the only real account on a PureDarwin image, so refusing its login
+# Root is the only real account on a OpenOSX image, so refusing its login
 # would leave nobody able to connect. Password auth needs a password set with
 # passwd(1) first: the shipped /etc/master.passwd has '*' for every account,
 # which no crypt(3) output can match.
@@ -201,13 +201,13 @@ exec /sbin/sshd -D -e
 EOF
     chmod +x $out/usr/libexec/pd-sshd
 
-    cat > $out/System/Library/LaunchDaemons/org.puredarwin.sshd.plist <<'EOF'
+    cat > $out/System/Library/LaunchDaemons/org.openosx.sshd.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>org.puredarwin.sshd</string>
+	<string>org.openosx.sshd</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/libexec/pd-sshd</string>

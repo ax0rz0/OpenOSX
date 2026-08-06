@@ -68,7 +68,7 @@
 // __pthread_tsd_end is the end of dynamic keys.
 
 static const int __pthread_tsd_first = __TSD_RESERVED_MAX + 1;
-/* PureDarwin: dyld static-links its own copy of this key allocator
+/* OpenOSX: dyld static-links its own copy of this key allocator
  * (pthread_static). Its bookkeeping table is separate from libSystem's
  * libpthread, but both hand out slots from the same per-thread TSD array, so
  * both allocating "first free slot from 256" gives dyld (dlerror buffer) and

@@ -38,7 +38,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-vulkan-tools";
+  pname = "openosx-vulkan-tools";
   inherit (vulkanTools) version src;
 
   nativeBuildInputs = [ cmake ninja python3 glslang pkg-config ];
@@ -121,7 +121,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "vulkaninfo and vkcube, cross-built for PureDarwin";
+    description = "vulkaninfo and vkcube, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

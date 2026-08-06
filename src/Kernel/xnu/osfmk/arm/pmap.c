@@ -8274,7 +8274,7 @@ pmap_enter_pte(pmap_t pmap, pt_entry_t *pte_p, pt_entry_t pte, vm_map_address_t 
 	} else {
 		WRITE_PTE(pte_p, pte);
 		/*
-		 * PureDarwin: A translation fault can be retained in the hardware TLB. When
+		 * OpenOSX: A translation fault can be retained in the hardware TLB. When
 		 * fault handling installs the first mapping, invalidate that cached
 		 * negative translation before the faulting access is retried.
 		 */
@@ -15140,7 +15140,7 @@ pmap_lookup_in_static_trust_cache(const uint8_t cdhash[CS_CDHASH_LEN])
 }
 
 /*
- * PureDarwin: genuinely missing from this arm pmap.c (present in the
+ * OpenOSX: genuinely missing from this arm pmap.c (present in the
  * x86_64 pmap.c equivalent, just under a plain simple_lock instead of the
  * PPL's pmap_simple_lock - see osfmk/x86_64/pmap.c's
  * pmap_set_compilation_service_cdhash for the sibling definition) - the
@@ -15201,7 +15201,7 @@ pmap_match_compilation_service_cdhash(const uint8_t cdhash[CS_CDHASH_LEN])
 }
 
 /*
- * PureDarwin: called unconditionally from vm_map.c's vm_map_cs_wx_enable(),
+ * OpenOSX: called unconditionally from vm_map.c's vm_map_cs_wx_enable(),
  * but (unlike its x86_64 pmap.c sibling, which has always had a plain
  * "unsupported on this architecture" stub) never defined anywhere in this
  * arm pmap.c for a config without XNU_MONITOR (PPL).

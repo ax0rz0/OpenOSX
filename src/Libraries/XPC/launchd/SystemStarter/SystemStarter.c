@@ -144,7 +144,7 @@ main(int argc, char *argv[])
 	}
 
 	fwexec("/usr/sbin/ipconfig", "waitall", NULL);
-	/* PureDarwin: no diskarbitrationd here (no DiskArbitration framework
+	/* OpenOSX: no diskarbitrationd here (no DiskArbitration framework
 	 * vendored at all yet - same category as mDNSResponder/notifyd), so
 	 * skip the "wait for Disk Arbitration to report idle" step rather
 	 * than block forever waiting for a session that will never see any
@@ -156,7 +156,7 @@ main(int argc, char *argv[])
 		fwexec(_PATH_BSHELL, "/etc/rc.local", NULL);
 	}
 
-	/* PureDarwin: no distnoted here - the distributed notification center
+	/* OpenOSX: no distnoted here - the distributed notification center
 	 * needs a running distnoted daemon this tree doesn't have (same
 	 * category as notifyd/mDNSResponder), so posting to it would just be
 	 * silently dropped; skip rather than pretend the notification did
@@ -440,5 +440,5 @@ fwexec(const char *cmd, ...)
 	return -1;
 }
 
-/* PureDarwin: autodiskmount()/autodiskmount_idle() removed - see the call
+/* OpenOSX: autodiskmount()/autodiskmount_idle() removed - see the call
  * site comment above; no DiskArbitration framework exists in this tree. */

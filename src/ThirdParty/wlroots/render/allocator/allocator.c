@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <wlr/backend.h>
-#include <wlr/backend/puredarwin.h>
+#include <wlr/backend/openosx.h>
 #include <wlr/config.h>
 #include <wlr/interfaces/wlr_buffer.h>
 #include <wlr/render/allocator.h>
@@ -131,11 +131,11 @@ struct wlr_allocator *wlr_allocator_autocreate(struct wlr_backend *backend,
 	// Preferred over shm for this backend: its buffers are the display's own
 	// storage, so presenting one does not copy.
 	if (wlr_backend_is_puredarwin(backend)) {
-		wlr_log(WLR_DEBUG, "Trying to create PureDarwin allocator");
+		wlr_log(WLR_DEBUG, "Trying to create OpenOSX allocator");
 		if ((alloc = wlr_puredarwin_allocator_create()) != NULL) {
 			return alloc;
 		}
-		wlr_log(WLR_DEBUG, "Failed to create PureDarwin allocator");
+		wlr_log(WLR_DEBUG, "Failed to create OpenOSX allocator");
 	}
 
 	uint32_t shm_caps = WLR_BUFFER_CAP_SHM | WLR_BUFFER_CAP_DATA_PTR;

@@ -27,7 +27,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libxml2";
+  pname = "openosx-libxml2";
   inherit (libxml2) version src;
 
   nativeBuildInputs = [ meson ninja pkg-config python3 git ];
@@ -43,7 +43,7 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -67,7 +67,7 @@ needs_exe_wrapper = true
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
@@ -100,7 +100,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libxml2, cross-built for PureDarwin";
+    description = "libxml2, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

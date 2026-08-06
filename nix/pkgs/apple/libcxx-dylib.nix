@@ -40,7 +40,7 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libcxx-dylib";
+  pname = "openosx-libcxx-dylib";
   version = "1";
 
   inherit src;
@@ -110,7 +110,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "PureDarwin libc++.1.dylib (full C++ standard library, cross-built, layered on libc++abi.dylib)";
+    description = "OpenOSX libc++.1.dylib (full C++ standard library, cross-built, layered on libc++abi.dylib)";
     platforms = platforms.linux;
   };
 }

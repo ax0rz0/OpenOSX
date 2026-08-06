@@ -591,7 +591,7 @@ IOFindBSDRoot( char * rootName, unsigned int rootNameSize,
 
 	static int          mountAttempts = 0;
 
-	// PureDarwin: stock XNU retries waitForService() FOREVER in the loop
+	// OpenOSX: stock XNU retries waitForService() FOREVER in the loop
 	// below (by design, for real hardware where a bus can legitimately still
 	// be enumerating, e.g. slow USB). On a bring-up kernel that's a silent,
 	// indefinite hang: nothing distinguishes "still probing" from "will never

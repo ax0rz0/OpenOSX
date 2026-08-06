@@ -7,7 +7,7 @@
     <key>CFBundleExecutable</key>
     <string>IONVMEFamily</string>
     <key>CFBundleGetInfoString</key>
-    <string>1.0.0, PureDarwin NVMe storage driver.</string>
+    <string>1.0.0, OpenOSX NVMe storage driver.</string>
     <key>CFBundleIdentifier</key>
     <string>com.apple.iokit.IONVMEFamily</string>
     <key>CFBundleInfoDictionaryVersion</key>

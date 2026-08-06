@@ -14,18 +14,18 @@ endif()
 
 # XNU build arch. x86_64 installs the i386/ machine headers (machine/types.h
 # includes "i386/types.h"); arm64 installs arm/ and needs a MACHINE_CONFIGS.
-if(PUREDARWIN_ARM64)
+if(OPENOSX_ARM64)
     set(XNU_ARCH_CONFIGS ARM64)
-    if(NOT DEFINED PUREDARWIN_ARM64_MACHINE_CONFIG)
-        set(PUREDARWIN_ARM64_MACHINE_CONFIG BCM2837)
+    if(NOT DEFINED OPENOSX_ARM64_MACHINE_CONFIG)
+        set(OPENOSX_ARM64_MACHINE_CONFIG BCM2837)
     endif()
-    set(XNU_MACHINE_CONFIGS MACHINE_CONFIGS=${PUREDARWIN_ARM64_MACHINE_CONFIG})
+    set(XNU_MACHINE_CONFIGS MACHINE_CONFIGS=${OPENOSX_ARM64_MACHINE_CONFIG})
 else()
     set(XNU_ARCH_CONFIGS X86_64)
     set(XNU_MACHINE_CONFIGS "")
 endif()
 
-if(PUREDARWIN_NIX_TOOLCHAIN)
+if(OPENOSX_NIX_TOOLCHAIN)
     # Real cctools ld64 (see the native-ld configure in build.nix), not
     # nixpkgs' ld64.lld - lld's Mach-O port doesn't implement "-kernel
     # -static" kernel-linking mode (drops -kernel silently, mis-parses
@@ -81,14 +81,14 @@ else()
     set(XNU_HOST_CC_ENV "")
 endif()
 
-set(PUREDARWIN_XNU_KERNEL_CONFIG "RELEASE" CACHE STRING
+set(OPENOSX_XNU_KERNEL_CONFIG "RELEASE" CACHE STRING
     "XNU kernel configuration to build: RELEASE, DEVELOPMENT, DEBUG, or KASAN")
-set_property(CACHE PUREDARWIN_XNU_KERNEL_CONFIG PROPERTY STRINGS
+set_property(CACHE OPENOSX_XNU_KERNEL_CONFIG PROPERTY STRINGS
     RELEASE DEVELOPMENT DEBUG KASAN)
-string(TOUPPER "${PUREDARWIN_XNU_KERNEL_CONFIG}" PUREDARWIN_XNU_KERNEL_CONFIG)
-if(NOT PUREDARWIN_XNU_KERNEL_CONFIG MATCHES "^(RELEASE|DEVELOPMENT|DEBUG|KASAN)$")
+string(TOUPPER "${OPENOSX_XNU_KERNEL_CONFIG}" OPENOSX_XNU_KERNEL_CONFIG)
+if(NOT OPENOSX_XNU_KERNEL_CONFIG MATCHES "^(RELEASE|DEVELOPMENT|DEBUG|KASAN)$")
     message(FATAL_ERROR
-        "Unsupported PUREDARWIN_XNU_KERNEL_CONFIG='${PUREDARWIN_XNU_KERNEL_CONFIG}'")
+        "Unsupported OPENOSX_XNU_KERNEL_CONFIG='${OPENOSX_XNU_KERNEL_CONFIG}'")
 endif()
 
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/xnu_header_install)
@@ -105,7 +105,7 @@ externalproject_add(xnu_headers.extproj
             -D CTFMERGE_PATH=$<TARGET_FILE:host_ctfmerge>
             -D CTFINSERT_PATH=$<TARGET_FILE:host_ctf_insert>
             -D AVAILABILITY_PL_PATH=$<TARGET_FILE:availability.pl>
-            -D MIG_PATH=${PUREDARWIN_SOURCE_DIR}/tools/mig/mig.sh
+            -D MIG_PATH=${OPENOSX_SOURCE_DIR}/tools/mig/mig.sh
             -D MIGCOM_PATH=$<TARGET_FILE:migcom>
             -D STRIP_PATH=${XNU_STRIP_PATH}
             -D LIPO_PATH=${XNU_LIPO_PATH}
@@ -122,7 +122,7 @@ externalproject_add(xnu_headers.extproj
         # ld64 correctly rejects.
         ${CMAKE_COMMAND} -E env ${XNU_HOST_CC_ENV} --unset=LD --unset=CC --unset=CXX --unset=STRIP --unset=NM --unset=CTFCONVERT --unset=CTFMERGE --unset=CTFINSERT
         make -C <SOURCE_DIR> installhdrs ARCH_CONFIGS=${XNU_ARCH_CONFIGS} ${XNU_MACHINE_CONFIGS} BUILD_LTO=0
-            BUILD_WERROR=0 DO_CTFMERGE=0 KERNEL_CONFIGS=${PUREDARWIN_XNU_KERNEL_CONFIG}
+            BUILD_WERROR=0 DO_CTFMERGE=0 KERNEL_CONFIGS=${OPENOSX_XNU_KERNEL_CONFIG}
             SRCROOT=${CMAKE_CURRENT_SOURCE_DIR} OBJROOT=<BINARY_DIR>
             DSTROOT=${CMAKE_CURRENT_BINARY_DIR}/xnu_header_install
     INSTALL_COMMAND "" # installed during build
@@ -172,7 +172,7 @@ externalproject_add(xnu
             -D CTFINSERT_PATH=$<TARGET_FILE:host_ctf_insert>
             -D AVAILABILITY_PL_PATH=$<TARGET_FILE:availability.pl>
             -D LD_PATH=${XNU_LD_PATH}
-            -D MIG_PATH=${PUREDARWIN_SOURCE_DIR}/tools/mig/mig.sh
+            -D MIG_PATH=${OPENOSX_SOURCE_DIR}/tools/mig/mig.sh
             -D MIGCOM_PATH=$<TARGET_FILE:migcom>
             -D STRIP_PATH=${XNU_STRIP_PATH}
             -D LIPO_PATH=${XNU_LIPO_PATH}
@@ -188,7 +188,7 @@ externalproject_add(xnu
     COMMAND
         ${CMAKE_COMMAND} -E env LD=${XNU_LD_PATH} STRIP=${XNU_STRIP_PATH} ${XNU_HOST_CC_ENV} --unset=CC --unset=CXX --unset=NM --unset=CTFCONVERT --unset=CTFMERGE --unset=CTFINSERT
         make ${XNU_MAKE_OUTPUT_SYNC_FLAG} -C <SOURCE_DIR> install ARCH_CONFIGS=${XNU_ARCH_CONFIGS} ${XNU_MACHINE_CONFIGS} BUILD_LTO=0
-            BUILD_WERROR=0 DO_CTFMERGE=0 KERNEL_CONFIGS=${PUREDARWIN_XNU_KERNEL_CONFIG}
+            BUILD_WERROR=0 DO_CTFMERGE=0 KERNEL_CONFIGS=${OPENOSX_XNU_KERNEL_CONFIG}
             SRCROOT=${CMAKE_CURRENT_SOURCE_DIR} OBJROOT=<BINARY_DIR>
             SYMROOT=${CMAKE_CURRENT_BINARY_DIR}/xnu_sym DSTROOT=${CMAKE_CURRENT_BINARY_DIR}/xnu
     INSTALL_COMMAND "" # installed during build
@@ -200,7 +200,7 @@ set(_xnu_dependencies
     migcom host_strip host_lipo host_nm unifdef host_nmedit availability.pl host_ld
     dyld_availability_headers
 )
-if(PUREDARWIN_NIX_TOOLCHAIN)
+if(OPENOSX_NIX_TOOLCHAIN)
     list(REMOVE_ITEM _xnu_dependencies host_ld)
 endif()
 add_dependencies(xnu ${_xnu_dependencies})

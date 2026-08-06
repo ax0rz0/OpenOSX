@@ -3,7 +3,7 @@
  *
  * The flag values are Apple's, so that software written against macOS
  * compiles and behaves the same way here. See copyfile.c for which of the
- * operations are actually carried out on PureDarwin.
+ * operations are actually carried out on OpenOSX.
  */
 
 #ifndef _COPYFILE_H_

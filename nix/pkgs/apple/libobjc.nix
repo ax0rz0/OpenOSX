@@ -56,7 +56,7 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libobjc";
+  pname = "openosx-libobjc";
   version = "1";
 
   inherit src;
@@ -103,7 +103,7 @@ stdenv.mkDerivation {
     CXXFLAGS="-x objective-c++ -std=gnu++17 -fno-objc-arc -fexceptions \
       -fno-delete-null-pointer-checks \
       -fobjc-exceptions -fPIC -Os -DNDEBUG -DLIBC_NO_LIBCRASHREPORTERCLIENT \
-      -D__PUREDARWIN__=1 \
+      -D__OPENOSX__=1 \
       -Wno-undef-prefix \
       -isysroot $DARWIN_SDK_ROOT \
       -Igenhdr -Iincdir -I$O/runtime -I$PRIV -I${libSystem}/usr/include"

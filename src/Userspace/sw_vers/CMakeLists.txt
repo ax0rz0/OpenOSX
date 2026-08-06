@@ -11,7 +11,7 @@ target_sources(sw_vers PRIVATE
 )
 
 target_compile_options(sw_vers PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -fno-builtin
     -fno-stack-protector
 )

@@ -1,5 +1,5 @@
 /*
- * PureDarwin: real Apple's NSSystemDirectories.h (historically part of
+ * OpenOSX: real Apple's NSSystemDirectories.h (historically part of
  * CarbonCore/CoreServicesInternal, never open-sourced) provided a much
  * larger API surface (NSSearchPathDirectory covering ~20 directory kinds,
  * NSAllDomainsMask, etc). SystemStarter.c/StartupItems.c only ever use

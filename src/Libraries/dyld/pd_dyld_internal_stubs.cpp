@@ -2,7 +2,7 @@
  * pd_dyld_internal_stubs.cpp
  *
  * dyld references a handful of its own symbols that live in translation units we
- * can't compile in the PureDarwin bring-up:
+ * can't compile in the OpenOSX bring-up:
  *
  *  - The dyld-monitor notification hooks (setNotifyMonitoringDyld{,Main} and
  *    AllImages::notifyMonitor{Main,Loads,Unloads}) live in

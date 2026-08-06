@@ -71,9 +71,9 @@ else()
     set(_mach_shim "${CMAKE_CURRENT_BINARY_DIR}/mach_shim")
     add_custom_command(OUTPUT "${_mach_shim}/mach/boolean.h"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/mach" "${_mach_shim}/mach"
+                "${OPENOSX_MACOSX_SDK}/usr/include/mach" "${_mach_shim}/mach"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/i386" "${_mach_shim}/i386"
+                "${OPENOSX_MACOSX_SDK}/usr/include/i386" "${_mach_shim}/i386"
         # i386/_types.h unconditionally (re)defines __int64_t/__uint64_t/
         # __mbstate_t with no include guards of its own - real, low-level
         # ABI typedefs that glibc's bits/types.h (already active via the
@@ -98,27 +98,27 @@ else()
         # with glibc's declarations (see below).
         COMMAND ${CMAKE_COMMAND} -E make_directory "${_mach_shim}/sys"
         COMMAND ${CMAKE_COMMAND} -E copy
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/sys/_types.h"
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/sys/_endian.h"
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/sys/appleapiopts.h"
+                "${OPENOSX_MACOSX_SDK}/usr/include/sys/_types.h"
+                "${OPENOSX_MACOSX_SDK}/usr/include/sys/_endian.h"
+                "${OPENOSX_MACOSX_SDK}/usr/include/sys/appleapiopts.h"
                 "${_mach_shim}/sys/"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/sys/_types" "${_mach_shim}/sys/_types"
+                "${OPENOSX_MACOSX_SDK}/usr/include/sys/_types" "${_mach_shim}/sys/_types"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/sys/_pthread" "${_mach_shim}/sys/_pthread"
+                "${OPENOSX_MACOSX_SDK}/usr/include/sys/_pthread" "${_mach_shim}/sys/_pthread"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/machine" "${_mach_shim}/machine"
+                "${OPENOSX_MACOSX_SDK}/usr/include/machine" "${_mach_shim}/machine"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/architecture" "${_mach_shim}/architecture"
+                "${OPENOSX_MACOSX_SDK}/usr/include/architecture" "${_mach_shim}/architecture"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/_types" "${_mach_shim}/_types"
+                "${OPENOSX_MACOSX_SDK}/usr/include/_types" "${_mach_shim}/_types"
         COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/libkern" "${_mach_shim}/libkern"
+                "${OPENOSX_MACOSX_SDK}/usr/include/libkern" "${_mach_shim}/libkern"
         COMMAND ${CMAKE_COMMAND} -E copy
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/Availability.h"
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/AvailabilityInternal.h"
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/AvailabilityVersions.h"
-                "${PUREDARWIN_MACOSX_SDK}/usr/include/AvailabilityMacros.h"
+                "${OPENOSX_MACOSX_SDK}/usr/include/Availability.h"
+                "${OPENOSX_MACOSX_SDK}/usr/include/AvailabilityInternal.h"
+                "${OPENOSX_MACOSX_SDK}/usr/include/AvailabilityVersions.h"
+                "${OPENOSX_MACOSX_SDK}/usr/include/AvailabilityMacros.h"
                 "${_mach_shim}/"
         COMMENT "Staging mach/ headers for native migcom build"
         VERBATIM

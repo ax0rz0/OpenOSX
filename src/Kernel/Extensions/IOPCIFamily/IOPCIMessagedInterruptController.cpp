@@ -47,7 +47,7 @@
 
 extern uint32_t gIOPCIFlags;
 
-// PureDarwin: the real IOPCISetMSIInterrupt (vtd.c) only exists when VT-d
+// OpenOSX: the real IOPCISetMSIInterrupt (vtd.c) only exists when VT-d
 // support is actually compiled in. ACPI_SUPPORT and VTD_SUPPORT are
 // independent here (we have ACPI plumbing but no IOMMU/VT-d), so this must
 // key off VTD_SUPPORT, not ACPI_SUPPORT - otherwise this macro disappears

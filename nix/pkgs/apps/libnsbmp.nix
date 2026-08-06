@@ -20,7 +20,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libnsbmp";
+  pname = "openosx-libnsbmp";
   inherit (libnsbmp) version src;
 
   buildPhase = ''
@@ -76,7 +76,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libnsbmp (NetSurf BMP/ICO decoder), cross-built for PureDarwin";
+    description = "libnsbmp (NetSurf BMP/ICO decoder), cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

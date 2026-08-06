@@ -84,7 +84,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-netsurf";
+  pname = "openosx-netsurf";
   version = "3.11";
   inherit src;
 
@@ -92,7 +92,7 @@ stdenv.mkDerivation {
 
   postPatch = ''
     patchShebangs .
-    substituteInPlace Makefile --replace-fail 'LDFLAGS += -Wl,--trace' '# LDFLAGS += -Wl,--trace (removed for PureDarwin: lld does not support it)'
+    substituteInPlace Makefile --replace-fail 'LDFLAGS += -Wl,--trace' '# LDFLAGS += -Wl,--trace (removed for OpenOSX: lld does not support it)'
   '';
 
   configurePhase = ''
@@ -176,7 +176,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "NetSurf web browser (GTK3 frontend), cross-built for PureDarwin";
+    description = "NetSurf web browser (GTK3 frontend), cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

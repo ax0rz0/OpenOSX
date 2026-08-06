@@ -2,12 +2,12 @@
  * pd_bridgeos_compat.h (force-included into libplatform_static)
  *
  * os/lock_private.h and friends use bridgeos(x) in __API_AVAILABLE lists, but
- * neither the MacOSX11.3 SDK nor PureDarwin's AvailabilityInternal.h define the
+ * neither the MacOSX11.3 SDK nor OpenOSX's AvailabilityInternal.h define the
  * bridgeos platform-macro family, leaving an undefined token -> "expected ','".
  * Supply the missing macros (clang knows the "bridgeos" availability platform).
  */
-#ifndef PUREDARWIN_LIBPLATFORM_BRIDGEOS_COMPAT_H
-#define PUREDARWIN_LIBPLATFORM_BRIDGEOS_COMPAT_H
+#ifndef OPENOSX_LIBPLATFORM_BRIDGEOS_COMPAT_H
+#define OPENOSX_LIBPLATFORM_BRIDGEOS_COMPAT_H
 
 #include <Availability.h>
 /* os/atomic_private_impl.h (pulled via os/lock.h) uses memory_order / the C11
@@ -24,4 +24,4 @@
  #define __API_UNAVAILABLE_PLATFORM_bridgeos bridgeos,unavailable
 #endif
 
-#endif /* PUREDARWIN_LIBPLATFORM_BRIDGEOS_COMPAT_H */
+#endif /* OPENOSX_LIBPLATFORM_BRIDGEOS_COMPAT_H */

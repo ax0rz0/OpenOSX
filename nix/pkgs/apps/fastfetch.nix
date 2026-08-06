@@ -34,7 +34,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-fastfetch";
+  pname = "openosx-fastfetch";
   inherit (fastfetch) version;
   src = fastfetch.src;
 
@@ -173,19 +173,19 @@ VEREOF
     # assumes the product is always macOS in two places; the plist supplies the
     # real name, and the id should match it.
     sed -i \
-      -e 's/ffStrbufSetStatic(&os->id, "macos");/ffStrbufSetStatic(\&os->id, "puredarwin");/' \
-      -e 's/ffStrbufSetStatic(&os->name, "macOS");/ffStrbufSetStatic(\&os->name, "PureDarwin");/' \
+      -e 's/ffStrbufSetStatic(&os->id, "macos");/ffStrbufSetStatic(\&os->id, "openosx");/' \
+      -e 's/ffStrbufSetStatic(&os->name, "macOS");/ffStrbufSetStatic(\&os->name, "OpenOSX");/' \
       src/detection/os/os_apple.m
 
-    # With os->id reported as "puredarwin", fastfetch's own logo autodetection
+    # With os->id reported as "openosx", fastfetch's own logo autodetection
     # picks a builtin of that name - so ship Hexley as one rather than making
     # every invocation pass --logo-type/--logo-color flags. Files in
     # src/logo/ascii are globbed into FASTFETCH_DATATEXT_LOGO_<NAME> by CMake.
-    cp ${./puredarwin-logo.txt} src/logo/ascii/puredarwin.txt
+    cp ${./openosx-logo.txt} src/logo/ascii/openosx.txt
     cat > pd-logo-entry.c <<'LOGOEOF'
-    // PureDarwin
+    // OpenOSX
     {
-        .names = { "puredarwin" },
+        .names = { "openosx" },
         .lines = FASTFETCH_DATATEXT_LOGO_PUREDARWIN,
         .colors = {
             FF_COLOR_FG_RED,

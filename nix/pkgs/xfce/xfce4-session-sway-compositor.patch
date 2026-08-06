@@ -6,10 +6,10 @@
    else
 -    default_compositor="labwc"
 +    default_compositor="sway"
-+    # PureDarwin's wlroots has neither DRM nor libinput: the compositor runs
++    # OpenOSX's wlroots has neither DRM nor libinput: the compositor runs
 +    # on the IOKit-backed backend with the pixman renderer. sway cannot set
 +    # this itself, it is read before the config file is parsed.
-+    : "${WLR_BACKENDS:=puredarwin}"
++    : "${WLR_BACKENDS:=openosx}"
 +    : "${WLR_RENDERER:=pixman}"
 +    export WLR_BACKENDS WLR_RENDERER
      if test "x$OPTS" = "x"; then

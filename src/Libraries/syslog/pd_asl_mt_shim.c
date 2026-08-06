@@ -4,7 +4,7 @@
  * Upstream asl_mt_shim.c forwards ASL messages to com.apple.analyticsd's
  * messagetracer service - Apple telemetry, entirely separate from logging - and
  * does so over xpc_pipe private SPI (XPC_PIPE_PRIVILEGED,
- * xpc_pipe_routine_with_flags) that PureDarwin's libxpc does not implement.
+ * xpc_pipe_routine_with_flags) that OpenOSX's libxpc does not implement.
  * There is no analyticsd here to receive the messages either.
  *
  * Not forwarding telemetry loses nothing: asl.c calls these purely as a side

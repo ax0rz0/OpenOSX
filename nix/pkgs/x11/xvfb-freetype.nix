@@ -25,7 +25,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-freetype2";
+  pname = "openosx-freetype2";
   version = freetype.version or "0";
 
   src = freetype.src;

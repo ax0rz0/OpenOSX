@@ -1,7 +1,7 @@
 /*
  * CFURLCopyResourcePropertyForKey() / kCFURLFileSizeKey.
  *
- * PureDarwin's CoreFoundation comes from swift-corelibs-foundation, where the
+ * OpenOSX's CoreFoundation comes from swift-corelibs-foundation, where the
  * URL resource-property API is a trampoline into the Swift NSURL bridge
  * (CFURL.c: "The base implementation of these functions exclusively exists in
  * Swift only") - so it resolves to nothing in a DEPLOYMENT_RUNTIME_OBJC build

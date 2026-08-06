@@ -34,7 +34,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-vulkan-loader";
+  pname = "openosx-vulkan-loader";
   inherit (vulkanLoader) version src;
 
   nativeBuildInputs = [ cmake ninja python3 pkg-config ];
@@ -42,7 +42,7 @@ stdenv.mkDerivation {
   # elseif(APPLE) fires before the X11 branch and sets only
   # VK_USE_PLATFORM_METAL_EXT, so BUILD_WSI_XCB_SUPPORT is never consulted and
   # the loader ships with no surface extensions at all - vkCreateXcbSurfaceKHR
-  # and friends are compiled out. PureDarwin presents X11, not Metal.
+  # and friends are compiled out. OpenOSX presents X11, not Metal.
   postPatch = ''
     sed -i \
       -e 's/^elseif(APPLE)$/elseif(FALSE)/' \
@@ -117,7 +117,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "Vulkan loader, cross-built for PureDarwin (dispatches to the lavapipe ICD)";
+    description = "Vulkan loader, cross-built for OpenOSX (dispatches to the lavapipe ICD)";
     platforms = platforms.linux;
   };
 }

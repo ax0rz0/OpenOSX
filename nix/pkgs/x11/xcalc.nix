@@ -60,7 +60,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xcalc";
+  pname = "openosx-xcalc";
   inherit (xcalc) version;
   src = xcalc.src;
 

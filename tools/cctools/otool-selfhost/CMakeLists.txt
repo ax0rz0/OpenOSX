@@ -37,7 +37,7 @@ target_compile_definitions(otool_selfhost PRIVATE
     -DPROGRAM_PREFIX=""
 )
 target_compile_options(otool_selfhost PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     "SHELL:-include stdlib.h"
     "SHELL:-include mach/i386/_structs.h"
 )

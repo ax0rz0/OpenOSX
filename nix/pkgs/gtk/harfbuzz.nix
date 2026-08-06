@@ -43,7 +43,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-harfbuzz";
+  pname = "openosx-harfbuzz";
   version = harfbuzz.version;
 
   src = harfbuzz.src;
@@ -64,7 +64,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" deps}:${lib.makeSearchPath "share/pkgconfig" deps}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -89,7 +89,7 @@ endian = '${targetInfo.mesonEndian}'
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \

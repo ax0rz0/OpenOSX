@@ -25,7 +25,7 @@ target_compile_definitions(ar_selfhost PRIVATE
     __DARWIN_UNIX03=1
     _DARWIN_USE_64_BIT_INODE=1
 )
-target_compile_options(ar_selfhost PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
+target_compile_options(ar_selfhost PRIVATE -isysroot ${OPENOSX_MACOSX_SDK})
 target_link_options(ar_selfhost PRIVATE
     -nostdlib
     -Wl,-L,$<TARGET_FILE_DIR:libSystem_B_stub>

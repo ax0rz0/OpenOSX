@@ -253,7 +253,7 @@ PDPreInit(InputDriverPtr drv, InputInfoPtr pInfo, int flags)
     pInfo->read_input = PDReadInput;
     pInfo->fd = -1;
 
-    xf86IDrvMsg(pInfo, X_INFO, "PureDarwin input: %s device %s\n",
+    xf86IDrvMsg(pInfo, X_INFO, "OpenOSX input: %s device %s\n",
                 priv->type == PD_KEYBOARD ? "keyboard" : "mouse", priv->device);
     return Success;
 }

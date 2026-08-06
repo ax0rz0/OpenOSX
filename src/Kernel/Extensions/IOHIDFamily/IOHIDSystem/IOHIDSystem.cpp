@@ -72,8 +72,8 @@
 #include "IOHIDSystemCursorHelper.h"
 #include "IOHIDDebug.h"
 
-#ifndef PUREDARWIN_ENABLE_IOHID_SHIMS
-#define PUREDARWIN_ENABLE_IOHID_SHIMS 0
+#ifndef OPENOSX_ENABLE_IOHID_SHIMS
+#define OPENOSX_ENABLE_IOHID_SHIMS 0
 #endif
 
 #include <sys/kdebug.h>
@@ -776,7 +776,7 @@ bool IOHIDSystem::handlePublishNotification(
         }
         return true;
     }
-#if PUREDARWIN_ENABLE_IOHID_SHIMS
+#if OPENOSX_ENABLE_IOHID_SHIMS
     if(OSDynamicCast(IOHIPointing, newService) && !OSDynamicCast(IOHIDPointing, newService)) {
       IOHIDPointingEventDevice * shim = IOHIDPointingEventDevice::newPointingDeviceAndStart(newService);
       if (shim) {
@@ -3398,7 +3398,7 @@ IOReturn IOHIDSystem::extPostEventGated(void *p1,void *p2 __unused, void *p3)
 
     if ( event->setFlags & kIOHIDPostHIDManagerEvent )
     {
-#if PUREDARWIN_ENABLE_IOHID_SHIMS
+#if OPENOSX_ENABLE_IOHID_SHIMS
         if ((typeMask & (MOUSEEVENTMASK | MOVEDEVENTMASK | NX_SCROLLWHEELMOVEDMASK)) &&
             (_hidPointingDevice || (_hidPointingDevice = IOHIDPointingDevice::newPointingDeviceAndStart(this, 8, 400, true, 2))))
         {

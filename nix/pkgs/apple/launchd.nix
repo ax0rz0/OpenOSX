@@ -22,7 +22,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-launchd";
+  pname = "openosx-launchd";
   version = "0.1";
 
   dontUnpack = true;
@@ -75,7 +75,7 @@ stdenv.mkDerivation {
     mkdir -p $out/usr/libexec
     cp pd-console-login $out/usr/libexec/
     mkdir -p $out/System/Library/LaunchDaemons
-    cp ${src}/src/Libraries/XPC/launchd/org.puredarwin.console-login.plist \
+    cp ${src}/src/Libraries/XPC/launchd/org.openosx.console-login.plist \
       $out/System/Library/LaunchDaemons/
     runHook postInstall
   '';
@@ -83,7 +83,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "PureDarwin/XPC launchd (bootstrap-namespace PID 1)";
+    description = "OpenOSX/XPC launchd (bootstrap-namespace PID 1)";
     platforms = platforms.linux;
   };
 }

@@ -1,5 +1,5 @@
 /*
- * IOUSBDevice.cpp - PureDarwin reconstruction (Apple's original was 0
+ * IOUSBDevice.cpp - OpenOSX reconstruction (Apple's original was 0
  * bytes in every open-source drop found; only IOUSBDevice.h survived).
  * Implements the subset IOUSBCompositeDriver/IOUSBPipe/IOUSBInterface
  * actually call (mined from their surviving source): GetDeviceDescriptor,

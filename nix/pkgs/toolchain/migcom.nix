@@ -22,7 +22,7 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-migcom-native";
+  pname = "openosx-migcom-native";
   version = "0.1";
 
   src = ../../../tools/mig;
@@ -91,7 +91,7 @@ stdenv.mkDerivation {
   '';
 
   meta = with lib; {
-    description = "Native ELF build of PureDarwin's tools/mig migcom, for use as a build-time host tool";
+    description = "Native ELF build of OpenOSX's tools/mig migcom, for use as a build-time host tool";
     platforms = platforms.linux;
   };
 }

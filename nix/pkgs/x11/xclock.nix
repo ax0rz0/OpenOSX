@@ -85,7 +85,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xclock";
+  pname = "openosx-xclock";
   inherit (xclock) version;
   src = xclock.src;
 

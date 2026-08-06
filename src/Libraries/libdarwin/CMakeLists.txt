@@ -53,11 +53,11 @@ target_include_directories(libdarwin_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../XPC/libxpc/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../dyld/upstream/include          # dlfcn.h
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/bsd                        # sys/guarded.h, uuid/uuid.h
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
 )
 
 target_compile_definitions(libdarwin_static PRIVATE
-    __PUREDARWIN__
+    __OPENOSX__
     __DARWIN_ONLY_UNIX_CONFORMANCE=1
     PRIVATE=1
     OS_CRASH_ENABLE_EXPERIMENTAL_LIBTRACE=1

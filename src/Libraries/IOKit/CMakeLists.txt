@@ -34,7 +34,7 @@ install(TARGETS IOKit DESTINATION usr/local/lib COMPONENT DeveloperInternal)
 install(FILES include/PDIOKitLib.h DESTINATION usr/local/include COMPONENT DeveloperInternal)
 install(FILES include/IOKit/IOKitLib.h DESTINATION usr/local/include/IOKit COMPONENT DeveloperInternal)
 
-if(PUREDARWIN_ENABLE_IOKITCF)
+if(OPENOSX_ENABLE_IOKITCF)
 
 add_darwin_static_library(IOKitCF)
 
@@ -79,15 +79,15 @@ target_include_directories(IOKitCF
         ${CMAKE_SOURCE_DIR}/src/Libraries/XPC/libinfo/compat  # dispatch/private.h
         ${CMAKE_SOURCE_DIR}/src/Libraries/libSystem/libdispatch
         ${CMAKE_SOURCE_DIR}/src/Libraries/libSystem/libdispatch/src/BlocksRuntime
-        ${PUREDARWIN_COREFOUNDATION_PREFIX}/include
+        ${OPENOSX_COREFOUNDATION_PREFIX}/include
         ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/iokit
         ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/libkern
         ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/osfmk
-        ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+        ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
 )
 
 target_compile_options(IOKitCF PRIVATE
-    -F${PUREDARWIN_COREFOUNDATION_PREFIX}/System/Library/Frameworks)
+    -F${OPENOSX_COREFOUNDATION_PREFIX}/System/Library/Frameworks)
 
 target_link_libraries(IOKitCF PUBLIC
     xnu_headers

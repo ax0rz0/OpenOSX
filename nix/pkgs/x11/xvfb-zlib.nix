@@ -22,7 +22,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-zlib";
+  pname = "openosx-zlib";
   version = zlib.version or "0";
 
   src = zlib.src;

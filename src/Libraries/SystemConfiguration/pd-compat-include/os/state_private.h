@@ -2,7 +2,7 @@
  * os_state: the sysdiagnose "state dump" facility. A process registers a block
  * that libsystem serialises on demand when a state dump is collected.
  *
- * PureDarwin has no state-dump collector, so os_state_add_handler() registers
+ * OpenOSX has no state-dump collector, so os_state_add_handler() registers
  * nothing and the block is simply never invoked - the documented behaviour when
  * no collector exists, and exactly what SCDynamicStore expects (it ignores the
  * return value). The types below match the real ABI so the handler block in

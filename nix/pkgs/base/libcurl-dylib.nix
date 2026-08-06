@@ -29,7 +29,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libcurl-dylib";
+  pname = "openosx-libcurl-dylib";
   inherit (curl) version;
   src = curl.src;
 
@@ -64,8 +64,8 @@ stdenv.mkDerivation {
     export NM="${darwinCrossToolchain}/bin/${targetTriple}-nm"
     # See curl.nix for why bridgeos needs a force-included header rather than -D.
     cat > "$PWD/pd-bridgeos.h" <<'EOF'
-#ifndef PUREDARWIN_CURL_BRIDGEOS_H
-#define PUREDARWIN_CURL_BRIDGEOS_H
+#ifndef OPENOSX_CURL_BRIDGEOS_H
+#define OPENOSX_CURL_BRIDGEOS_H
 #ifndef __API_AVAILABLE_PLATFORM_bridgeos
 #define __API_AVAILABLE_PLATFORM_bridgeos(x) bridgeos,introduced=x
 #endif
@@ -154,7 +154,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "Real /usr/lib/libcurl.4.dylib for PureDarwin";
+    description = "Real /usr/lib/libcurl.4.dylib for OpenOSX";
     platforms = platforms.linux;
   };
 }

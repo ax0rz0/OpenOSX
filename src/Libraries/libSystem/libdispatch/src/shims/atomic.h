@@ -80,7 +80,7 @@
 #define _os_acq_barrier_ordered                 memory_order_acquire
 
 /*
- * PureDarwin: our vendored os/atomic_private.h (xnu's, not libdispatch's own
+ * OpenOSX: our vendored os/atomic_private.h (xnu's, not libdispatch's own
  * upstream one) doesn't define the _os_{rel,acq}_barrier_dependency /
  * _os_atomic_mo_dependency_smp family this file's macros token-paste
  * (os_atomic_thread_fence(dependency) etc. expand to _os_rel_barrier_##m
@@ -99,7 +99,7 @@
 #define _os_atomic_mo_dependency                memory_order_relaxed
 
 /*
- * PureDarwin: same version gap as above - our vendored os/atomic_private.h
+ * OpenOSX: same version gap as above - our vendored os/atomic_private.h
  * uses _os_atomic_auto_dependency(e) in os_atomic_inject_dependency() (and
  * os_atomic_load_with_dependency_on()) but never defines it. Per its own
  * doc comment ("capable of automatically creating dependency tokens"),

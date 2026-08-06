@@ -60,7 +60,7 @@
 #define __ptrauth_swift_value_witness_function_pointer(__key)
 #endif
 
-// PureDarwin: clang's own <ptrauth.h> exists (so the __has_include branch above
+// OpenOSX: clang's own <ptrauth.h> exists (so the __has_include branch above
 // is taken and the empty fallbacks are skipped), but it only defines the
 // __ptrauth_objc_*/cxx_* qualifier macros under __has_feature(ptrauth_intrinsics)
 // - which is off on x86_64. Provide empty definitions for the ones the runtime

@@ -67,7 +67,7 @@
 #include <os/assumes.h>
 
 #if HAVE_LIBAUDITD
-/* PureDarwin: bsm/auditd_lib.h doesn't exist in this (or any modern) SDK -
+/* OpenOSX: bsm/auditd_lib.h doesn't exist in this (or any modern) SDK -
  * its only job here was declaring _audit_session_self(), a private
  * double-underscore-mangled forwarder to the real "audit_session_self" Mach
  * syscall */
@@ -299,7 +299,7 @@ main(int argc, char *const *argv)
 	jobmgr_init(sflag);
 	pd_phase("after jobmgr_init");
 	if (pid1_magic) {
-		/* PureDarwin: mount /dev before launchctl bootstraps the system domain. */
+		/* OpenOSX: mount /dev before launchctl bootstraps the system domain. */
 		extern void pd_launchd_boot(void);
 		pd_phase("before pd_launchd_boot");
 		pd_launchd_boot();
@@ -333,7 +333,7 @@ void
 pd_phase(const char *phase)
 {
 	if (pid1_magic && launchd_console) {
-		fprintf(launchd_console, "PureDarwin launchd: %s\n", phase);
+		fprintf(launchd_console, "OpenOSX launchd: %s\n", phase);
 		fflush(launchd_console);
 	}
 }

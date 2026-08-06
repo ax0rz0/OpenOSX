@@ -1,7 +1,7 @@
 { stdenvNoCC }:
 
 stdenvNoCC.mkDerivation {
-  pname = "puredarwin-i3status-shim";
+  pname = "openosx-i3status-shim";
   version = "0.1";
 
   dontUnpack = true;
@@ -17,7 +17,7 @@ printf '[\n'
 printf '[]\n'
 
 while :; do
-    printf ',[{"full_text":"PureDarwin"}]\n'
+    printf ',[{"full_text":"OpenOSX"}]\n'
     sleep 5
 done
 EOF

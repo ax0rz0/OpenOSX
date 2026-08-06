@@ -20,7 +20,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xz";
+  pname = "openosx-xz";
   inherit (xz) version;
   src = xz.src;
 
@@ -74,7 +74,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "XZ compression utilities, cross-built for PureDarwin";
+    description = "XZ compression utilities, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

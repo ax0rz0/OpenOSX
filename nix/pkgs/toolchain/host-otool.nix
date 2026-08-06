@@ -39,7 +39,7 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-host-otool";
+  pname = "openosx-host-otool";
   version = "0.1";
 
   dontUnpack = true;
@@ -90,7 +90,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "PureDarwin otool and install_name_tool, cross-built for PureDarwin";
+    description = "OpenOSX otool and install_name_tool, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

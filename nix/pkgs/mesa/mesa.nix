@@ -69,7 +69,7 @@ let
     (p: "${p}/lib/pkgconfig:${p}/share/pkgconfig") xDeps;
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-mesa";
+  pname = "openosx-mesa";
   version = "26.1.5";
 
   src = fetchurl {
@@ -103,11 +103,11 @@ stdenv.mkDerivation {
       --replace "  with_dri_platform = 'apple'" \
                 "  with_dri_platform = 'pseudo-drm'"
 
-    mkdir -p src/gallium/winsys/virgl/puredarwin
-    cp ${virglWinsysSrc}/virgl_puredarwin_winsys.c src/gallium/winsys/virgl/puredarwin/
-    cp ${virglWinsysSrc}/virgl_puredarwin_public.h src/gallium/winsys/virgl/puredarwin/
-    cp ${pdVirglShim}/include/pd_virgl_shim.h src/gallium/winsys/virgl/puredarwin/
-    cp ${virglAbiHeader} src/gallium/winsys/virgl/puredarwin/IOVirtIOGPU3DShared.h
+    mkdir -p src/gallium/winsys/virgl/openosx
+    cp ${virglWinsysSrc}/virgl_puredarwin_winsys.c src/gallium/winsys/virgl/openosx/
+    cp ${virglWinsysSrc}/virgl_puredarwin_public.h src/gallium/winsys/virgl/openosx/
+    cp ${pdVirglShim}/include/pd_virgl_shim.h src/gallium/winsys/virgl/openosx/
+    cp ${virglAbiHeader} src/gallium/winsys/virgl/openosx/IOVirtIOGPU3DShared.h
 
     # Two changes beyond swapping vtest for our winsys. The wrap returns NULL
     # when IOVirtIOGPU has no 3D user client (real hardware, or virtio-gpu
@@ -122,7 +122,7 @@ stdenv.mkDerivation {
                   src/gallium/auxiliary/target-helpers/sw_helper.h; do
       substituteInPlace "$helper" \
       --replace '#include "virgl/vtest/virgl_vtest_public.h"' \
-                '#include "virgl/puredarwin/virgl_puredarwin_public.h"' \
+                '#include "virgl/openosx/virgl_puredarwin_public.h"' \
       --replace 'vws = virgl_vtest_winsys_wrap(winsys);' \
                 'vws = virgl_puredarwin_winsys_wrap(winsys);' \
       --replace 'screen = virgl_create_screen(vws, NULL);' \
@@ -136,7 +136,7 @@ stdenv.mkDerivation {
 
     # The DRI helper still contains the Linux virtio-gpu entry point even
     # though the Darwin virgl build intentionally omits the DRM winsys.
-    # Leave the descriptor as a stub on Darwin; the PureDarwin winsys is
+    # Leave the descriptor as a stub on Darwin; the OpenOSX winsys is
     # selected through the software frontend below.
     drmhelper=src/gallium/auxiliary/target-helpers/drm_helper.h
     substituteInPlace "$drmhelper" \
@@ -146,20 +146,20 @@ stdenv.mkDerivation {
     dritarget=src/gallium/targets/dri/meson.build
     substituteInPlace "$dritarget" \
       --replace "files('dri_target.c')," \
-                "files('dri_target.c', '../../winsys/virgl/puredarwin/virgl_puredarwin_winsys.c')," \
+                "files('dri_target.c', '../../winsys/virgl/openosx/virgl_puredarwin_winsys.c')," \
       --replace "include_directories('../../frontends/dri')," \
-                "include_directories('../../frontends/dri'), include_directories('../../winsys/virgl/puredarwin'), inc_virtio," \
+                "include_directories('../../frontends/dri'), include_directories('../../winsys/virgl/openosx'), inc_virtio," \
       --replace 'gallium_dri_ld_args = [cc.get_supported_link_arguments' \
                 "gallium_dri_ld_args = ['-L${pdVirglShim}/usr/lib', '-lpd_virgl_shim'] + [cc.get_supported_link_arguments"
 
     xmeson=src/gallium/targets/libgl-xlib/meson.build
     substituteInPlace $xmeson \
       --replace "files('xlib.c')," \
-                "files('xlib.c', '../../winsys/virgl/puredarwin/virgl_puredarwin_winsys.c')," \
+                "files('xlib.c', '../../winsys/virgl/openosx/virgl_puredarwin_winsys.c')," \
       --replace 'gallium_xlib_ld_args = []' \
                 "gallium_xlib_ld_args = ['-L${pdVirglShim}/usr/lib', '-lpd_virgl_shim']" \
       --replace "include_directories('../../frontends/glx/xlib')," \
-                "include_directories('../../frontends/glx/xlib'), include_directories('../../winsys/virgl/puredarwin'), inc_virtio,"
+                "include_directories('../../frontends/glx/xlib'), include_directories('../../winsys/virgl/openosx'), inc_virtio,"
   '';
 
   configurePhase = ''
@@ -176,7 +176,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_PATH_FOR_BUILD="${waylandScanner}/lib/pkgconfig"
     export PKG_CONFIG_LIBDIR_FOR_BUILD="${waylandScanner}/lib/pkgconfig"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -208,7 +208,7 @@ needs_exe_wrapper = true
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out/usr \
       --libdir=lib \
       --buildtype=release \
@@ -296,7 +296,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "Mesa softpipe (Gallium swrast) + OSMesa, cross-built for PureDarwin";
+    description = "Mesa softpipe (Gallium swrast) + OSMesa, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

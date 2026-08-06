@@ -20,7 +20,7 @@ let
   cc = "${darwinCrossToolchain}/bin/${targetTriple}-clang";
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-gsbase-test";
+  pname = "openosx-gsbase-test";
   version = "1";
   dontUnpack = true;
 

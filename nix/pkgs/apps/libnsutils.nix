@@ -22,7 +22,7 @@ let
   srcs = [ "src/unistd.c" "src/base64.c" "src/time.c" ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libnsutils";
+  pname = "openosx-libnsutils";
   inherit (libnsutils) version src;
 
   buildPhase = ''
@@ -81,7 +81,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libnsutils (NetSurf utility library), cross-built for PureDarwin";
+    description = "libnsutils (NetSurf utility library), cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

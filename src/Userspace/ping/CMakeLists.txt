@@ -16,7 +16,7 @@ target_sources(ping PRIVATE
 target_compile_definitions(ping PRIVATE PRIVATE=1 __DARWIN_ONLY_UNIX_CONFORMANCE=1)
 
 target_compile_options(ping PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     # xnu's bsd tree for <netinet/ip_var.h>, <netinet/in_systm.h> and
     # <netinet/ip_icmp.h>; libresolv's include for <ifaddrs.h> (the real
     # getifaddrs() is already in libinfo, inside libSystem).

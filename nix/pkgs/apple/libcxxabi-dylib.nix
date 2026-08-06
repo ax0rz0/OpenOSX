@@ -8,7 +8,7 @@
 , src
 }:
 
-# Builds a real /usr/lib/libc++abi.dylib for PureDarwin.
+# Builds a real /usr/lib/libc++abi.dylib for OpenOSX.
 #
 # The same vendored LLVM libc++abi / libunwind / libc++ subtrees that
 # src/Libraries/libcxxabi/CMakeLists.txt compiles into *static* archives (for
@@ -44,7 +44,7 @@ let
   cxxSrcs = [ ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libcxxabi-dylib";
+  pname = "openosx-libcxxabi-dylib";
   version = "1";
 
   inherit src;
@@ -136,7 +136,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "PureDarwin libc++abi.dylib (libc++abi + libunwind + libc++ subset, cross-built)";
+    description = "OpenOSX libc++abi.dylib (libc++abi + libunwind + libc++ subset, cross-built)";
     platforms = platforms.linux;
   };
 }

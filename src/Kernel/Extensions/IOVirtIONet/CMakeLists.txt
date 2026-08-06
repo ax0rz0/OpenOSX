@@ -3,7 +3,7 @@
 # source exists for this device class). Polling-only, matching PDE1000's
 # shape: no MSI-X/interrupts, RX is timer-polled.
 add_kext_bundle(IOVirtIONet.kext INFO_PLIST Info.plist KERNEL_PRIVATE
-    BUNDLE_IDENTIFIER org.puredarwin.driver.IOVirtIONet BUNDLE_VERSION 1.0.0)
+    BUNDLE_IDENTIFIER org.openosx.driver.IOVirtIONet BUNDLE_VERSION 1.0.0)
 set_property(TARGET IOVirtIONet.kext PROPERTY OUTPUT_NAME IOVirtIONet)
 
 target_sources(IOVirtIONet.kext PRIVATE
@@ -12,9 +12,9 @@ target_sources(IOVirtIONet.kext PRIVATE
 
 # IOVirtIONet.cpp includes <IOKit/network/Foo.h>; mirror PDE1000's shim
 # trick so it can see those headers without installing them system-wide.
-set(PUREDARWIN_VNET_SHIM_DIR "${CMAKE_CURRENT_BINARY_DIR}/shim-include")
-set(PUREDARWIN_IONF_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../IONetworkingFamily")
-file(MAKE_DIRECTORY "${PUREDARWIN_VNET_SHIM_DIR}/IOKit/network")
+set(OPENOSX_VNET_SHIM_DIR "${CMAKE_CURRENT_BINARY_DIR}/shim-include")
+set(OPENOSX_IONF_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../IONetworkingFamily")
+file(MAKE_DIRECTORY "${OPENOSX_VNET_SHIM_DIR}/IOKit/network")
 foreach(hdr
     IOBasicOutputQueue.h IOEthernetController.h IOEthernetInterface.h
     IOEthernetStats.h IOGatedOutputQueue.h IOKernelDebugger.h
@@ -23,13 +23,13 @@ foreach(hdr
     IONetworkInterface.h IONetworkMedium.h IONetworkStack.h
     IONetworkStats.h IONetworkTypesPrivate.h IONetworkUserClient.h
     IOOutputQueue.h IOPacketQueue.h)
-    file(CREATE_LINK "${PUREDARWIN_IONF_SRC_DIR}/${hdr}"
-        "${PUREDARWIN_VNET_SHIM_DIR}/IOKit/network/${hdr}" SYMBOLIC)
+    file(CREATE_LINK "${OPENOSX_IONF_SRC_DIR}/${hdr}"
+        "${OPENOSX_VNET_SHIM_DIR}/IOKit/network/${hdr}" SYMBOLIC)
 endforeach()
 
 target_include_directories(IOVirtIONet.kext PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PUREDARWIN_VNET_SHIM_DIR}
+    ${OPENOSX_VNET_SHIM_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../IOPCIFamily/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../IOVirtIOFamily
     ${CMAKE_CURRENT_SOURCE_DIR}/../../xnu/EXTERNAL_HEADERS)

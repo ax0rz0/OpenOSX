@@ -34,7 +34,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-glib";
+  pname = "openosx-glib";
   version = glib.version;
 
   src = glib.src;
@@ -53,8 +53,8 @@ stdenv.mkDerivation {
     perl -0pi -e 's/#include <libintl\.h>\n#include <string\.h>.*?#define NC_\(Context, String\) \(String\)/#include <string.h>\n\n#ifdef ENABLE_NLS\n#include <libintl.h>\n#define  _(String) gettext (String)\n#define Q_(String) g_dpgettext (NULL, String, 0)\n#define N_(String) (String)\n#define C_(Context,String) g_dpgettext (NULL, Context "\\004" String, strlen (Context) + 1)\n#define NC_(Context, String) (String)\n#else\n#define  _(String) (String)\n#define Q_(String) (String)\n#define N_(String) (String)\n#define C_(Context,String) (String)\n#define NC_(Context, String) (String)\n#endif/s' glib/gi18n.h
     perl -0pi -e 's/#include <libintl\.h>\n#include <string\.h>\n\n#ifndef GETTEXT_PACKAGE\n#error You must define GETTEXT_PACKAGE before including gi18n-lib\.h\.  Did you forget to include config\.h\?\n#endif\n\n#define  _\(String\) \(\(char \*\) g_dgettext \(GETTEXT_PACKAGE, String\)\)\n#define Q_\(String\) g_dpgettext \(GETTEXT_PACKAGE, String, 0\)\n#define N_\(String\) \(String\)\n#define C_\(Context,String\) g_dpgettext \(GETTEXT_PACKAGE, Context "\\004" String, strlen \(Context\) \+ 1\)\n#define NC_\(Context, String\) \(String\)/#include <string.h>\n\n#ifndef GETTEXT_PACKAGE\n#error You must define GETTEXT_PACKAGE before including gi18n-lib.h.  Did you forget to include config.h?\n#endif\n\n#ifdef ENABLE_NLS\n#include <libintl.h>\n#define  _(String) ((char *) g_dgettext (GETTEXT_PACKAGE, String))\n#define Q_(String) g_dpgettext (GETTEXT_PACKAGE, String, 0)\n#define N_(String) (String)\n#define C_(Context,String) g_dpgettext (GETTEXT_PACKAGE, Context "\\004" String, strlen (Context) + 1)\n#define NC_(Context, String) (String)\n#else\n#define  _(String) (String)\n#define Q_(String) (String)\n#define N_(String) (String)\n#define C_(Context,String) (String)\n#define NC_(Context, String) (String)\n#endif/s' glib/gi18n-lib.h
     perl -0pi -e 's/#define NC_\(Context, String\) \(String\)\n#endif/#define NC_(Context, String) (String)\n#define textdomain(String) ((String) ? (String) : "messages")\n#define gettext(String) (String)\n#define dgettext(Domain,String) (String)\n#define dcgettext(Domain,String,Category) (String)\n#define bindtextdomain(Domain,Directory) (Domain)\n#define bind_textdomain_codeset(Domain,Codeset) ((void) 0)\n#define ngettext(Single,Plural,Number) ((Number) == 1 ? (Single) : (Plural))\n#define dngettext(Domain,Single,Plural,Number) ((Number) == 1 ? (Single) : (Plural))\n#define dcngettext(Domain,Single,Plural,Number,Category) ((Number) == 1 ? (Single) : (Plural))\n#endif/g' glib/gi18n.h glib/gi18n-lib.h
-    perl -0pi -e 's@/\* Common code \{\{\{2 \*/\n#else\n#error No _g_get_unix_mounts\(\) implementation for system\n#endif@/* PureDarwin {{{2 */\n#elif defined (__APPLE__)\n\nstatic char *\nget_mtab_monitor_file (void)\n{\n  return NULL;\n}\n\nstatic GUnixMountEntry **\n_g_unix_mounts_get_from_file (const char *table_path,\n                              uint64_t   *time_read_out,\n                              size_t     *n_entries_out)\n{\n  if (time_read_out != NULL)\n    *time_read_out = 0;\n  if (n_entries_out != NULL)\n    *n_entries_out = 0;\n\n  return NULL;\n}\n\nstatic GList *\n_g_get_unix_mounts (void)\n{\n  return NULL;\n}\n\n/* Common code {{{2 */\n#else\n#error No _g_get_unix_mounts() implementation for system\n#endif@' gio/gunixmounts.c
-    perl -0pi -e 's@/\* Common code \{\{\{2 \*/\n#else\n#error No g_get_mount_table\(\) implementation for system\n#endif@/* PureDarwin {{{2 */\n#elif defined (__APPLE__)\n\nstatic GList *\n_g_get_unix_mount_points (void)\n{\n  return NULL;\n}\n\nstatic GUnixMountPoint **\n_g_unix_mount_points_get_from_file (const char *table_path,\n                                    uint64_t   *time_read_out,\n                                    size_t     *n_points_out)\n{\n  if (time_read_out != NULL)\n    *time_read_out = 0;\n  if (n_points_out != NULL)\n    *n_points_out = 0;\n\n  return NULL;\n}\n\n/* Common code {{{2 */\n#else\n#error No g_get_mount_table() implementation for system\n#endif@' gio/gunixmounts.c
+    perl -0pi -e 's@/\* Common code \{\{\{2 \*/\n#else\n#error No _g_get_unix_mounts\(\) implementation for system\n#endif@/* OpenOSX {{{2 */\n#elif defined (__APPLE__)\n\nstatic char *\nget_mtab_monitor_file (void)\n{\n  return NULL;\n}\n\nstatic GUnixMountEntry **\n_g_unix_mounts_get_from_file (const char *table_path,\n                              uint64_t   *time_read_out,\n                              size_t     *n_entries_out)\n{\n  if (time_read_out != NULL)\n    *time_read_out = 0;\n  if (n_entries_out != NULL)\n    *n_entries_out = 0;\n\n  return NULL;\n}\n\nstatic GList *\n_g_get_unix_mounts (void)\n{\n  return NULL;\n}\n\n/* Common code {{{2 */\n#else\n#error No _g_get_unix_mounts() implementation for system\n#endif@' gio/gunixmounts.c
+    perl -0pi -e 's@/\* Common code \{\{\{2 \*/\n#else\n#error No g_get_mount_table\(\) implementation for system\n#endif@/* OpenOSX {{{2 */\n#elif defined (__APPLE__)\n\nstatic GList *\n_g_get_unix_mount_points (void)\n{\n  return NULL;\n}\n\nstatic GUnixMountPoint **\n_g_unix_mount_points_get_from_file (const char *table_path,\n                                    uint64_t   *time_read_out,\n                                    size_t     *n_points_out)\n{\n  if (time_read_out != NULL)\n    *time_read_out = 0;\n  if (n_points_out != NULL)\n    *n_points_out = 0;\n\n  return NULL;\n}\n\n/* Common code {{{2 */\n#else\n#error No g_get_mount_table() implementation for system\n#endif@' gio/gunixmounts.c
   '';
 
   configurePhase = ''
@@ -67,7 +67,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" depPcPaths}:${lib.makeSearchPath "share/pkgconfig" depPcPaths}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -104,7 +104,7 @@ endian = '${targetInfo.mesonEndian}'
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \

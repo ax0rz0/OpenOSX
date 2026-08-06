@@ -4447,7 +4447,7 @@
     #define __API_AVAILABLE_PLATFORM_ios(x) ios,introduced=x
     #define __API_AVAILABLE_PLATFORM_watchos(x) watchos,introduced=x
     #define __API_AVAILABLE_PLATFORM_tvos(x) tvos,introduced=x
-    /* PureDarwin: bridgeos is missing from this drop's platform-macro family,
+    /* OpenOSX: bridgeos is missing from this drop's platform-macro family,
      * but Apple headers in the tree (os/lock_private.h, SystemConfiguration's
      * public headers) do use it - an undefined token there becomes a bare
      * "expected ','" at the use site. clang knows the platform. */

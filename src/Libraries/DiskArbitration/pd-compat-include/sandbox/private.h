@@ -7,8 +7,8 @@
  *                                  path)
  *
  * to ask whether the client asking for a mount is permitted to mount at that
- * path. PureDarwin has no Sandbox.kext and so no MAC policy to consult; the
- * existing PureDarwin sandbox_check* (XPC/notify/pd_sandbox_check.c) report
+ * path. OpenOSX has no Sandbox.kext and so no MAC policy to consult; the
+ * existing OpenOSX sandbox_check* (XPC/notify/pd_sandbox_check.c) report
  * "allowed", which is the documented behaviour when no profile is in effect.
  */
 

@@ -6,7 +6,7 @@
 }:
 
 stdenv.mkDerivation {
-  pname = "puredarwin-automake";
+  pname = "openosx-automake";
   inherit (automake) version src;
 
   nativeBuildInputs = [ perl autoconf ];
@@ -38,7 +38,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "GNU Automake, installed for PureDarwin (pure Perl - no cross-compiling needed)";
+    description = "GNU Automake, installed for OpenOSX (pure Perl - no cross-compiling needed)";
     platforms = platforms.linux;
   };
 }

@@ -6,13 +6,13 @@
 # targeting Darwin) as "<triple>-ld"; prefer that, matching migcom's
 # seeded-via-package-manager pattern, and only fall back to host_ld if it
 # can't be found.
-if(PUREDARWIN_NIX_TOOLCHAIN AND DEFINED ENV{NIX_NATIVE_LD_PATH})
+if(OPENOSX_NIX_TOOLCHAIN AND DEFINED ENV{NIX_NATIVE_LD_PATH})
     set(NATIVE_LD64_EXECUTABLE "$ENV{NIX_NATIVE_LD_PATH}" CACHE FILEPATH "Native host ld64 for Darwin links" FORCE)
 endif()
 
-set(PUREDARWIN_USE_LD64_LLD FALSE)
-if(PUREDARWIN_NIX_TOOLCHAIN AND NOT NATIVE_LD64_EXECUTABLE)
-    set(PUREDARWIN_USE_LD64_LLD TRUE)
+set(OPENOSX_USE_LD64_LLD FALSE)
+if(OPENOSX_NIX_TOOLCHAIN AND NOT NATIVE_LD64_EXECUTABLE)
+    set(OPENOSX_USE_LD64_LLD TRUE)
 endif()
 
 if(NOT CMAKE_HOST_APPLE AND NOT NATIVE_LD64_EXECUTABLE)
@@ -26,7 +26,7 @@ function(add_darwin_executable name)
     cmake_parse_arguments(SL "NO_STANDARD_LIBRARIES;USE_HOST_SDK" "MACOSX_VERSION_MIN" "" ${ARGN})
 
     add_executable(${name})
-    target_compile_definitions(${name} PRIVATE __PUREDARWIN__)
+    target_compile_definitions(${name} PRIVATE __OPENOSX__)
     if(CMAKE_HOST_APPLE)
         # PD own ld64 (host_ld) is built without TAPI support, so it cannot
         # resolve the SDK .tbd text-stub files (e.g. libSystem.tbd), fall
@@ -35,7 +35,7 @@ function(add_darwin_executable name)
         target_link_options(${name} PRIVATE -fuse-ld=${XCRUN_LD})
     elseif(NATIVE_LD64_EXECUTABLE)
         target_link_options(${name} PRIVATE -fuse-ld=${NATIVE_LD64_EXECUTABLE})
-    elseif(PUREDARWIN_USE_LD64_LLD)
+    elseif(OPENOSX_USE_LD64_LLD)
         target_link_options(${name} PRIVATE -fuse-ld=lld)
     else()
         add_dependencies(${name} host_ld)
@@ -45,7 +45,7 @@ function(add_darwin_executable name)
     if(NOT SL_USE_HOST_SDK)
         target_compile_options(${name} PRIVATE -nostdlib -nostdinc)
         target_link_options(${name} PRIVATE -nostdlib)
-        set_property(TARGET ${name} PROPERTY OSX_ARCHITECTURES "${PUREDARWIN_ARCH}")
+        set_property(TARGET ${name} PROPERTY OSX_ARCHITECTURES "${OPENOSX_ARCH}")
     endif()
 
     # TODO: Handle SL_NO_STANDARD_LIBRARIES here, once the libraries have been added to the build.
@@ -66,7 +66,7 @@ function(add_darwin_static_library name)
     if(TARGET host_libtool)
         add_dependencies(${name} host_libtool)
     endif()
-    target_compile_definitions(${name} PRIVATE __PUREDARWIN__)
+    target_compile_definitions(${name} PRIVATE __OPENOSX__)
 
     if(SL_MACOSX_VERSION_MIN)
         set_property(TARGET ${name} PROPERTY CMAKE_OSX_DEPLOYMENT_TARGET ${SL_MACOSX_VERSION_MIN})
@@ -78,7 +78,7 @@ function(add_darwin_static_library name)
 
     if(NOT SL_USE_HOST_SDK)
         target_compile_options(${name} PRIVATE -nostdlib -nostdinc)
-        set_property(TARGET ${name} PROPERTY OSX_ARCHITECTURES "${PUREDARWIN_ARCH}")
+        set_property(TARGET ${name} PROPERTY OSX_ARCHITECTURES "${OPENOSX_ARCH}")
     endif()
 endfunction()
 
@@ -99,13 +99,13 @@ function(add_darwin_shared_library name)
         target_link_options(${name} PRIVATE -fuse-ld=${XCRUN_LD})
     elseif(NATIVE_LD64_EXECUTABLE)
         target_link_options(${name} PRIVATE -fuse-ld=${NATIVE_LD64_EXECUTABLE})
-    elseif(PUREDARWIN_USE_LD64_LLD)
+    elseif(OPENOSX_USE_LD64_LLD)
         target_link_options(${name} PRIVATE -fuse-ld=lld)
     else()
         add_dependencies(${name} host_ld)
         target_link_options(${name} PRIVATE -fuse-ld=$<TARGET_FILE:host_ld>)
     endif()
-    target_compile_definitions(${name} PRIVATE __PUREDARWIN__)
+    target_compile_definitions(${name} PRIVATE __OPENOSX__)
 
     string(SUBSTRING ${name} 0 3 name_prefix)
     if(name_prefix STREQUAL "lib")
@@ -119,7 +119,7 @@ function(add_darwin_shared_library name)
         target_compile_options(${name} PRIVATE -nostdlib -nostdinc)
         target_link_options(${name} PRIVATE -nostdlib)
 
-        set_property(TARGET ${name} PROPERTY OSX_ARCHITECTURES "${PUREDARWIN_ARCH}")
+        set_property(TARGET ${name} PROPERTY OSX_ARCHITECTURES "${OPENOSX_ARCH}")
     endif()
 
     if(SL_MACOSX_VERSION_MIN)
@@ -171,7 +171,7 @@ function(add_darwin_object_library name)
 
     add_library(${name} OBJECT)
     set_property(TARGET ${name} PROPERTY LINKER_LANGUAGE C)
-    target_compile_definitions(${name} PRIVATE __PUREDARWIN__)
+    target_compile_definitions(${name} PRIVATE __OPENOSX__)
 
     if(SL_MACOSX_VERSION_MIN)
         set_property(TARGET ${name} PROPERTY CMAKE_OSX_DEPLOYMENT_TARGET ${SL_MACOSX_VERSION_MIN})
@@ -183,7 +183,7 @@ function(add_darwin_object_library name)
 
     if(NOT SL_USE_HOST_SDK)
         target_compile_options(${name} PRIVATE -nostdlib -nostdinc)
-        set_property(TARGET ${name} PROPERTY OSX_ARCHITECTURES "${PUREDARWIN_ARCH}")
+        set_property(TARGET ${name} PROPERTY OSX_ARCHITECTURES "${OPENOSX_ARCH}")
     endif()
 endfunction()
 

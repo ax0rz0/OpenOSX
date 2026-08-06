@@ -1,4 +1,4 @@
-/* Minimal PureDarwin chown(1). */
+/* Minimal OpenOSX chown(1). */
 #include <sys/types.h>
 
 #include <errno.h>

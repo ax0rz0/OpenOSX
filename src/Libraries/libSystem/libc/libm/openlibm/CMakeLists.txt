@@ -1,4 +1,4 @@
-# openlibm (PureDarwin/Libm fork), vendored directly (BSD/FreeBSD/OpenBSD-derived,
+# openlibm (OpenOSX/Libm fork), vendored directly (BSD/FreeBSD/OpenBSD-derived,
 # see LICENSE.md) - replaces the hand-rolled pd_libm_*.c files that used to
 # live in the parent libm/ directory. Built as portable C only: the amd64/
 # directory's optimized .S routines are skipped (fenv.c, which is plain C,
@@ -7,7 +7,7 @@
 add_darwin_static_library(openlibm_static)
 
 target_sources(openlibm_static PRIVATE
-    $<$<BOOL:${PUREDARWIN_ARM64}>:src/pd_arm64.c>
+    $<$<BOOL:${OPENOSX_ARM64}>:src/pd_arm64.c>
     # src/ - main portable C implementation (see src/Make.files)
     src/common.c
     src/e_acos.c src/e_acosf.c src/e_acosh.c src/e_acoshf.c
@@ -132,7 +132,7 @@ set(_openlibm_long_double_sources
     ld80/e_coshl.c ld80/e_log10l.c ld80/e_tgammal.c
     ld80/e_expl.c ld80/e_log2l.c ld80/k_cosl.c ld80/s_log1pl.c ld80/s_tanhl.c
     ld80/e_logl.c ld80/k_sinl.c ld80/s_erfl.c ld80/s_nanl.c)
-if(PUREDARWIN_ARCH STREQUAL "arm64")
+if(OPENOSX_ARCH STREQUAL "arm64")
     set_source_files_properties(${_openlibm_long_double_sources}
         PROPERTIES HEADER_FILE_ONLY TRUE)
     # The ARM fenv implementation is provided by the public compiler/runtime
@@ -149,11 +149,11 @@ if(_openlibm_copts)
 endif()
 
 target_compile_options(openlibm_static PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -include ${CMAKE_CURRENT_SOURCE_DIR}/src/cdefs-compat.h
     -Wno-implicit-function-declaration)
 target_compile_definitions(openlibm_static PRIVATE
-    __PUREDARWIN__=1
+    __OPENOSX__=1
     __BSD_VISIBLE=1
     _FORTIFY_SOURCE=0)
 target_include_directories(openlibm_static PRIVATE

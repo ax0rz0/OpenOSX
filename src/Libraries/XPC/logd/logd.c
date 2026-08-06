@@ -1,5 +1,5 @@
 /*
- * PureDarwin recreation of `logd` - just enough to not shit the bed
+ * OpenOSX recreation of `logd` - just enough to not shit the bed
 */
 #include <bootstrap.h>
 #include <errno.h>
@@ -47,7 +47,7 @@ logd_write_fd(int fd, const char *prefix, const char *msg, ssize_t len)
 static void
 logd_note(const char *msg)
 {
-	logd_write_fd(console_fd, "PureDarwin logd: ", msg, (ssize_t)strlen(msg));
+	logd_write_fd(console_fd, "OpenOSX logd: ", msg, (ssize_t)strlen(msg));
 }
 
 static void

@@ -90,7 +90,7 @@ let
       libSystem = libSystemBuild;
       shared = true;
       nativeMesonTools = nativeMesonToolsDir;
-      pname = "puredarwin-xfconf";
+      pname = "openosx-xfconf";
       version = "4.20.0";
       src = xfconfSrc;
       deps = [
@@ -131,7 +131,7 @@ let
       libSystem = libSystemBuild;
       shared = true;
       nativeMesonTools = nativeMesonToolsDir;
-      pname = "puredarwin-libxfce4ui";
+      pname = "openosx-libxfce4ui";
       version = "4.20.2";
       src = libxfce4uiSrc;
       deps = [
@@ -171,7 +171,7 @@ let
       inherit darwinCrossToolchain nativeLd;
       libSystem = libSystemBuild;
       guestPrefix = true;
-      pname = "puredarwin-xfwm4";
+      pname = "openosx-xfwm4";
       version = "4.20.0";
       src = xfwm4Src;
       deps = [
@@ -204,7 +204,7 @@ let
         "--enable-randr"
         "--enable-xsync"
         # xi2 stays off, matching upstream's default: its AC_CHECK_LIB
-        # link probe does not survive PureDarwin's static libXi, and input
+        # link probe does not survive OpenOSX's static libXi, and input
         # arrives through the puredarwininput driver regardless.
         "--enable-startup-notification"
       ];
@@ -272,7 +272,7 @@ let
       # once in the panel binary and again in each plugin.
       shared = true;
       nativeMesonTools = nativeMesonToolsDir;
-      pname = "puredarwin-garcon";
+      pname = "openosx-garcon";
       version = "4.20.0";
       src = garconSrc;
       deps = [
@@ -303,7 +303,7 @@ let
       libSystem = libSystemBuild;
       shared = true;
       nativeMesonTools = nativeMesonToolsDir;
-      pname = "puredarwin-exo";
+      pname = "openosx-exo";
       version = "4.20.0";
       src = exoSrc;
       deps = [
@@ -334,7 +334,7 @@ let
       inherit darwinCrossToolchain nativeLd;
       libSystem = libSystemBuild;
       guestPrefix = true;
-      pname = "puredarwin-xfce4-session";
+      pname = "openosx-xfce4-session";
       version = "4.20.4";
       src = xfce4SessionSrc;
       # startxfce4 --wayland hardcodes labwc, which is GPL2; sway is MIT and is
@@ -399,7 +399,7 @@ let
       # cannot be loaded - the panel would start as an empty bar.
       shared = true;
       nativeMesonTools = nativeMesonToolsDir;
-      pname = "puredarwin-xfce4-panel";
+      pname = "openosx-xfce4-panel";
       version = "4.20.8";
       src = xfce4PanelSrc;
       deps = [
@@ -446,7 +446,7 @@ let
       inherit darwinCrossToolchain nativeLd;
       libSystem = libSystemBuild;
       guestPrefix = true;
-      pname = "puredarwin-xfdesktop";
+      pname = "openosx-xfdesktop";
       version = "4.20.2";
       src = xfdesktopSrc;
       deps = [
@@ -535,7 +535,7 @@ let
       inherit darwinCrossToolchain nativeLd;
       libSystem = libSystemBuild;
       guestPrefix = true;
-      pname = "puredarwin-xfce4-settings";
+      pname = "openosx-xfce4-settings";
       version = "4.20.5";
       src = xfce4SettingsSrc;
       deps = [
@@ -578,7 +578,7 @@ let
       inherit darwinCrossToolchain nativeLd;
       libSystem = libSystemBuild;
       guestPrefix = true;
-      pname = "puredarwin-xfce4-appfinder";
+      pname = "openosx-xfce4-appfinder";
       version = "4.20.0";
       src = xfce4AppfinderSrc;
       deps = [
@@ -619,7 +619,7 @@ let
       # manager without its own extension library.
       shared = true;
       nativeMesonTools = nativeMesonToolsDir;
-      pname = "puredarwin-thunar";
+      pname = "openosx-thunar";
       version = "4.20.9";
       src = thunarSrc;
       deps = [

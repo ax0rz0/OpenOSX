@@ -12,17 +12,17 @@ static const IOPhysicalLength kECAMLength = 0x10000000ULL;
 
 IOService *PDArmPCI::probe(IOService *provider, SInt32 *score)
 {
-    IOLog("PureDarwin PDArmPCI: probe provider=%s\n",
+    IOLog("OpenOSX PDArmPCI: probe provider=%s\n",
           provider ? provider->getName() : "(null)");
     IOService *result = super::probe(provider, score);
-    IOLog("PureDarwin PDArmPCI: probe result=%p score=%ld\n",
+    IOLog("OpenOSX PDArmPCI: probe result=%p score=%ld\n",
           result, score ? (long)*score : 0L);
     return result;
 }
 
 bool PDArmPCI::start(IOService *provider)
 {
-    IOLog("PureDarwin PDArmPCI: start provider=%s\n",
+    IOLog("OpenOSX PDArmPCI: start provider=%s\n",
           provider ? provider->getName() : "(null)");
     ecamMemory = IODeviceMemory::withRange(kECAMBase, kECAMLength);
     if (!ecamMemory)
@@ -40,7 +40,7 @@ bool PDArmPCI::start(IOService *provider)
 
 bool PDArmPCI::configure(IOService *provider)
 {
-    IOLog("PureDarwin PDArmPCI: configure\n");
+    IOLog("OpenOSX PDArmPCI: configure\n");
     /* QEMU virt's non-prefetchable PCI window is 0x10000000..0x3fffffff. */
     addBridgeMemoryRange(0x10000000ULL, 0x30000000ULL, true);
     return super::configure(provider);

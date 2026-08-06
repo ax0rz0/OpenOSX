@@ -7,11 +7,11 @@
 	<key>CFBundleExecutable</key>
 	<string>AppleUSBMergeNub</string>
 	<key>CFBundleGetInfoString</key>
-	<string>PureDarwin - real Apple source, unmodified. No personality: not needed by any target
+	<string>OpenOSX - real Apple source, unmodified. No personality: not needed by any target
 	hardware yet, built so it's available and its build health is checked, but dormant
 	(zero IOKit matching risk since nothing instantiates it without a personality).</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.puredarwin.driver.AppleUSBMergeNub</string>
+	<string>org.openosx.driver.AppleUSBMergeNub</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>

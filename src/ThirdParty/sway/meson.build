@@ -74,7 +74,7 @@ gdk_pixbuf = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
 pixman = dependency('pixman-1')
 if host_machine.system() == 'darwin'
 	libevdev = declare_dependency(
-		include_directories: include_directories('puredarwin'),
+		include_directories: include_directories('openosx'),
 	)
 	add_project_arguments('-DPUREDARWIN', language: 'c')
 else

@@ -29,7 +29,7 @@
 #include <sys/cdefs.h>
 
 /*
- * PureDarwin: __apple_build_version__ is only ever defined by Apple's own
+ * OpenOSX: __apple_build_version__ is only ever defined by Apple's own
  * clang, never by a vanilla/nixpkgs LLVM - so this always fell into the
  * #else (pre-2019, no ".4s" suffix) branch when cross-building, and our
  * modern LLVM's integrated assembler rejects that older operand syntax

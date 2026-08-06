@@ -13,14 +13,14 @@
 // GNU General Public License for more details.
 //
 // DESCRIPTION:
-//	DOOM graphics for PureDarwin, via PDGOP (the same userland
+//	DOOM graphics for OpenOSX, via PDGOP (the same userland
 //	IOGOPFramebuffer client the puredarwingop Xorg DDX driver uses - see
 //	src/Libraries/PDGOP). No X server, no /dev/fb0: this opens the GOP
 //	framebuffer directly, gets back a real mapped linear buffer plus
 //	width/height/stride/bpp/pixelType, and writes converted pixels
 //	straight into it every frame. This file (and i_input_pd.c) replace
 //	fbDOOM's own i_video_fbdev.c/i_input_tty.c/i_joystick.c, which have
-//	no PureDarwin equivalent - see this component's CMakeLists.txt.
+//	no OpenOSX equivalent - see this component's CMakeLists.txt.
 //
 //-----------------------------------------------------------------------------
 

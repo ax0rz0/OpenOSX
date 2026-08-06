@@ -21,7 +21,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-yajl";
+  pname = "openosx-yajl";
   version = yajl.version;
 
   src = yajl.src;

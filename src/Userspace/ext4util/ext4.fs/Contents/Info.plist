@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.puredarwin.filesystems.ext4</string>
+	<string>org.openosx.filesystems.ext4</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -51,7 +51,7 @@
 	    "/sbin/mount -t", so it has to match the name ext4.kext registers
 	    with the kernel's VFS table.
 
-	    There is deliberately no FSRepairExecutable: PureDarwin has no
+	    There is deliberately no FSRepairExecutable: OpenOSX has no
 	    fsck_ext4, and naming one that does not exist makes DAFileSystemProbe
 	    fail with ENOTSUP before it ever runs the probe. Without it DA treats
 	    the volume as unrepairable and mounts it as-is, which is the current

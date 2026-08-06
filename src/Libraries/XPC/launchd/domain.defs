@@ -1,5 +1,5 @@
 /*
- * PureDarwin local reconstruction of launchd's XPC domain MIG interface.
+ * OpenOSX local reconstruction of launchd's XPC domain MIG interface.
  *
  * The server routines are already present in core.c; this file exposes that
  * surface to launchd's normal MIG demux path so XPC domains can become real

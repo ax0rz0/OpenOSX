@@ -6,7 +6,7 @@
 }:
 
 stdenv.mkDerivation {
-  pname = "puredarwin-kc-arm64";
+  pname = "openosx-kc-arm64";
   version = "0.1";
 
   dontUnpack = true;
@@ -65,7 +65,7 @@ stdenv.mkDerivation {
   '';
 
   meta = with lib; {
-    description = "PureDarwin arm64-virt boot kernel collection (kernel + kexts fileset), assembled by kc-tools' kc-builder";
+    description = "OpenOSX arm64-virt boot kernel collection (kernel + kexts fileset), assembled by kc-tools' kc-builder";
     platforms = platforms.linux;
   };
 }

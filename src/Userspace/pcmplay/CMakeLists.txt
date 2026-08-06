@@ -11,7 +11,7 @@ target_sources(pcmplay PRIVATE
 )
 
 target_compile_options(pcmplay PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -fno-builtin
     -fno-stack-protector
 )

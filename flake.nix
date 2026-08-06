@@ -21,10 +21,10 @@
 
           isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
           # fbDOOM (GPL, opt-in - see src/Userspace/fbdoom/CMakeLists.txt) is
-          # an external checkout, not a flake input: point PUREDARWIN_FBDOOM_SOURCE_ENV
+          # an external checkout, not a flake input: point OPENOSX_FBDOOM_SOURCE_ENV
           # at it (requires --impure). Mirrors the SDK tarball's requireFile
           # pattern - never hardcode a personal machine path into this file.
-          fbdoomExternalSrcEnv = builtins.getEnv "PUREDARWIN_FBDOOM_SOURCE_ENV";
+          fbdoomExternalSrcEnv = builtins.getEnv "OPENOSX_FBDOOM_SOURCE_ENV";
           # Component source trees (see nix/sources.nix).
           sources = import ./nix/sources.nix {
             inherit pkgs sourceWith libSystemSourcePaths fbdoomExternalSrcEnv;
@@ -147,7 +147,7 @@
           } // args);
 
           userlandBuild = mkPureDarwinBuild {
-            pname = "puredarwin-userland";
+            pname = "openosx-userland";
             src = userlandSource;
             buildTargets = [ "sw_vers" "ps" "mkfile" "sync" "sysctl" "vm_stat" "hostinfo" "dmesg" "purge" "cpuctl" "mean" "reboot" "halt" "poweroff" "shutdown" "netsetup" "pd-networkd" "ping" "pcmplay" "startx" "mousemon" "mount" "umount" "ext4tool" "ext4_util" "mdnsd" ]
               # shell_cmds (+ tsort/uuencode/uudecode)
@@ -170,7 +170,7 @@
             ];
           };
           tccBuild = mkPureDarwinBuild {
-            pname = "puredarwin-tcc";
+            pname = "openosx-tcc";
             src = userlandSource;
             buildTargets = [ "tcc" ];
             enableProjects = false;
@@ -183,7 +183,7 @@
             prebuiltLibSystem = libSystemBuild;
           };
           cctoolsBuild = mkPureDarwinBuild {
-            pname = "puredarwin-cctools";
+            pname = "openosx-cctools";
             src = cctoolsSource;
             buildTargets = [
               "lipo_selfhost" "size_selfhost" "strings_selfhost" "checksyms_selfhost"
@@ -235,7 +235,7 @@
               inherit darwinCrossToolchain;
               nativeLd = nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXdmcp";
+              pname = "openosx-libXdmcp";
               version = pkgs.libxdmcp.version;
               src = pkgs.libxdmcp.src;
               deps = [ pkgs.xorgproto ];
@@ -259,7 +259,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libfontenc";
+              pname = "openosx-libfontenc";
               version = pkgs.libfontenc.version;
               src = pkgs.libfontenc.src;
               deps = [ pkgs.xorgproto xvfbZlibBuild ];
@@ -268,7 +268,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXfont2";
+              pname = "openosx-libXfont2";
               version = pkgs.libxfont_2.version;
               src = pkgs.libxfont_2.src;
               deps = [
@@ -286,7 +286,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libX11";
+              pname = "openosx-libX11";
               version = pkgs.libX11.version;
               src = pkgs.libX11.src;
               deps = [
@@ -305,7 +305,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libxcb";
+              pname = "openosx-libxcb";
               version = pkgs.libxcb.version;
               src = pkgs.libxcb.src;
               deps = [
@@ -328,7 +328,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libxcb-util";
+              pname = "openosx-libxcb-util";
               version = pkgs.libxcb-util.version;
               src = pkgs.libxcb-util.src;
               deps = [ pkgs.xorgproto xcbBuild ];
@@ -337,7 +337,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libxcb-keysyms";
+              pname = "openosx-libxcb-keysyms";
               version = pkgs.libxcb-keysyms.version;
               src = pkgs.libxcb-keysyms.src;
               deps = [ pkgs.xorgproto xcbBuild xcbUtilBuild ];
@@ -346,7 +346,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libxcb-wm";
+              pname = "openosx-libxcb-wm";
               version = pkgs.libxcb-wm.version;
               src = pkgs.libxcb-wm.src;
               deps = [ pkgs.xorgproto xcbBuild xcbUtilBuild ];
@@ -356,7 +356,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libxcb-render-util";
+              pname = "openosx-libxcb-render-util";
               version = pkgs.libxcb-render-util.version;
               src = pkgs.libxcb-render-util.src;
               deps = [ pkgs.xorgproto xcbBuild xcbUtilBuild ];
@@ -365,7 +365,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libxcb-image";
+              pname = "openosx-libxcb-image";
               version = pkgs.libxcb-image.version;
               src = pkgs.libxcb-image.src;
               deps = [ pkgs.xorgproto xcbBuild xcbUtilBuild xcbRenderUtilBuild ];
@@ -377,7 +377,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libxcb-cursor";
+              pname = "openosx-libxcb-cursor";
               version = pkgs.libxcb-cursor.version;
               src = pkgs.libxcb-cursor.src;
               deps = [
@@ -394,7 +394,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-xcb-util-xrm";
+              pname = "openosx-xcb-util-xrm";
               version = pkgs.xcbutilxrm.version;
               src = pkgs.xcbutilxrm.src;
               deps = [ pkgs.xorgproto xlibBuild xcbBuild xcbUtilBuild ];
@@ -407,7 +407,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libev";
+              pname = "openosx-libev";
               version = pkgs.libev.version;
               src = pkgs.libev.src;
               preConfigureExtra = ''
@@ -420,7 +420,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-pcre2";
+              pname = "openosx-pcre2";
               version = pkgs.pcre2.version;
               src = pkgs.pcre2.src;
               configureFlags = [
@@ -442,7 +442,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-startup-notification";
+              pname = "openosx-startup-notification";
               version = pkgs.libstartup_notification.version;
               src = pkgs.libstartup_notification.src;
               deps = [ pkgs.xorgproto xlibBuild xcbBuild xcbUtilBuild ];
@@ -480,7 +480,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libffi";
+              pname = "openosx-libffi";
               version = pkgs.libffi.version;
               src = pkgs.libffi.src;
               configureFlags = [
@@ -503,7 +503,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-expat";
+              pname = "openosx-expat";
               version = pkgs.expat.version;
               src = pkgs.expat.src;
               configureFlags = [
@@ -614,7 +614,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libICE";
+              pname = "openosx-libICE";
               version = pkgs.libICE.version;
               src = pkgs.libICE.src;
               deps = [ pkgs.xorgproto pkgs.xtrans ];
@@ -626,7 +626,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libSM";
+              pname = "openosx-libSM";
               version = pkgs.libSM.version;
               src = pkgs.libSM.src;
               deps = [ pkgs.xorgproto pkgs.xtrans xvfbLibICEBuild ];
@@ -638,7 +638,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXt";
+              pname = "openosx-libXt";
               version = pkgs.libXt.version;
               src = pkgs.libXt.src;
               deps = [
@@ -652,7 +652,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXext";
+              pname = "openosx-libXext";
               version = pkgs.libXext.version;
               src = pkgs.libXext.src;
               deps = [ pkgs.xorgproto xlibBuild xvfbLibXauBuild ];
@@ -661,7 +661,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXmu";
+              pname = "openosx-libXmu";
               version = pkgs.libXmu.version;
               src = pkgs.libXmu.src;
               deps = [
@@ -677,7 +677,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXpm";
+              pname = "openosx-libXpm";
               version = pkgs.libXpm.version;
               src = pkgs.libXpm.src;
               deps = [ pkgs.xorgproto xlibBuild ];
@@ -686,7 +686,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXaw";
+              pname = "openosx-libXaw";
               version = pkgs.libXaw.version;
               src = pkgs.libXaw.src;
               deps = [
@@ -710,7 +710,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libxkbfile";
+              pname = "openosx-libxkbfile";
               version = pkgs.libxkbfile.version;
               src = pkgs.libxkbfile.src;
               deps = [ pkgs.xorgproto xlibBuild ];
@@ -729,7 +729,7 @@
           xvfbFontsBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xvfb-fonts.nix { };
           xkeyboardConfigBuild =
-            if isDarwin then null else pkgs.runCommand "puredarwin-xkeyboard-config" { } ''
+            if isDarwin then null else pkgs.runCommand "openosx-xkeyboard-config" { } ''
               mkdir -p "$out/usr/share"
               cp -a ${pkgs.xkeyboard_config}/share/X11 "$out/usr/share/X11"
               chmod -R u+w "$out/usr/share/X11"
@@ -742,7 +742,7 @@
               fi
             '';
           xlibLocaleBuild =
-            if isDarwin then null else pkgs.runCommand "puredarwin-libx11-locale" { } ''
+            if isDarwin then null else pkgs.runCommand "openosx-libx11-locale" { } ''
               mkdir -p "$out/usr/share/X11"
               cp -a ${pkgs.libX11}/share/X11/locale "$out/usr/share/X11/locale"
               chmod -R u+w "$out/usr/share/X11/locale"
@@ -919,7 +919,7 @@
             };
           pdVirglShimBuild =
             if isDarwin then null else (mkPureDarwinBuild {
-              pname = "puredarwin-pd-virgl-shim";
+              pname = "openosx-pd-virgl-shim";
               src = userlandSource;
               buildTargets = [ "pd_virgl_shim" ];
               enableProjects = false;
@@ -966,7 +966,7 @@
               waylandProtocols = waylandProtocolsBuild;
               waylandScanner = waylandScannerBuild;
               pdVirglShim = pdVirglShimBuild;
-              virglWinsysSrc = ./nix/pkgs/mesa/virgl-puredarwin;
+              virglWinsysSrc = ./nix/pkgs/mesa/virgl-openosx;
               virglAbiHeader = ./src/Kernel/Extensions/IOVirtIOGPU/IOVirtIOGPU3DShared.h;
               inherit (pkgs) meson ninja pkg-config python3 bison flex xorgproto xtrans;
             };
@@ -1004,7 +1004,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libgpg-error";
+              pname = "openosx-libgpg-error";
               inherit (pkgs.libgpg-error) version src;
               # mkheader looks for syscfg/lock-obj-pub.<host_os>.h, i.e.
               # darwin20.4, while the tree ships the generic
@@ -1029,7 +1029,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libtasn1";
+              pname = "openosx-libtasn1";
               inherit (pkgs.libtasn1) version src;
               configureFlags = [ "--disable-doc" "--disable-gtk-doc" ];
             };
@@ -1037,7 +1037,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-sqlite";
+              pname = "openosx-sqlite";
               inherit (pkgs.sqlite) version;
               # nixpkgs' sqlite src is a .zip the default unpacker cannot read.
               src = pkgs.runCommand "sqlite-src-${pkgs.sqlite.version}" { nativeBuildInputs = [ pkgs.unzip ]; } ''
@@ -1100,7 +1100,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-nghttp2";
+              pname = "openosx-nghttp2";
               inherit (pkgs.nghttp2) version src;
               # Only libnghttp2 is wanted; the apps are C++ and pull in
               # libev/openssl/jansson that nothing here needs.
@@ -1110,7 +1110,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libpsl";
+              pname = "openosx-libpsl";
               inherit (pkgs.libpsl) version;
               # Upstream ships a .tar.lz, which the default unpacker cannot read.
               src = pkgs.runCommand "libpsl-src-${pkgs.libpsl.version}" { nativeBuildInputs = [ pkgs.lzip ]; } ''
@@ -1140,7 +1140,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libgcrypt";
+              pname = "openosx-libgcrypt";
               inherit (pkgs.libgcrypt) version src;
               deps = [ libgpgErrorBuild ];
               configureFlags = [
@@ -1170,7 +1170,7 @@
               nativeTblgen = "${pkgs.llvmPackages_21.llvm}/bin/llvm-tblgen";
             };
           nativeMesonToolsDir =
-            if isDarwin then null else pkgs.runCommand "puredarwin-native-meson-tools" { } ''
+            if isDarwin then null else pkgs.runCommand "openosx-native-meson-tools" { } ''
               mkdir -p $out/bin
               ln -s ${hostOtoolBuild}/bin/otool $out/bin/otool
               ln -s ${hostOtoolBuild}/bin/install_name_tool $out/bin/install_name_tool
@@ -1189,7 +1189,7 @@
               nativeMesonTools = nativeMesonToolsDir;
               guestPrefix = true;
               shared = true;
-              pname = "puredarwin-libcroco";
+              pname = "openosx-libcroco";
               version = "0.6.13";
               src = pkgs.fetchurl {
                 url = "https://download.gnome.org/sources/libcroco/0.6/libcroco-0.6.13.tar.xz";
@@ -1209,7 +1209,7 @@
               nativeMesonTools = nativeMesonToolsDir;
               guestPrefix = true;
               shared = true;
-              pname = "puredarwin-gettext";
+              pname = "openosx-gettext";
               version = pkgs.gettext.version;
               src = pkgs.gettext.src;
               deps = [ libiconvBuild ];
@@ -1234,7 +1234,7 @@
               nativeMesonTools = nativeMesonToolsDir;
               guestPrefix = true;
               shared = true;
-              pname = "puredarwin-librsvg";
+              pname = "openosx-librsvg";
               version = "2.40.21";
               src = pkgs.fetchurl {
                 url = "https://download.gnome.org/sources/librsvg/2.40/librsvg-2.40.21.tar.xz";
@@ -1530,7 +1530,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXrender";
+              pname = "openosx-libXrender";
               version = pkgs.libXrender.version;
               src = pkgs.libXrender.src;
               deps = [ pkgs.xorgproto xlibBuild ];
@@ -1539,7 +1539,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXfixes";
+              pname = "openosx-libXfixes";
               version = pkgs.libXfixes.version;
               src = pkgs.libXfixes.src;
               deps = [ pkgs.xorgproto xlibBuild ];
@@ -1548,7 +1548,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXcursor";
+              pname = "openosx-libXcursor";
               version = pkgs.libXcursor.version;
               src = pkgs.libXcursor.src;
               deps = [ pkgs.xorgproto xlibBuild xvfbLibXfixesBuild xvfbLibXrenderBuild ];
@@ -1579,7 +1579,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXrandr";
+              pname = "openosx-libXrandr";
               version = pkgs.libXrandr.version;
               src = pkgs.libXrandr.src;
               deps = [ pkgs.xorgproto xlibBuild xvfbLibXrenderBuild xvfbLibXextBuild ];
@@ -1674,7 +1674,7 @@
               inherit (pkgs) vanilla-dmz;
             };
           iconThemesBuild =
-            if isDarwin then null else pkgs.runCommand "puredarwin-icon-themes" { } ''
+            if isDarwin then null else pkgs.runCommand "openosx-icon-themes" { } ''
               mkdir -p "$out/share/icons"
               cp -a ${pkgs.hicolor-icon-theme}/share/icons/hicolor "$out/share/icons/"
               cp -a ${pkgs.adwaita-icon-theme}/share/icons/Adwaita "$out/share/icons/"
@@ -1744,7 +1744,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-xrandr";
+              pname = "openosx-xrandr";
               version = "1.5.4";
               src = pkgs.fetchurl {
                 url = "https://www.x.org/releases/individual/app/xrandr-1.5.4.tar.xz";
@@ -1768,7 +1768,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-xrdb";
+              pname = "openosx-xrdb";
               version = "1.2.3";
               # release tarball: nixpkgs' src is a git checkout with no configure
               src = pkgs.fetchurl {
@@ -1799,7 +1799,7 @@
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               guestPrefix = true;
-              pname = "puredarwin-xinit";
+              pname = "openosx-xinit";
               version = "1.4.4";
               src = pkgs.fetchurl {
                 url = "https://www.x.org/releases/individual/app/xinit-1.4.4.tar.xz";
@@ -1818,7 +1818,7 @@
               configureFlags = [
                 "--with-xserver=/usr/bin/Xorg"
                 # launchd support here is the macOS org.x.startx plist machinery,
-                # which is unrelated to how PureDarwin starts X.
+                # which is unrelated to how OpenOSX starts X.
                 "--without-launchd"
               ];
               postInstallExtra = ''
@@ -1829,7 +1829,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-iceauth";
+              pname = "openosx-iceauth";
               version = "1.0.11";
               src = pkgs.fetchurl {
                 url = "https://www.x.org/releases/individual/app/iceauth-1.0.11.tar.xz";
@@ -1841,7 +1841,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXinerama";
+              pname = "openosx-libXinerama";
               version = pkgs.libXinerama.version;
               src = pkgs.libXinerama.src;
               deps = [ pkgs.xorgproto xlibBuild xvfbLibXextBuild ];
@@ -1850,7 +1850,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXres";
+              pname = "openosx-libXres";
               version = pkgs.libXres.version;
               src = pkgs.libXres.src;
               deps = [ pkgs.xorgproto xlibBuild xvfbLibXextBuild ];
@@ -1859,7 +1859,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXcomposite";
+              pname = "openosx-libXcomposite";
               version = pkgs.libXcomposite.version;
               src = pkgs.libXcomposite.src;
               deps = [ pkgs.xorgproto xlibBuild xvfbLibXfixesBuild ];
@@ -1868,7 +1868,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXdamage";
+              pname = "openosx-libXdamage";
               version = pkgs.libXdamage.version;
               src = pkgs.libXdamage.src;
               deps = [ pkgs.xorgproto xlibBuild xvfbLibXfixesBuild ];
@@ -1877,7 +1877,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXpresent";
+              pname = "openosx-libXpresent";
               version = pkgs.libXpresent.version;
               src = pkgs.libXpresent.src;
               deps = [
@@ -1893,7 +1893,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXft";
+              pname = "openosx-libXft";
               version = pkgs.libXft.version;
               src = pkgs.libXft.src;
               deps = [
@@ -1926,7 +1926,7 @@
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xorg-cross-lib.nix {
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
-              pname = "puredarwin-libXi";
+              pname = "openosx-libXi";
               version = pkgs.libXi.version;
               src = pkgs.libXi.src;
               deps = [
@@ -2045,17 +2045,17 @@
           } // args);
 
           libXauSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libXau";
+            pname = "openosx-libXau";
             inherit (pkgs.libXau) version src;
             deps = [ pkgs.xorgproto ];
           };
           libXdmcpSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libXdmcp";
+            pname = "openosx-libXdmcp";
             inherit (pkgs.libXdmcp) version src;
             deps = [ pkgs.xorgproto ];
           };
           libxcbSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libxcb";
+            pname = "openosx-libxcb";
             inherit (pkgs.libxcb) version src;
             deps = [ pkgs.xorgproto libXauSharedBuild libXdmcpSharedBuild ];
             nativeDeps = [ pkgs.python3 pkgs.xcb-proto ];
@@ -2065,38 +2065,38 @@
             '';
           };
           libX11SharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libX11";
+            pname = "openosx-libX11";
             inherit (pkgs.libX11) version src;
             deps = [ pkgs.xorgproto pkgs.xtrans libxcbSharedBuild libXauSharedBuild libXdmcpSharedBuild ];
             configureFlags = [ "--disable-specs" "--enable-xlocaledir" ];
           };
           libXextSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libXext";
+            pname = "openosx-libXext";
             inherit (pkgs.libXext) version src;
             deps = [ pkgs.xorgproto libX11SharedBuild libXauSharedBuild ];
           };
           libXrenderSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libXrender";
+            pname = "openosx-libXrender";
             inherit (pkgs.libXrender) version src;
             deps = [ pkgs.xorgproto libX11SharedBuild ];
           };
           libXfixesSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libXfixes";
+            pname = "openosx-libXfixes";
             inherit (pkgs.libXfixes) version src;
             deps = [ pkgs.xorgproto libX11SharedBuild libXextSharedBuild ];
           };
           libXiSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libXi";
+            pname = "openosx-libXi";
             inherit (pkgs.libXi) version src;
             deps = [ pkgs.xorgproto libX11SharedBuild libXextSharedBuild libXfixesSharedBuild ];
           };
           libXrandrSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libXrandr";
+            pname = "openosx-libXrandr";
             inherit (pkgs.libXrandr) version src;
             deps = [ pkgs.xorgproto libX11SharedBuild libXextSharedBuild libXrenderSharedBuild ];
           };
           libXcursorSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libXcursor";
+            pname = "openosx-libXcursor";
             inherit (pkgs.libXcursor) version src;
             deps = [ pkgs.xorgproto libX11SharedBuild libXrenderSharedBuild libXfixesSharedBuild ];
           };
@@ -2136,13 +2136,13 @@
               inherit (pkgs) xorgproto;
             };
           libxshmfenceSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-libxshmfence";
+            pname = "openosx-libxshmfence";
             inherit (pkgs.libxshmfence) version src;
             deps = [ pkgs.xorgproto ];
             configureFlags = [ "--with-shared-memory-dir=/tmp" ];
           };
           nettleSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-nettle";
+            pname = "openosx-nettle";
             inherit (pkgs.nettle) version src;
             configureFlags = [
               "--enable-mini-gmp"
@@ -2152,7 +2152,7 @@
             ];
           };
           gnutlsSharedBuild = if isDarwin then null else mkSharedXorgLib {
-            pname = "puredarwin-gnutls";
+            pname = "openosx-gnutls";
             inherit (pkgs.gnutls) version src;
             deps = [ nettleSharedBuild ];
             postPatchExtra = ''
@@ -2628,7 +2628,7 @@
             };
           # arm64 twins of the remaining image packages and their dependency
           # closure, generated from the x86 wiring: toolchain/triple/libSystem
-          # come from mkArm64Build, and each package's own PureDarwin deps are
+          # come from mkArm64Build, and each package's own OpenOSX deps are
           # pointed at their arm64 builds.
 
           # arm64 cross-compiled package set. Split out to keep this file
@@ -2809,7 +2809,7 @@
             };
           mkSystemConfigurationBuild = { corefoundation, libobjc, security }:
             if isDarwin then null else (mkPureDarwinBuild {
-              pname = "puredarwin-systemconfiguration";
+              pname = "openosx-systemconfiguration";
               src = systemConfigurationSource;
               buildTargets = [ "SystemConfiguration" "configd" ];
               enableProjects = false;
@@ -2862,7 +2862,7 @@
           # because it links CoreFoundation, which itself links libSystem.
           iokitCFStaticBuild =
             if isDarwin then null else (mkPureDarwinBuild {
-              pname = "puredarwin-iokitcf-static";
+              pname = "openosx-iokitcf-static";
               src = iokitCFSource;
               buildTargets = [ "IOKitCF" ];
               enableProjects = false;
@@ -2896,7 +2896,7 @@
             };
           diskArbitrationBuild =
             if isDarwin then null else (mkPureDarwinBuild {
-              pname = "puredarwin-diskarbitration";
+              pname = "openosx-diskarbitration";
               src = diskArbitrationSource;
               buildTargets = [ "DiskArbitration" "diskarbitrationd" ];
               enableProjects = false;
@@ -2967,7 +2967,7 @@
               src = libSystemSource;
             };
           libSystemBuild = mkPureDarwinBuild {
-            pname = "puredarwin-libsystem";
+            pname = "openosx-libsystem";
             src = libSystemSource;
             buildTargets = [ "libSystem_B_stub" "dyld" "libsystem_kernel_static" "libdispatch_static" "XPC_libnv_static" "XPC_libinfo_static" "XPC_libxpc_static" "XPC_launchd_static" "XPC_launchd_mig_static" "XPC_notify_client_static" "notifyd" "logd" ];
             enableUserspace = false;
@@ -2977,7 +2977,7 @@
             installLibSystem = true;
           };
           fbdoomBuild = (mkPureDarwinBuild {
-            pname = "puredarwin-fbdoom";
+            pname = "openosx-fbdoom";
             src = fbdoomSource;
             buildTargets = [ "fbdoom" ];
             enableProjects = false;
@@ -2998,7 +2998,7 @@
             '';
           });
           kernelBuild = mkPureDarwinBuild {
-            pname = "puredarwin-kernel";
+            pname = "openosx-kernel";
             src = kernelSource;
             buildTargets = [ "xnu" ];
             enableUserspace = false;
@@ -3007,7 +3007,7 @@
             xnuKernelConfig = "RELEASE";
           };
           kernelDebugBuild = mkPureDarwinBuild {
-            pname = "puredarwin-kernel-debug";
+            pname = "openosx-kernel-debug";
             src = kernelSource;
             buildTargets = [ "xnu" ];
             enableUserspace = false;
@@ -3016,7 +3016,7 @@
             xnuKernelConfig = "DEBUG";
           };
           xnuHeadersBuild = mkPureDarwinBuild {
-            pname = "puredarwin-xnu-headers";
+            pname = "openosx-xnu-headers";
             src = kernelSource;
             buildTargets = [ "xnu_headers.extproj" ];
             enableUserspace = false;
@@ -3026,7 +3026,7 @@
             xnuKernelConfig = "RELEASE";
           };
           kextsBuild = mkPureDarwinBuild {
-            pname = "puredarwin-kexts";
+            pname = "openosx-kexts";
             src = kextsSource;
             buildTargets = [ "kexts" ];
             enableUserspace = false;
@@ -3036,7 +3036,7 @@
             enableIOGraphicsFamily = true;
           };
           iographicsBuild = mkPureDarwinBuild {
-            pname = "puredarwin-iographics";
+            pname = "openosx-iographics";
             src = kextsSource;
             buildTargets = [ "IOGraphicsFamily.kext" ];
             enableUserspace = false;
@@ -3292,14 +3292,14 @@
             NIX_HOST_CC_PATH = "${pkgs.clang}/bin/clang";
             NIX_MIGCOM_PATH = "${nativeMigcom}/bin/migcom";
             NIX_UNIFDEF_PATH = "${nativeUnifdef}/bin/unifdef";
-            PUREDARWIN_TCC_SOURCE = "${pkgs.tinycc.src}";
+            OPENOSX_TCC_SOURCE = "${pkgs.tinycc.src}";
             shellHook = ''
               export CMAKE_TOOLCHAIN_FILE="$PWD/cmake/nix-toolchain.cmake"
-              echo "PureDarwin Nix kernel shell: cmake/nix-toolchain.cmake and cached native ld/migcom/unifdef are active."
+              echo "OpenOSX Nix kernel shell: cmake/nix-toolchain.cmake and cached native ld/migcom/unifdef are active."
             '';
           } // lib.optionalAttrs isDarwin {
             shellHook = ''
-              echo "PureDarwin Darwin shell: using the native Apple host toolchain path."
+              echo "OpenOSX Darwin shell: using the native Apple host toolchain path."
             '';
           });
         in {

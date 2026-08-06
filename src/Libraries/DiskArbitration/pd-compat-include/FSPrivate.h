@@ -11,7 +11,7 @@
  *
  *   _FSGetMediaEncryptionStatusAtPath
  *       whether the media is encrypted. Reported as not encrypted, which is
- *       accurate: PureDarwin has no FileVault and no CoreStorage.
+ *       accurate: OpenOSX has no FileVault and no CoreStorage.
  *
  *   FSCompareVolumeRole
  *       compares APFS volume roles. Reports "not equal" for everything, the

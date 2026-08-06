@@ -18,7 +18,7 @@
 	<key>Program</key>
 	<string>/usr/libexec/diskarbitrationd</string>
 	<!--
-	    PureDarwin: -d turns on DALogDebug, which is where every probe and
+	    OpenOSX: -d turns on DALogDebug, which is where every probe and
 	    mount decision is recorded, and opens /var/log/diskarbitrationd.log.
 	    Without it DA is silent about everything except hard errors. Drop this
 	    once disk probing is trusted.

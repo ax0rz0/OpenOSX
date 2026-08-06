@@ -1,12 +1,12 @@
-if(NOT PUREDARWIN_ENABLE_SYSTEMCONFIGURATION)
+if(NOT OPENOSX_ENABLE_SYSTEMCONFIGURATION)
     return()
 endif()
 
-if(NOT PUREDARWIN_COREFOUNDATION_PREFIX AND DEFINED ENV{PUREDARWIN_COREFOUNDATION_PREFIX})
-    set(PUREDARWIN_COREFOUNDATION_PREFIX "$ENV{PUREDARWIN_COREFOUNDATION_PREFIX}")
+if(NOT OPENOSX_COREFOUNDATION_PREFIX AND DEFINED ENV{OPENOSX_COREFOUNDATION_PREFIX})
+    set(OPENOSX_COREFOUNDATION_PREFIX "$ENV{OPENOSX_COREFOUNDATION_PREFIX}")
 endif()
-if(NOT PUREDARWIN_COREFOUNDATION_PREFIX)
-    message(FATAL_ERROR "PUREDARWIN_COREFOUNDATION_PREFIX must point to the CoreFoundation install prefix (with include/CoreFoundation and System/Library/Frameworks)")
+if(NOT OPENOSX_COREFOUNDATION_PREFIX)
+    message(FATAL_ERROR "OPENOSX_COREFOUNDATION_PREFIX must point to the CoreFoundation install prefix (with include/CoreFoundation and System/Library/Frameworks)")
 endif()
 
 add_darwin_shared_library(SystemConfiguration
@@ -19,7 +19,7 @@ mig(SystemConfiguration.fproj/config.defs
     USER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/configUser.c
     SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/configServer.h
     SERVER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/configServer.c
-    ARCH ${PUREDARWIN_ARCH}
+    ARCH ${OPENOSX_ARCH}
     NOVOUCHERS)
 
 # SCHelper_client.c talks to the SCHelper privileged-operation daemon.
@@ -29,7 +29,7 @@ mig(SystemConfiguration.fproj/helper/helper.defs
     USER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/helperUser.c
     SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/helperServer.h
     SERVER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/helperServer.c
-    ARCH ${PUREDARWIN_ARCH}
+    ARCH ${OPENOSX_ARCH}
     NOVOUCHERS)
 
 target_sources(SystemConfiguration PRIVATE
@@ -110,7 +110,7 @@ target_include_directories(SystemConfiguration PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libc/pd-compat-include
     ${CMAKE_CURRENT_SOURCE_DIR}/../CrashReporterClient/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../Security/include
-    # Apple's CoreFoundation-based IOKitLib (IOKitUser), not PureDarwin's
+    # Apple's CoreFoundation-based IOKitLib (IOKitUser), not OpenOSX's
     # CF-free PDIOKitLib.
     ${CMAKE_CURRENT_SOURCE_DIR}/../IOKit/iokituser/include
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/iokit                     # IOKit/IOBSD.h
@@ -152,7 +152,7 @@ target_include_directories(SystemConfiguration PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/pthread/private
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libsystem_kernel/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libsystem_kernel/private_include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
 )
 
 # PRIVATE=1 matches libsystem_kernel and libdispatch: <machine/cpu_capabilities.h>,
@@ -164,7 +164,7 @@ target_compile_definitions(SystemConfiguration PRIVATE
 
 target_compile_options(SystemConfiguration PRIVATE
     -fblocks
-    -F${PUREDARWIN_COREFOUNDATION_PREFIX}/System/Library/Frameworks
+    -F${OPENOSX_COREFOUNDATION_PREFIX}/System/Library/Frameworks
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libplatform/pd_bridgeos_compat.h>
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/pd_sc_prelude.h>
     -w)
@@ -173,13 +173,13 @@ target_link_options(SystemConfiguration PRIVATE
     -nostdlib
     -Wl,-L,$<TARGET_FILE_DIR:libSystem_B_stub>
     -Wl,-platform_version,macos,11.0,11.5
-    "${PUREDARWIN_COREFOUNDATION_PREFIX}/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation"
+    "${OPENOSX_COREFOUNDATION_PREFIX}/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation"
     # gCRAnnotations (__DATA,__crash_info) is defined per image on Darwin, so
     # every binary using CRSetCrashLogMessage links its own copy. By archive
     # path rather than target name: the target's INTERFACE deps include
     # xnu_kernel_headers, which src/Kernel/xnu does not define in this build.
     $<TARGET_FILE:CrashReporterClient>
-    "${PUREDARWIN_SECURITY_PREFIX}/System/Library/Frameworks/Security.framework/Versions/A/Security"
+    "${OPENOSX_SECURITY_PREFIX}/System/Library/Frameworks/Security.framework/Versions/A/Security"
     -lSystem)
 
 # xnu_headers/xnu_private_headers are deliberately absent here: they are defined

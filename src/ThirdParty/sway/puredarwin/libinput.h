@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
-/* PureDarwin build-time definitions used when wlroots has no libinput backend. */
-#ifndef PUREDARWIN_LIBINPUT_H
-#define PUREDARWIN_LIBINPUT_H
+/* OpenOSX build-time definitions used when wlroots has no libinput backend. */
+#ifndef OPENOSX_LIBINPUT_H
+#define OPENOSX_LIBINPUT_H
 
 enum libinput_config_accel_profile {
 	LIBINPUT_CONFIG_ACCEL_PROFILE_ADAPTIVE = 0,

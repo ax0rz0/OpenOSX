@@ -2,7 +2,7 @@
  * IOPMAssertion: the IOKit power-management API for telling powerd "do not let
  * the system idle-sleep while I am doing this". The real implementation is
  * IOKitUser's pwr_mgt.subproj/IOPMAssertions.c, which is a client of powerd -
- * and PureDarwin has no powerd, no idle sleep, and no sleep at all.
+ * and OpenOSX has no powerd, no idle sleep, and no sleep at all.
  */
 
 #include <IOKit/IOReturn.h>

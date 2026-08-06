@@ -119,7 +119,7 @@
 #define HAVE_NORETURN_BUILTIN_TRAP 1
 
 /* Define if you have the Objective-C runtime */
-/* PureDarwin now has a real objc4-derived libobjc (see
+/* OpenOSX now has a real objc4-derived libobjc (see
  * nix/pkgs/libobjc.nix); CMakeLists.txt sets HAVE_OBJC via
  * target_compile_definitions when wiring USE_OBJC=1, so don't clobber that
  * here - only supply a default for builds that don't set it. */
@@ -140,7 +140,7 @@
 #define HAVE_PTHREAD_ATTR_SETCPUPERCENT_NP 1
 
 /* Define to 1 if you have the <pthread_machdep.h> header file. */
-/* PureDarwin: no pthread_machdep.h (private/internal, not vendored here) -
+/* OpenOSX: no pthread_machdep.h (private/internal, not vendored here) -
  * the DISPATCH_USE_DIRECT_TSD path this gates falls back to os/tsd.h +
  * pthread/private.h (both present) via __has_include when this is 0. */
 #define HAVE_PTHREAD_MACHDEP_H 0

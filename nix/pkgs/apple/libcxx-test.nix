@@ -56,7 +56,7 @@ let
   '';
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libcxx-test";
+  pname = "openosx-libcxx-test";
   version = "1";
 
   dontUnpack = true;

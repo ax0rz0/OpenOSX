@@ -54,7 +54,7 @@ add_compile_options($<$<COMPILE_LANGUAGE:C>:-fblocks>)
 if("${CMAKE_C_SIMULATE_ID}" STREQUAL "MSVC")
   add_compile_options($<$<COMPILE_LANGUAGE:C>:/EHsc>)
 else()
-  # PureDarwin: -fexceptions emits unwind-table personality-routine
+  # OpenOSX: -fexceptions emits unwind-table personality-routine
   # references (___gcc_personality_v0) that need a real C++/ObjC exception
   # unwind runtime (libunwind/libc++abi) to back them - we have neither,
   # and nothing we compile here is real Objective-C using @try/@catch
@@ -354,7 +354,7 @@ add_framework(CoreFoundation
                 Preferences.subproj/CFPreferences.c
                 Preferences.subproj/CFXMLPreferencesDomain.c
                 # RunLoop
-                # PureDarwin: real Mach target (actual XNU/Mach IPC, not the
+                # OpenOSX: real Mach target (actual XNU/Mach IPC, not the
                 # Linux-only swift-corelibs-foundation build these files were
                 # excluded for) - SystemStarter's real job-exit detection
                 # (task_name_for_pid + CFMachPort dead-name notification)
@@ -363,7 +363,7 @@ add_framework(CoreFoundation
                 RunLoop.subproj/CFMachPort.c
                 RunLoop.subproj/CFMachPort_Lifetime.c
                 # RunLoop.subproj/CFMessagePort.c
-                # PureDarwin: CFMessagePort.c itself still excluded - see
+                # OpenOSX: CFMessagePort.c itself still excluded - see
                 # CFMessagePort_PureDarwin_Stub.c for why.
                 RunLoop.subproj/CFMessagePort_PureDarwin_Stub.c
                 RunLoop.subproj/CFRunLoop.c

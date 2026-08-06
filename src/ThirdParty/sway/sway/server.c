@@ -382,7 +382,7 @@ bool server_init(struct sway_server *server) {
 	}
 
 	wl_list_init(&server->decorations);
-#ifndef PUREDARWIN
+#ifndef OPENOSX
 	server->server_decoration_manager =
 		wlr_server_decoration_manager_create(server->wl_display);
 	if (!server->server_decoration_manager) {
@@ -721,7 +721,7 @@ void server_fini(struct sway_server *server) {
 	wl_list_remove(&server->new_output.link);
 	wl_list_remove(&server->layer_shell_surface.link);
 	wl_list_remove(&server->xdg_shell_toplevel.link);
-#ifndef PUREDARWIN
+#ifndef OPENOSX
 	wl_list_remove(&server->server_decoration.link);
 #endif
 	wl_list_remove(&server->xdg_decoration.link);

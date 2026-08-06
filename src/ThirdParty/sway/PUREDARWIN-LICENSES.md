@@ -6,5 +6,5 @@ MIT license. The complete upstream license text is retained in `LICENSE`.
 The files under `assets/` have their own upstream `assets/LICENSE` notice and
 are retained separately.
 
-PureDarwin-specific files added to this tree use `SPDX-License-Identifier:
+OpenOSX-specific files added to this tree use `SPDX-License-Identifier:
 MIT` headers.

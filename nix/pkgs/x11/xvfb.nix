@@ -48,7 +48,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xvfb";
+  pname = "openosx-xvfb";
   version = "21.1.24";
 
   src = xorg-server.src;
@@ -79,7 +79,7 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
@@ -108,7 +108,7 @@ EOF
 
     export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" xPkgConfigDeps}:${lib.makeSearchPath "share/pkgconfig" xPkgConfigDeps}"
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=/usr \
       --bindir=bin \
       --libdir=lib \

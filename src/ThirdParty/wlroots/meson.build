@@ -70,7 +70,7 @@ features = {
 	'drm-backend': false,
 	'x11-backend': false,
 	'libinput-backend': false,
-	'puredarwin-backend': false,
+	'openosx-backend': false,
 	'xwayland': false,
 	'gles2-renderer': false,
 	'vulkan-renderer': false,

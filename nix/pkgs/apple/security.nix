@@ -23,7 +23,7 @@ let
   installName = "/System/Library/Frameworks/Security.framework/Versions/A/Security";
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-security";
+  pname = "openosx-security";
   version = "0.1";
 
   dontUnpack = true;
@@ -62,7 +62,7 @@ stdenv.mkDerivation {
     ln -s Versions/Current/Headers "$frameworkDir/Headers"
 
     # Also drop a flat dylib under /usr/lib, matching every other
-    # PureDarwin library (CoreFoundation, IOKitCF) - some consumers link
+    # OpenOSX library (CoreFoundation, IOKitCF) - some consumers link
     # -lSecurity / -L.../usr/lib rather than -F.../Frameworks.
     mkdir -p "$out/usr/lib"
     ln -s "../../System/Library/Frameworks/Security.framework/Versions/A/Security" \
@@ -74,7 +74,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "Minimal PureDarwin Security.framework (real SecRandomCopyBytes, stub SecItem*)";
+    description = "Minimal OpenOSX Security.framework (real SecRandomCopyBytes, stub SecItem*)";
     platforms = platforms.linux;
   };
 }

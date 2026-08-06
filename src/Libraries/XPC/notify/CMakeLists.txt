@@ -36,7 +36,7 @@ set(PD_NOTIFY_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/pthread/compat-include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../CrashReporterClient/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libc/pd-compat-include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/osfmk
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/bsd
@@ -54,8 +54,8 @@ target_compile_definitions(XPC_notify_client_static PRIVATE __DARWIN_ONLY_UNIX_C
 target_compile_options(XPC_notify_client_static PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libplatform/pd_bridgeos_compat.h>
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/pd_notifyd_compat.h>
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
-    -I${PUREDARWIN_MACOSX_SDK}/usr/include)
+    -isysroot ${OPENOSX_MACOSX_SDK}
+    -I${OPENOSX_MACOSX_SDK}/usr/include)
 target_include_directories(XPC_notify_client_static PRIVATE ${PD_NOTIFY_INCLUDES})
 target_link_libraries(XPC_notify_client_static PRIVATE
     AvailabilityHeaders
@@ -76,8 +76,8 @@ target_sources(XPC_notifyd_mig_static PRIVATE
 target_compile_definitions(XPC_notifyd_mig_static PRIVATE __DARWIN_ONLY_UNIX_CONFORMANCE=1)
 target_compile_options(XPC_notifyd_mig_static PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libplatform/pd_bridgeos_compat.h>
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
-    -I${PUREDARWIN_MACOSX_SDK}/usr/include)
+    -isysroot ${OPENOSX_MACOSX_SDK}
+    -I${OPENOSX_MACOSX_SDK}/usr/include)
 target_include_directories(XPC_notifyd_mig_static PRIVATE ${PD_NOTIFY_INCLUDES})
 add_dependencies(XPC_notifyd_mig_static libsystem_kernel_static)
 target_link_libraries(XPC_notifyd_mig_static PRIVATE
@@ -106,7 +106,7 @@ target_sources(notifyd PRIVATE
     pd_sandbox_check.c
 )
 target_compile_definitions(notifyd PRIVATE __DARWIN_ONLY_UNIX_CONFORMANCE=1 PRIVATE=1)
-if(PUREDARWIN_ARM64)
+if(OPENOSX_ARM64)
     target_compile_definitions(notifyd PRIVATE
         __DARWIN_ONLY_VERS_1050=1
         __DARWIN_ONLY_64_BIT_INO_T=1)
@@ -115,13 +115,13 @@ target_compile_options(notifyd PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libplatform/pd_bridgeos_compat.h>
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/pd_notifyd_compat.h>
     $<$<COMPILE_LANGUAGE:C>:-includeerrno.h>
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
-    -I${PUREDARWIN_MACOSX_SDK}/usr/include
+    -isysroot ${OPENOSX_MACOSX_SDK}
+    -I${OPENOSX_MACOSX_SDK}/usr/include
     -ferror-limit=0)
 target_include_directories(notifyd PRIVATE ${PD_NOTIFY_INCLUDES})
 target_link_options(notifyd PRIVATE
     -nostdlib
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -Wl,-L,$<TARGET_FILE_DIR:libSystem_B_stub>
     -Wl,-dylinker_install_name,/usr/lib/dyld
     -Wl,-platform_version,macos,11.0,11.5

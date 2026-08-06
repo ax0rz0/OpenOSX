@@ -22,7 +22,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libwebp";
+  pname = "openosx-libwebp";
   inherit (libwebp) version src;
 
   nativeBuildInputs = [ cmake ninja ];
@@ -75,7 +75,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "libwebp, cross-built for PureDarwin (WebKitGTK requires WebP with demux)";
+    description = "libwebp, cross-built for OpenOSX (WebKitGTK requires WebP with demux)";
     platforms = platforms.linux;
   };
 }

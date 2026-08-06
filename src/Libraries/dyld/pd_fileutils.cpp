@@ -1,5 +1,5 @@
 /*
- * Minimal runtime-side FileUtils for the PureDarwin dyld target.
+ * Minimal runtime-side FileUtils for the OpenOSX dyld target.
  *
  * Apple's dyld3/shared-cache/FileUtils.cpp is shared-cache builder tooling: it
  * pulls in iostreams, JSON parsing, order-file processing, and temp-file save

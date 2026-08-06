@@ -1,8 +1,8 @@
 /*
- * membership.h - PureDarwin stand-in for Libinfo's membership.subproj.
+ * membership.h - OpenOSX stand-in for Libinfo's membership.subproj.
  *
  * The real mbr_* API resolves uid/gid <-> UUID and supplementary-group
- * membership through opendirectoryd over private xpc_pipe SPI. PureDarwin has
+ * membership through opendirectoryd over private xpc_pipe SPI. OpenOSX has
  * neither, and Libinfo's membership.c cannot be built here for the same reason.
  *
  * asl_core.c uses these only as the *fallback* leg of its read-access check:

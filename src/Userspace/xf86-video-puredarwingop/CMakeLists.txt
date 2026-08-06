@@ -1,10 +1,10 @@
 # xf86-video-puredarwingop: loadable Xorg video driver module for
 # IOGOPFramebuffer. Built only when the Xorg module SDK path is provided
-# (PUREDARWIN_XORG_INCLUDE_DIRS, threaded in from the nix xorgBuild); the SDK
+# (OPENOSX_XORG_INCLUDE_DIRS, threaded in from the nix xorgBuild); the SDK
 # is a large separate build, so plain `cmake` runs without it just skip this.
 
-if(NOT PUREDARWIN_XORG_INCLUDE_DIRS)
-    message(STATUS "xf86-video-puredarwingop: PUREDARWIN_XORG_INCLUDE_DIRS not set, skipping Xorg driver")
+if(NOT OPENOSX_XORG_INCLUDE_DIRS)
+    message(STATUS "xf86-video-puredarwingop: OPENOSX_XORG_INCLUDE_DIRS not set, skipping Xorg driver")
     return()
 endif()
 
@@ -78,7 +78,7 @@ if(_opts)
 endif()
 
 target_compile_options(puredarwingop_drv PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -fno-builtin
     -fno-stack-protector
 )
@@ -94,10 +94,10 @@ target_compile_definitions(puredarwingop_drv PRIVATE
     IN_MODULE=1
 )
 
-# PUREDARWIN_XORG_INCLUDE_DIRS is a ;-list of: the xorg module SDK
+# OPENOSX_XORG_INCLUDE_DIRS is a ;-list of: the xorg module SDK
 # (usr/include/xorg), xorgproto (X11/*.h), and pixman-1.
 target_include_directories(puredarwingop_drv PRIVATE
-    ${PUREDARWIN_XORG_INCLUDE_DIRS}
+    ${OPENOSX_XORG_INCLUDE_DIRS}
 )
 
 # PDGOP (static) pulls in IOKit + the mig device_user stubs transitively.

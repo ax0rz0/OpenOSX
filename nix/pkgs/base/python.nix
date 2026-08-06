@@ -25,7 +25,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-python";
+  pname = "openosx-python";
   inherit (python3) version src;
 
   nativeBuildInputs = [ gnumake pkg-config python3 ];
@@ -160,7 +160,7 @@ stdenv.mkDerivation {
   dontStrip = true;
 
   meta = with lib; {
-    description = "CPython, cross-built for PureDarwin";
+    description = "CPython, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

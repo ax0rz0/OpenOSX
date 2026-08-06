@@ -20,7 +20,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xxd";
+  pname = "openosx-xxd";
   inherit (tinyxxd) version;
   src = tinyxxd.src;
 
@@ -67,7 +67,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "Tiny xxd-compatible hex dump tool, cross-built for PureDarwin";
+    description = "Tiny xxd-compatible hex dump tool, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

@@ -522,7 +522,7 @@ commpage_populate_one(
 	next = 0;
 	commPagePtr = (char *)commpage_allocate( submap, (vm_size_t) area_used, uperm );
 
-	/* PureDarwin/QEMU-TCG: from here until this function returns, commPagePtr32
+	/* OpenOSX/QEMU-TCG: from here until this function returns, commPagePtr32
 	 * (or 64) is non-NULL but the page is only lazily faulted in as the writes
 	 * below actually touch it.
 	 */

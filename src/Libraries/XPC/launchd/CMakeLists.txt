@@ -62,14 +62,14 @@ target_compile_definitions(XPC_launchd_mig_static PRIVATE __DARWIN_ONLY_UNIX_CON
 target_compile_options(XPC_launchd_mig_static PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libplatform/pd_bridgeos_compat.h>
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/core.h>
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
-    -I${PUREDARWIN_MACOSX_SDK}/usr/include)
+    -isysroot ${OPENOSX_MACOSX_SDK}
+    -I${OPENOSX_MACOSX_SDK}/usr/include)
 target_include_directories(XPC_launchd_mig_static PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../libxpc
     ${CMAKE_CURRENT_SOURCE_DIR}/../libxpc/include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include
 )
 add_dependencies(XPC_launchd_mig_static libsystem_kernel_static)
@@ -104,8 +104,8 @@ target_sources(XPC_launchd_static PRIVATE
 target_compile_definitions(XPC_launchd_static PRIVATE __DARWIN_ONLY_UNIX_CONFORMANCE=1)
 target_compile_options(XPC_launchd_static PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libplatform/pd_bridgeos_compat.h>
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
-    -I${PUREDARWIN_MACOSX_SDK}/usr/include
+    -isysroot ${OPENOSX_MACOSX_SDK}
+    -I${OPENOSX_MACOSX_SDK}/usr/include
     # pd_launchd_plist.c's <CoreFoundation/CFData.h>-style includes need
     # real framework-header resolution (CF's own headers are written the
     # same self-referential way, e.g. CFDictionary.h includes
@@ -114,7 +114,7 @@ target_compile_options(XPC_launchd_static PRIVATE
     # default search paths, not explicitly-added ones, so this -F is
     # unaffected by it and doesn't touch core.c/launchd.c's carefully
     # isolated host-include setup.
-    -F${PUREDARWIN_MACOSX_SDK}/System/Library/Frameworks
+    -F${OPENOSX_MACOSX_SDK}/System/Library/Frameworks
     -ferror-limit=0)
 target_include_directories(XPC_launchd_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -139,7 +139,7 @@ target_include_directories(XPC_launchd_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libdispatch
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libdispatch/os
     ${CMAKE_CURRENT_SOURCE_DIR}/../../CrashReporterClient/include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/osfmk
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/bsd

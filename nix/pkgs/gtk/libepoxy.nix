@@ -32,7 +32,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libepoxy";
+  pname = "openosx-libepoxy";
   inherit (libepoxy) version src;
 
   nativeBuildInputs = [ meson ninja pkg-config python3 ];
@@ -46,7 +46,7 @@ stdenv.mkDerivation {
     substituteInPlace src/dispatch_common.c \
       --replace '"/opt/X11/lib/libGL.1.dylib"' '"/usr/lib/libGL.1.dylib"'
     substituteInPlace src/dispatch_common.h \
-      --replace '#elif defined(__APPLE__)' '#elif defined(__APPLE__) && !defined(PUREDARWIN)'
+      --replace '#elif defined(__APPLE__)' '#elif defined(__APPLE__) && !defined(OPENOSX)'
   '';
 
   configurePhase = ''
@@ -59,7 +59,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_PATH="${mesa}/usr/lib/pkgconfig:${mesa}/usr/share/pkgconfig:${lib.makeSearchPath "lib/pkgconfig" depPcPaths}:${lib.makeSearchPath "share/pkgconfig" depPcPaths}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -84,7 +84,7 @@ needs_exe_wrapper = true
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
@@ -136,7 +136,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libepoxy, cross-built for PureDarwin";
+    description = "libepoxy, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

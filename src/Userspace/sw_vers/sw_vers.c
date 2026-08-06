@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#define PRODUCT_NAME "PureDarwin"
+#define PRODUCT_NAME "OpenOSX"
 #define PRODUCT_VERSION "11.3"
 #define BUILD_VERSION "20E241"
 

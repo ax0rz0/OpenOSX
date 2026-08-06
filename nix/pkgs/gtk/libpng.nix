@@ -21,7 +21,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libpng";
+  pname = "openosx-libpng";
   inherit (libpng) version;
   src = libpng.src;
 
@@ -68,7 +68,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "libpng, cross-built for PureDarwin (static; needed by cairo's SVG surface and gdk-pixbuf's PNG loader)";
+    description = "libpng, cross-built for OpenOSX (static; needed by cairo's SVG surface and gdk-pixbuf's PNG loader)";
     platforms = platforms.linux;
   };
 }

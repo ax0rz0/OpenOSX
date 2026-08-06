@@ -21,7 +21,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-iokit";
+  pname = "openosx-iokit";
   version = "0.1";
 
   dontUnpack = true;

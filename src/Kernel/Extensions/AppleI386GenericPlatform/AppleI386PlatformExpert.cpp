@@ -17,7 +17,7 @@
  * Please see the License for the specific language governing rights and
  * limitations under the License.
  *
- * This file was modified by William Kent in 2017 to support the PureDarwin
+ * This file was modified by William Kent in 2017 to support the OpenOSX
  * project. This notice is included in support of clause 2.2(b) of the License.
  */
 
@@ -106,7 +106,7 @@ bool AppleI386PlatformExpert::init(OSDictionary *properties) {\
  *
  * On x86_64 stock XNU only publishes it from
  * IOPlatformExpert::registerNVRAMController(), because on a real Mac the UUID
- * comes out of NVRAM. PureDarwin has no IONVRAMController, so that path never
+ * comes out of NVRAM. OpenOSX has no IONVRAMController, so that path never
  * runs; xnu-loader instead puts the 16-byte "platform-uuid" property (from
  * SMBIOS, falling back to the boot volume UUID) on the device-tree /options
  * node, and we publish it here.

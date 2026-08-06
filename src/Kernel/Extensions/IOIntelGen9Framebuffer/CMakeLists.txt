@@ -1,5 +1,5 @@
 add_kext_bundle(IOIntelGen9Framebuffer.kext INFO_PLIST Info.plist KERNEL_PRIVATE
-    BUNDLE_IDENTIFIER org.puredarwin.driver.IOIntelGen9Framebuffer BUNDLE_VERSION 1.0.0)
+    BUNDLE_IDENTIFIER org.openosx.driver.IOIntelGen9Framebuffer BUNDLE_VERSION 1.0.0)
 set_property(TARGET IOIntelGen9Framebuffer.kext PROPERTY OUTPUT_NAME IOIntelGen9Framebuffer)
 
 # lil sources (mirrors lil/meson.build: generic + ivy_bridge + kaby_lake + vbt)

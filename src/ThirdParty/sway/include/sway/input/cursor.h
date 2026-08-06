@@ -7,7 +7,7 @@
 #include <wlr/types/wlr_compositor.h>
 #include "sway/input/seat.h"
 #include "config.h"
-#ifdef PUREDARWIN
+#ifdef OPENOSX
 #include <linux/input-event-codes.h>
 #endif
 

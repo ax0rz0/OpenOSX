@@ -162,11 +162,11 @@
 
 // Define HAVE_TASK_RESTARTABLE_RANGES to enable usage of
 // task_restartable_ranges_synchronize()
-// PureDarwin: the task_restartable_ranges_register/synchronize mach APIs are
+// OpenOSX: the task_restartable_ranges_register/synchronize mach APIs are
 // not implemented in PD's libSystem yet, so force this off. objc-cache then
 // uses the classic thread-scanning _collecting_in_critical() fallback (plain
 // mach task_threads/thread_get_state), which PD does provide.
-#if defined(__PUREDARWIN__) || TARGET_OS_SIMULATOR || defined(__i386__) || defined(__arm__) || !TARGET_OS_MAC
+#if defined(__OPENOSX__) || TARGET_OS_SIMULATOR || defined(__i386__) || defined(__arm__) || !TARGET_OS_MAC
 #   define HAVE_TASK_RESTARTABLE_RANGES 0
 #else
 #   define HAVE_TASK_RESTARTABLE_RANGES 1

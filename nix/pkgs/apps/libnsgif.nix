@@ -22,7 +22,7 @@ let
   srcs = [ "src/lzw.c" "src/gif.c" ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libnsgif";
+  pname = "openosx-libnsgif";
   inherit (libnsgif) version src;
 
   buildPhase = ''
@@ -81,7 +81,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libnsgif (NetSurf GIF decoder), cross-built for PureDarwin";
+    description = "libnsgif (NetSurf GIF decoder), cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

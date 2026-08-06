@@ -41,11 +41,11 @@
 /*
  * The cctools-port aliases below make Darwin's __foo register field names
  * available as foo in the otool source.  When cross-building otool itself for
- * PureDarwin, those aliases must not be active while Mach headers are parsed:
+ * OpenOSX, those aliases must not be active while Mach headers are parsed:
  * they otherwise rewrite SDK type/field declarations and leave i386 thread
  * state structs incomplete.
  */
-#ifdef __PUREDARWIN__
+#ifdef __OPENOSX__
 #include <mach-o/loader.h>
 #endif
 

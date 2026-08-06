@@ -24,7 +24,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-flex";
+  pname = "openosx-flex";
   inherit (flex) version src;
 
   nativeBuildInputs = [ gnumake bison help2man perl ];
@@ -85,7 +85,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "Flex, cross-built for PureDarwin";
+    description = "Flex, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

@@ -1549,7 +1549,7 @@ _pthread_set_self_dyld(void)
 {
 	pthread_t p = &_main_thread;
 #if !VARIANT_DYLD
-	/* PureDarwin: this dylib merges pthread into the same single image as
+	/* OpenOSX: this dylib merges pthread into the same single image as
 	 * libc (see PD_PTHREAD_MERGED_INTO_LIBSYSTEM in pthread/CMakeLists.txt),
 	 * so unlike real Apple's dyld-vs-libpthread.dylib split, there's no
 	 * separate later stage to discover this seed thread via
@@ -1572,7 +1572,7 @@ _pthread_set_self_dyld(void)
 	_pthread_tsd_slot(p, ERRNO) = &p->err_no;
 	_thread_set_tsd_base(&p->tsd[0]);
 
-	/* PureDarwin: real Darwin's __pthread_init() (compiled out here, see the
+	/* OpenOSX: real Darwin's __pthread_init() (compiled out here, see the
 	 * `#if !VARIANT_DYLD` around it - that full init lives only in the
 	 * separate, non-VARIANT_DYLD libsystem_pthread.dylib on real Darwin, not
 	 * in this minimal copy statically linked into dyld/libSystem) is what
@@ -1585,7 +1585,7 @@ _pthread_set_self_dyld(void)
 	 * even though it's not the real kernel-supplied token. */
 	_pthread_init_signature(p);
 
-	/* PureDarwin: __pthread_init() being compiled out also means its call to
+	/* OpenOSX: __pthread_init() being compiled out also means its call to
 	 * _pthread_main_thread_init(thread) never happens, so MACH_THREAD_SELF
 	 * (along with MIG_REPLY/MACH_SPECIAL_REPLY/SEMAPHORE_CACHE and the
 	 * __pthread_head list registration) was never populated for the main
@@ -1759,7 +1759,7 @@ parse_ptr_munge_params(const char *envp[], const char *apple[])
 	}
 
 	if (!token) {
-		/* PureDarwin: real Darwin's kernel always supplies "ptr_munge" in the
+		/* OpenOSX: real Darwin's kernel always supplies "ptr_munge" in the
 		 * apple[] vector at exec time; this from-scratch XNU/exec path does
 		 * not populate it yet. Rather than crash the whole boot on a missing
 		 * kernel-security-hardening value that has no equivalent threat model

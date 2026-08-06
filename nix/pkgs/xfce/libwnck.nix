@@ -74,7 +74,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libwnck";
+  pname = "openosx-libwnck";
   inherit (libwnck) version src;
 
   nativeBuildInputs = [ meson ninja pkg-config python3 glibNative ];
@@ -102,7 +102,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
     export PATH="${glibNative}/bin:$PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -129,7 +129,7 @@ needs_exe_wrapper = true
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
@@ -188,7 +188,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libwnck, cross-built for PureDarwin";
+    description = "libwnck, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

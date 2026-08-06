@@ -24,7 +24,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-curl";
+  pname = "openosx-curl";
   inherit (curl) version;
   src = curl.src;
 
@@ -42,15 +42,15 @@ stdenv.mkDerivation {
     export CPPFLAGS="-I${libSystem}/usr/include -I${openssl}/include -I${zlib}/include -F${corefoundation}/System/Library/Frameworks -F${systemConfiguration}/System/Library/Frameworks"
     # SystemConfiguration's public headers use bridgeos(x) in their
     # API_AVAILABLE/API_UNAVAILABLE lists, and neither the MacOSX11.3 SDK (which
-    # -isysroot brings in here) nor PureDarwin's own AvailabilityInternal.h
+    # -isysroot brings in here) nor OpenOSX's own AvailabilityInternal.h
     # defines the bridgeos platform-macro family - the undefined token shows up
     # as a bare "expected ','" at the use site. Force-include the same three
     # macros libplatform's pd_bridgeos_compat.h supplies for in-tree builds;
     # they cannot be passed as -D because the function-like ones carry parens
     # that make re-expands through the shell.
     cat > "$PWD/pd-bridgeos.h" <<'EOF'
-#ifndef PUREDARWIN_CURL_BRIDGEOS_H
-#define PUREDARWIN_CURL_BRIDGEOS_H
+#ifndef OPENOSX_CURL_BRIDGEOS_H
+#define OPENOSX_CURL_BRIDGEOS_H
 #ifndef __API_AVAILABLE_PLATFORM_bridgeos
 #define __API_AVAILABLE_PLATFORM_bridgeos(x) bridgeos,introduced=x
 #endif

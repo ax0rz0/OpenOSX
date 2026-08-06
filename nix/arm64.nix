@@ -253,7 +253,7 @@ let
     iokit = iokitArm64Build;
   };
   libXftArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXft";
+    pname = "openosx-libXft";
     version = pkgs.libXft.version;
     src = pkgs.libXft.src;
     deps = [
@@ -295,7 +295,7 @@ let
     inherit (pkgs) libepoxy xorgproto meson ninja python3;
   };
   libfontencArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libfontenc";
+    pname = "openosx-libfontenc";
     version = pkgs.libfontenc.version;
     src = pkgs.libfontenc.src;
     deps = [ pkgs.xorgproto xvfbZlibArm64Build ];
@@ -339,7 +339,7 @@ let
     libXau = xvfbLibXauArm64Build;
     libXdmcp = xvfbLibXdmcpArm64Build;
     pdVirglShim = pdVirglShimArm64Build;
-    virglWinsysSrc = ./pkgs/mesa/virgl-puredarwin;
+    virglWinsysSrc = ./pkgs/mesa/virgl-openosx;
     virglAbiHeader = ../src/Kernel/Extensions/IOVirtIOGPU/IOVirtIOGPU3DShared.h;
     inherit (pkgs) meson ninja pkg-config python3 bison flex xorgproto xtrans;
   };
@@ -455,7 +455,7 @@ let
     inherit arm64CrossToolchain;
   };
   startupNotificationArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-startup-notification";
+    pname = "openosx-startup-notification";
     version = pkgs.libstartup_notification.version;
     src = pkgs.libstartup_notification.src;
     deps = [ pkgs.xorgproto xlibArm64Build xcbArm64Build xcbUtilArm64Build ];
@@ -485,7 +485,7 @@ let
     inherit (pkgs) xorgproto;
   };
   xcbArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libxcb";
+    pname = "openosx-libxcb";
     version = pkgs.libxcb.version;
     src = pkgs.libxcb.src;
     deps = [
@@ -505,7 +505,7 @@ let
     '';
   };
   xcbCursorArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libxcb-cursor";
+    pname = "openosx-libxcb-cursor";
     version = pkgs.libxcb-cursor.version;
     src = pkgs.libxcb-cursor.src;
     deps = [
@@ -519,7 +519,7 @@ let
     nativeDeps = [ pkgs.m4 ];
   };
   xcbImageArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libxcb-image";
+    pname = "openosx-libxcb-image";
     version = pkgs.libxcb-image.version;
     src = pkgs.libxcb-image.src;
     deps = [ pkgs.xorgproto xcbArm64Build xcbUtilArm64Build xcbRenderUtilArm64Build ];
@@ -528,32 +528,32 @@ let
     '';
   };
   xcbKeysymsArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libxcb-keysyms";
+    pname = "openosx-libxcb-keysyms";
     version = pkgs.libxcb-keysyms.version;
     src = pkgs.libxcb-keysyms.src;
     deps = [ pkgs.xorgproto xcbArm64Build xcbUtilArm64Build ];
   };
   xcbRenderUtilArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libxcb-render-util";
+    pname = "openosx-libxcb-render-util";
     version = pkgs.libxcb-render-util.version;
     src = pkgs.libxcb-render-util.src;
     deps = [ pkgs.xorgproto xcbArm64Build xcbUtilArm64Build ];
   };
   xcbUtilArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libxcb-util";
+    pname = "openosx-libxcb-util";
     version = pkgs.libxcb-util.version;
     src = pkgs.libxcb-util.src;
     deps = [ pkgs.xorgproto xcbArm64Build ];
   };
   xcbWmArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libxcb-wm";
+    pname = "openosx-libxcb-wm";
     version = pkgs.libxcb-wm.version;
     src = pkgs.libxcb-wm.src;
     deps = [ pkgs.xorgproto xcbArm64Build xcbUtilArm64Build ];
     nativeDeps = [ pkgs.m4 ];
   };
   xcbXrmArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-xcb-util-xrm";
+    pname = "openosx-xcb-util-xrm";
     version = pkgs.xcbutilxrm.version;
     src = pkgs.xcbutilxrm.src;
     deps = [ pkgs.xorgproto xlibArm64Build xcbArm64Build xcbUtilArm64Build ];
@@ -613,7 +613,7 @@ let
     libxcb = xcbArm64Build;
   };
   xlibArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libX11";
+    pname = "openosx-libX11";
     version = pkgs.libX11.version;
     src = pkgs.libX11.src;
     deps = [
@@ -686,7 +686,7 @@ let
     libXdmcp = pkgs.libxdmcp;
   };
   xvfbLibICEArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libICE";
+    pname = "openosx-libICE";
     version = pkgs.libICE.version;
     src = pkgs.libICE.src;
     deps = [ pkgs.xorgproto pkgs.xtrans ];
@@ -695,7 +695,7 @@ let
     '';
   };
   xvfbLibSMArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libSM";
+    pname = "openosx-libSM";
     version = pkgs.libSM.version;
     src = pkgs.libSM.src;
     deps = [ pkgs.xorgproto pkgs.xtrans xvfbLibICEArm64Build ];
@@ -716,7 +716,7 @@ let
     '';
   };
   xvfbLibXawArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXaw";
+    pname = "openosx-libXaw";
     version = pkgs.libXaw.version;
     src = pkgs.libXaw.src;
     deps = [
@@ -737,7 +737,7 @@ let
     '';
   };
   xvfbLibXcursorArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXcursor";
+    pname = "openosx-libXcursor";
     version = pkgs.libXcursor.version;
     src = pkgs.libXcursor.src;
     deps = [ pkgs.xorgproto xlibArm64Build xvfbLibXfixesArm64Build xvfbLibXrenderArm64Build ];
@@ -776,19 +776,19 @@ let
     '';
   };
   xvfbLibXextArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXext";
+    pname = "openosx-libXext";
     version = pkgs.libXext.version;
     src = pkgs.libXext.src;
     deps = [ pkgs.xorgproto xlibArm64Build xvfbLibXauArm64Build ];
   };
   xvfbLibXfixesArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXfixes";
+    pname = "openosx-libXfixes";
     version = pkgs.libXfixes.version;
     src = pkgs.libXfixes.src;
     deps = [ pkgs.xorgproto xlibArm64Build ];
   };
   xvfbLibXfont2Arm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXfont2";
+    pname = "openosx-libXfont2";
     version = pkgs.libxfont_2.version;
     src = pkgs.libxfont_2.src;
     deps = [
@@ -803,7 +803,7 @@ let
     ];
   };
   xvfbLibXiArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXi";
+    pname = "openosx-libXi";
     version = pkgs.libXi.version;
     src = pkgs.libXi.src;
     deps = [
@@ -817,13 +817,13 @@ let
     ];
   };
   xvfbLibXkbfileArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libxkbfile";
+    pname = "openosx-libxkbfile";
     version = pkgs.libxkbfile.version;
     src = pkgs.libxkbfile.src;
     deps = [ pkgs.xorgproto xlibArm64Build ];
   };
   xvfbLibXmuArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXmu";
+    pname = "openosx-libXmu";
     version = pkgs.libXmu.version;
     src = pkgs.libXmu.src;
     deps = [
@@ -836,25 +836,25 @@ let
     ];
   };
   xvfbLibXpmArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXpm";
+    pname = "openosx-libXpm";
     version = pkgs.libXpm.version;
     src = pkgs.libXpm.src;
     deps = [ pkgs.xorgproto xlibArm64Build ];
   };
   xvfbLibXrandrArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXrandr";
+    pname = "openosx-libXrandr";
     version = pkgs.libXrandr.version;
     src = pkgs.libXrandr.src;
     deps = [ pkgs.xorgproto xlibArm64Build xvfbLibXrenderArm64Build xvfbLibXextArm64Build ];
   };
   xvfbLibXrenderArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXrender";
+    pname = "openosx-libXrender";
     version = pkgs.libXrender.version;
     src = pkgs.libXrender.src;
     deps = [ pkgs.xorgproto xlibArm64Build ];
   };
   xvfbLibXtArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libXt";
+    pname = "openosx-libXt";
     version = pkgs.libXt.version;
     src = pkgs.libXt.src;
     deps = [
@@ -872,7 +872,7 @@ let
   };
   pdVirglShimArm64Build =
   if isDarwin then null else (mkPureDarwinBuild {
-      pname = "puredarwin-pd-virgl-shim-arm64";
+      pname = "openosx-pd-virgl-shim-arm64";
       src = userlandSource;
       buildTargets = [ "pd_virgl_shim" ];
       enableProjects = false;
@@ -969,12 +969,12 @@ let
   # libSystem are filtered down to the arguments each package actually
   # declares, so the same call works everywhere; callPackage still fills
   # the plain nixpkgs inputs, and `deps` rewires that package's own
-  # PureDarwin dependencies onto their arm64 builds.
+  # OpenOSX dependencies onto their arm64 builds.
   # Re-instantiate a package file for arm64. The arm64 toolchain/triple/
   # libSystem are filtered down to the arguments each package actually
   # declares, so the same call works everywhere; callPackage still fills
   # the plain nixpkgs inputs, and `deps` rewires that package's own
-  # PureDarwin dependencies onto their arm64 builds.
+  # OpenOSX dependencies onto their arm64 builds.
   mkArm64Build = file: deps:
   if isDarwin then null else
   let
@@ -1017,7 +1017,7 @@ let
   # Core libraries.
   # Core libraries.
   libffiArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libffi";
+    pname = "openosx-libffi";
     version = pkgs.libffi.version;
     src = pkgs.libffi.src;
     configureFlags = [
@@ -1026,7 +1026,7 @@ let
     ];
   };
   expatArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-expat";
+    pname = "openosx-expat";
     version = pkgs.expat.version;
     src = pkgs.expat.src;
     configureFlags = [
@@ -1036,7 +1036,7 @@ let
     ];
   };
   pcre2Arm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-pcre2";
+    pname = "openosx-pcre2";
     version = pkgs.pcre2.version;
     src = pkgs.pcre2.src;
     configureFlags = [
@@ -1049,7 +1049,7 @@ let
     ];
   };
   libevArm64Build = mkArm64Build ./pkgs/x11/xorg-cross-lib.nix {
-    pname = "puredarwin-libev";
+    pname = "openosx-libev";
     version = pkgs.libev.version;
     src = pkgs.libev.src;
     preConfigureExtra = ''
@@ -1107,7 +1107,7 @@ let
     prebuiltLibSystem = libSystemArm64Build;
   };
   kernelArm64Build = mkPureDarwinBuild {
-    pname = "puredarwin-kernel-arm64";
+    pname = "openosx-kernel-arm64";
     src = kernelSource;
     buildTargets = [ "xnu" ];
     enableUserspace = false;
@@ -1118,7 +1118,7 @@ let
     inherit arm64CrossToolchain;
   };
   kernelArm64VirtBuild = mkPureDarwinBuild {
-    pname = "puredarwin-kernel-arm64-virt";
+    pname = "openosx-kernel-arm64-virt";
     src = kernelSource;
     buildTargets = [ "xnu" ];
     enableUserspace = false;
@@ -1130,7 +1130,7 @@ let
     extraCmakeFlags = [ "-DPUREDARWIN_ARM64_MACHINE_CONFIG=VIRT" ];
   };
   kernelArm64VirtDebugBuild = mkPureDarwinBuild {
-    pname = "puredarwin-kernel-arm64-virt-debug";
+    pname = "openosx-kernel-arm64-virt-debug";
     src = kernelSource;
     buildTargets = [ "xnu" ];
     enableUserspace = false;
@@ -1142,7 +1142,7 @@ let
     extraCmakeFlags = [ "-DPUREDARWIN_ARM64_MACHINE_CONFIG=VIRT" ];
   };
   kextsArm64Build = mkPureDarwinBuild {
-    pname = "puredarwin-kexts-arm64";
+    pname = "openosx-kexts-arm64";
     src = kextsSource;
     buildTargets = [
       "IOPCIFamily" "IOStorageFamily" "IOVirtIOFamily.kext"
@@ -1185,7 +1185,7 @@ let
   # ARM64 kernel and kexts. Keep the kernel payload separate so this
   # composition cannot accidentally pull the x86 kernel into the ARM
   # image.
-  splitBaseSystemArm64VirtMinimal = pkgs.runCommand "puredarwin-basesystem-arm64-virt-minimal-0.1" { } ''
+  splitBaseSystemArm64VirtMinimal = pkgs.runCommand "openosx-basesystem-arm64-virt-minimal-0.1" { } ''
     mkdir -p "$out"
     cp -a ${libSystemArm64Build}/. "$out/"
     chmod -R u+w "$out"
@@ -1221,7 +1221,7 @@ let
     chmod -R u+w "$out"
   '';
 
-  splitBaseSystemArm64VirtMinimalRelease = pkgs.runCommand "puredarwin-basesystem-arm64-virt-minimal-release-0.1" { } ''
+  splitBaseSystemArm64VirtMinimalRelease = pkgs.runCommand "openosx-basesystem-arm64-virt-minimal-release-0.1" { } ''
     mkdir -p "$out"
     cp -a ${libSystemArm64Build}/. "$out/"
     chmod -R u+w "$out"

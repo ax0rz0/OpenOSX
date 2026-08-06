@@ -192,7 +192,7 @@ size_t os_log_encode(void* buffer,
 {
     /*
      * Serialising into the binary os_log tracepoint format needs
-     * _os_log_encode() from libtrace's private encoder, which PureDarwin does
+     * _os_log_encode() from libtrace's private encoder, which OpenOSX does
      * not have: the only encoder in tree is XNU's kernel-side
      * os_log_context_encode(), which requires a logmem_t arena and a
      * preinitialised os_log_context_s that only the kernel can supply.

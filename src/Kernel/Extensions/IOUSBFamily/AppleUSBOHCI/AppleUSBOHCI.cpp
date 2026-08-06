@@ -1,6 +1,6 @@
 /*
  * AppleUSBOHCI - a real (if minimal) OHCI host controller driver for the
- * reconstructed PureDarwin IOUSBFamily.
+ * reconstructed OpenOSX IOUSBFamily.
  *
  * This is not Apple's original UIM (that shipped as 0-byte files). It drives
  * the OHCI hardware directly and satisfies the reconstructed IOUSBController's

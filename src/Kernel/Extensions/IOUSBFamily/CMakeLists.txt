@@ -1,5 +1,5 @@
 add_kext_bundle(IOUSBFamily KERNEL_PRIVATE INFO_PLIST Info.plist
-    BUNDLE_IDENTIFIER org.puredarwin.iokit.IOUSBFamily BUNDLE_VERSION 1.0.0)
+    BUNDLE_IDENTIFIER org.openosx.iokit.IOUSBFamily BUNDLE_VERSION 1.0.0)
 
 target_sources(IOUSBFamily PRIVATE
     IOUSBFamily/IOUSBBus.cpp

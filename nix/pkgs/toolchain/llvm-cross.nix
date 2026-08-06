@@ -29,7 +29,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-llvm";
+  pname = "openosx-llvm";
   version = llvmVersion;
 
   src = llvmSrc;
@@ -164,7 +164,7 @@ LLVMCONFIG
   dontFixup = true;
 
   meta = with lib; {
-    description = "LLVM ${llvmVersion} runtime libraries, cross-built for PureDarwin (llvmpipe/lavapipe backend)";
+    description = "LLVM ${llvmVersion} runtime libraries, cross-built for OpenOSX (llvmpipe/lavapipe backend)";
     platforms = platforms.linux;
   };
 }

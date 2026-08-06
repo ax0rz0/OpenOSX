@@ -1,5 +1,5 @@
 /*
- * pd-networkd - early PureDarwin IPv4 network bring-up.
+ * pd-networkd - early OpenOSX IPv4 network bring-up.
  *
  * This is still static IPv4 by default, but it is now a launchd-started
  * service instead of a manually invoked boot hack. DHCP can replace the static
@@ -52,7 +52,7 @@ pd_log(const char *fmt, ...)
 {
     va_list ap;
 
-    printf("PureDarwin network: ");
+    printf("OpenOSX network: ");
     va_start(ap, fmt);
     vprintf(fmt, ap);
     va_end(ap);
@@ -332,8 +332,8 @@ usage(const char *prog)
     printf("usage:\n");
     printf("  %s [--wait SECONDS] [IFNAME IFADDR NETMASK GATEWAY [DNS [BROADCAST]]]\n", prog);
     printf("environment overrides:\n");
-    printf("  PUREDARWIN_NET_IFACE PUREDARWIN_NET_ADDR PUREDARWIN_NET_MASK\n");
-    printf("  PUREDARWIN_NET_ROUTER PUREDARWIN_NET_DNS PUREDARWIN_NET_BROADCAST\n");
+    printf("  OPENOSX_NET_IFACE OPENOSX_NET_ADDR OPENOSX_NET_MASK\n");
+    printf("  OPENOSX_NET_ROUTER OPENOSX_NET_DNS OPENOSX_NET_BROADCAST\n");
 }
 
 int
@@ -342,12 +342,12 @@ main(int argc, char **argv)
     struct pd_network_config cfg;
     int argi = 1;
 
-    cfg.ifname = env_default("PUREDARWIN_NET_IFACE", PD_NETWORKD_DEFAULT_IFACE);
-    cfg.addr = env_default("PUREDARWIN_NET_ADDR", PD_NETWORKD_DEFAULT_ADDR);
-    cfg.mask = env_default("PUREDARWIN_NET_MASK", PD_NETWORKD_DEFAULT_MASK);
-    cfg.router = env_default("PUREDARWIN_NET_ROUTER", PD_NETWORKD_DEFAULT_ROUTER);
-    cfg.dns = env_default("PUREDARWIN_NET_DNS", PD_NETWORKD_DEFAULT_DNS);
-    cfg.broadcast = env_default("PUREDARWIN_NET_BROADCAST", PD_NETWORKD_DEFAULT_BROADCAST);
+    cfg.ifname = env_default("OPENOSX_NET_IFACE", PD_NETWORKD_DEFAULT_IFACE);
+    cfg.addr = env_default("OPENOSX_NET_ADDR", PD_NETWORKD_DEFAULT_ADDR);
+    cfg.mask = env_default("OPENOSX_NET_MASK", PD_NETWORKD_DEFAULT_MASK);
+    cfg.router = env_default("OPENOSX_NET_ROUTER", PD_NETWORKD_DEFAULT_ROUTER);
+    cfg.dns = env_default("OPENOSX_NET_DNS", PD_NETWORKD_DEFAULT_DNS);
+    cfg.broadcast = env_default("OPENOSX_NET_BROADCAST", PD_NETWORKD_DEFAULT_BROADCAST);
     cfg.wait_seconds = PD_NETWORKD_DEFAULT_WAIT_SECONDS;
     cfg.write_resolver = 1;
 

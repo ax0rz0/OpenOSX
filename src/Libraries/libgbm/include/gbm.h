@@ -1,7 +1,7 @@
 /*
  * A GBM-shaped veneer over PDSurface.
  *
- * GBM's shape is an accident of Linux's DRM, not something PureDarwin wants to
+ * GBM's shape is an accident of Linux's DRM, not something OpenOSX wants to
  * be built on - PDSurface is the real interface and this exists so software
  * that assumes GBM links and runs unmodified. Anything native should use
  * <PDSurface.h> directly.

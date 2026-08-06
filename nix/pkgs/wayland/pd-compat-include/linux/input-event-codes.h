@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * Key and button codes for Wayland clients cross-built for PureDarwin.
+ * Key and button codes for Wayland clients cross-built for OpenOSX.
  *
  * wl_keyboard.key and wl_pointer.button carry Linux evdev codes by protocol
  * definition, so these are Wayland wire constants rather than kernel-specific
@@ -8,8 +8,8 @@
  * evdev ioctls or struct input_event fails to compile rather than silently
  * misbehaving. Values match linux-headers 6.18.7.
  */
-#ifndef PUREDARWIN_LINUX_INPUT_EVENT_CODES_H
-#define PUREDARWIN_LINUX_INPUT_EVENT_CODES_H
+#ifndef OPENOSX_LINUX_INPUT_EVENT_CODES_H
+#define OPENOSX_LINUX_INPUT_EVENT_CODES_H
 
 #define KEY_RESERVED             0
 #define KEY_ESC                  1

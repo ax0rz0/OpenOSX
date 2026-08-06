@@ -38,7 +38,7 @@
 #define	__fenv_static	static
 #endif
 
-#ifdef __PUREDARWIN__
+#ifdef __OPENOSX__
 // _sjc_ This is the fenv_t structure as defined for Intel in the macOS fenv.h
 typedef struct {
     unsigned short          __control;      /* x87 control word               */
@@ -105,7 +105,7 @@ extern const fenv_t	__fe_dfl_env;
 #define	__ldmxcsr(__csr)	__asm __volatile("ldmxcsr %0" : : "m" (__csr))
 #define	__stmxcsr(__csr)	__asm __volatile("stmxcsr %0" : "=m" (*(__csr)))
 
-#ifdef __PUREDARWIN__
+#ifdef __OPENOSX__
 int feclearexcept(int __excepts);
 #else
 __fenv_static __attribute__((always_inline)) inline int
@@ -193,7 +193,7 @@ fesetround(int __round)
 OLM_DLLEXPORT int fegetenv(fenv_t *__envp);
 OLM_DLLEXPORT int feholdexcept(fenv_t *__envp);
 
-#ifdef __PUREDARWIN__
+#ifdef __OPENOSX__
 int fesetenv(const fenv_t *__envp);
 #else
 __fenv_static inline int

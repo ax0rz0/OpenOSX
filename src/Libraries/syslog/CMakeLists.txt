@@ -56,17 +56,17 @@ target_include_directories(syslog_asl_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libsystem_kernel/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libsystem_kernel/private_include
     ${CMAKE_CURRENT_SOURCE_DIR}/../CrashReporterClient/include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
 )
 
 target_compile_definitions(syslog_asl_static PRIVATE
-    __PUREDARWIN__
+    __OPENOSX__
     __DARWIN_ONLY_UNIX_CONFORMANCE=1
     PRIVATE=1
 )
 
-target_compile_definitions(syslog_asl_static PRIVATE PUREDARWIN_ASL_NO_ACL=1
-    PUREDARWIN_ASL_SYSLOG_BOTH_SPELLINGS=1)
+target_compile_definitions(syslog_asl_static PRIVATE OPENOSX_ASL_NO_ACL=1
+    OPENOSX_ASL_SYSLOG_BOTH_SPELLINGS=1)
 
 target_compile_options(syslog_asl_static PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libplatform/pd_bridgeos_compat.h>

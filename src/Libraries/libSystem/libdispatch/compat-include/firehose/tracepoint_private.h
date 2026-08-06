@@ -1,5 +1,5 @@
 /*
- * PureDarwin: minimal stand-in for firehose/tracepoint_private.h, which
+ * OpenOSX: minimal stand-in for firehose/tracepoint_private.h, which
  * lives in Apple's separate (not vendored here) firehose project. Nothing
  * in this build actually implements os_log/firehose activity tracing - this
  * only provides the handful of plain integer typedefs

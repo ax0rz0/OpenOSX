@@ -32,7 +32,7 @@
 #define ACPI_SUPPORT            0
 #endif
 
-// VT-d (Intel IOMMU) page-table support is not implemented in PureDarwin: the
+// VT-d (Intel IOMMU) page-table support is not implemented in OpenOSX: the
 // balloc.c / rballoc.c allocators that vtd.c source-includes were never imported.
 // QEMU without an intel-iommu device does not need it, so keep it disabled; the
 // AppleVTD entry points become no-ops (see IOPCIBridge.cpp). This is independent

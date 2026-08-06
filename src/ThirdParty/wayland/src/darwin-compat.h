@@ -1,4 +1,4 @@
-/* PureDarwin event primitives for the vendored Wayland event loop. */
+/* OpenOSX event primitives for the vendored Wayland event loop. */
 #ifndef WAYLAND_DARWIN_COMPAT_H
 #define WAYLAND_DARWIN_COMPAT_H
 

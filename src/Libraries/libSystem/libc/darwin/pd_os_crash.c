@@ -1,5 +1,5 @@
 /*
- * PureDarwin minimal _os_crash.
+ * OpenOSX minimal _os_crash.
  *
  * Real Apple's implementation (os/assumes.c) logs the crash message through
  * os_log/ASL and annotates the crash report before trapping. That machinery

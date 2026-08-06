@@ -1,5 +1,5 @@
 /*
- * PureDarwin: setregid(2) is marked NO_SYSCALL_STUB in syscalls.master
+ * OpenOSX: setregid(2) is marked NO_SYSCALL_STUB in syscalls.master
  * (real Apple hides it from the public API, though the kernel trap - and
  * the kauth_cred_setresgid() logic behind it - is present). See
  * __setreuid.s for the matching rationale.

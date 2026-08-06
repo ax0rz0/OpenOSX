@@ -95,7 +95,7 @@
  * __DARWIN_BYTE_ORDER must be defined before the #elif chain below: if it is
  * undefined it evaluates to 0 == 0 against __DARWIN_BIG_ENDIAN and
  * htonl/ntohl silently become identity macros on little-endian targets
- * (this bit PureDarwin's libc: inet_aton returned host-order addresses,
+ * (this bit OpenOSX's libc: inet_aton returned host-order addresses,
  * because with -Ixnu/osfmk ahead of -Ixnu/bsd, <machine/endian.h> resolves
  * to osfmk's kernel-internal copy, which never defines __DARWIN_BYTE_ORDER).
  * Include it here as modern SDKs do, then fall back to the compiler's

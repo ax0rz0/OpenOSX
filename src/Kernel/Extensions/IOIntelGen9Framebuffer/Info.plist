@@ -9,7 +9,7 @@
     <key>CFBundleGetInfoString</key>
     <string>1.0.0, Copyright (C) 2026 PureDarwin Project. All rights reserved.</string>
     <key>CFBundleIdentifier</key>
-    <string>org.puredarwin.driver.IOIntelGen9Framebuffer</string>
+    <string>org.openosx.driver.IOIntelGen9Framebuffer</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -27,7 +27,7 @@
         <key>IOIntelGen9Framebuffer</key>
         <dict>
             <key>CFBundleIdentifier</key>
-            <string>org.puredarwin.driver.IOIntelGen9Framebuffer</string>
+            <string>org.openosx.driver.IOIntelGen9Framebuffer</string>
             <key>IOClass</key>
             <string>IOIntelGen9Framebuffer</string>
             <key>IOPCIPrimaryMatch</key>

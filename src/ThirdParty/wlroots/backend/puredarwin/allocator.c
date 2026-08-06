@@ -100,7 +100,7 @@ static struct wlr_buffer *allocator_create_buffer(
 	/* PDSurface's format constants are DRM fourccs, so no translation. */
 	if (format->format != kPDSurfaceFormatARGB8888 &&
 			format->format != kPDSurfaceFormatXRGB8888) {
-		wlr_log(WLR_DEBUG, "PureDarwin allocator rejected format 0x%" PRIX32,
+		wlr_log(WLR_DEBUG, "OpenOSX allocator rejected format 0x%" PRIX32,
 			format->format);
 		return NULL;
 	}
@@ -150,7 +150,7 @@ struct wlr_allocator *wlr_puredarwin_allocator_create(void) {
 	 * present path, which is the reference for telling a scanout-flip problem
 	 * apart from a compositing one. */
 	if (getenv("WLR_PUREDARWIN_NO_SURFACE_ALLOC") != NULL) {
-		wlr_log(WLR_INFO, "PureDarwin allocator disabled by environment");
+		wlr_log(WLR_INFO, "OpenOSX allocator disabled by environment");
 		return NULL;
 	}
 
@@ -166,7 +166,7 @@ struct wlr_allocator *wlr_puredarwin_allocator_create(void) {
 
 	wlr_allocator_init(&allocator->base, &allocator_impl,
 		WLR_BUFFER_CAP_DATA_PTR);
-	wlr_log(WLR_INFO, "Created PureDarwin allocator on %s",
+	wlr_log(WLR_INFO, "Created OpenOSX allocator on %s",
 		PDSurfaceDeviceGetName(allocator->device));
 	return &allocator->base;
 }

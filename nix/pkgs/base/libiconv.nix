@@ -21,7 +21,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libiconv";
+  pname = "openosx-libiconv";
   inherit (libiconvReal) version src;
 
   nativeBuildInputs = [
@@ -30,7 +30,7 @@ stdenv.mkDerivation {
 
   postPatch = ''
     # The Darwin SDK's MB_CUR_MAX_L macro references the private
-    # ____mb_cur_max_l symbol, which PureDarwin libSystem does not export.
+    # ____mb_cur_max_l symbol, which OpenOSX libSystem does not export.
     sed -i 's/strcmp (codeset, "UTF-8") == 0 && MB_CUR_MAX_L (uselocale (NULL)) <= 1/0/' libcharset/lib/localcharset.c
 
     # GNU libiconv exports libiconv_* on Darwin by default, while some

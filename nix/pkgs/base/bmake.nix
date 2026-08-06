@@ -20,7 +20,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-bmake";
+  pname = "openosx-bmake";
   inherit (bmake) version;
   src = bmake.src;
 

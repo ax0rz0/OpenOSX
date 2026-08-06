@@ -10,9 +10,9 @@ macro(cctools_selfhost_executable name)
     target_compile_definitions(${name}_selfhost PRIVATE
         __DARWIN_UNIX03=1
         _DARWIN_USE_64_BIT_INODE=1
-        PUREDARWIN_SELFHOST_CCTOOLS=1
+        OPENOSX_SELFHOST_CCTOOLS=1
     )
-    target_compile_options(${name}_selfhost PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
+    target_compile_options(${name}_selfhost PRIVATE -isysroot ${OPENOSX_MACOSX_SDK})
     target_link_options(${name}_selfhost PRIVATE
         -nostdlib
         -Wl,-L,$<TARGET_FILE_DIR:libSystem_B_stub>
@@ -66,10 +66,10 @@ macro(cctools_selfhost_executable_alias name source extra_define)
     target_compile_definitions(${name}_selfhost PRIVATE
         __DARWIN_UNIX03=1
         _DARWIN_USE_64_BIT_INODE=1
-        PUREDARWIN_SELFHOST_CCTOOLS=1
+        OPENOSX_SELFHOST_CCTOOLS=1
         ${extra_define}
     )
-    target_compile_options(${name}_selfhost PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
+    target_compile_options(${name}_selfhost PRIVATE -isysroot ${OPENOSX_MACOSX_SDK})
     target_link_options(${name}_selfhost PRIVATE
         -nostdlib
         -Wl,-L,$<TARGET_FILE_DIR:libSystem_B_stub>

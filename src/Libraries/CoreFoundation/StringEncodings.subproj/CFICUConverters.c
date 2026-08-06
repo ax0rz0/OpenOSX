@@ -7,7 +7,7 @@
 	See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 	Responsibility: Foundation Team
 
-	PureDarwin: no real ICU runtime library exists here (only the SDK's
+	OpenOSX: no real ICU runtime library exists here (only the SDK's
 	link-time-only libicucore.tbd stub, with no dylib behind it), so any
 	code path that actually reaches into ICU fails at runtime - some
 	eagerly (data-symbol references like &UCNV_FROM_U_CALLBACK_STOP need

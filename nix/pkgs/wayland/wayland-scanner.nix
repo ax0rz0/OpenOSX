@@ -9,7 +9,7 @@
 }:
 
 stdenv.mkDerivation {
-  pname = "puredarwin-wayland-scanner-native";
+  pname = "openosx-wayland-scanner-native";
   version = "1.25.0";
   inherit src;
 
@@ -25,7 +25,7 @@ stdenv.mkDerivation {
   ];
 
   meta = with lib; {
-    description = "Native Wayland protocol scanner used during PureDarwin cross builds";
+    description = "Native Wayland protocol scanner used during OpenOSX cross builds";
     platforms = platforms.linux;
   };
 }

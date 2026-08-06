@@ -694,7 +694,7 @@ L_dispatch_from_user_no_push_rax:
 	mov	16(%rax), %rax	/* Offset of per-CPU shadow */
 
 #if DEVELOPMENT || DEBUG
-	/* PureDarwin bring-up: the cacheline-stash diagnostic (do_cacheline_stash)
+	/* OpenOSX bring-up: the cacheline-stash diagnostic (do_cacheline_stash)
 	 * dereferences the faulting RIP to capture the instruction bytes. Its
 	 * fault-recovery only catches a #PF during that read, NOT the #GP raised
 	 * when the faulting RIP is non-canonical -- which is exactly what happens

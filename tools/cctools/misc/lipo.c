@@ -1227,7 +1227,7 @@ struct input_file *input)
 	if(fstat(fd, &stat_buf2) == -1)
 	    system_fatal("can't stat input file: %s", input->name);
 	if(stat_buf2.st_size != size
-#ifndef PUREDARWIN_SELFHOST_CCTOOLS
+#ifndef OPENOSX_SELFHOST_CCTOOLS
 	   || stat_buf2.st_mtime != stat_buf.st_mtime
 #endif
 	   )

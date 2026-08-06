@@ -1,5 +1,5 @@
 /*
- * IOUSBController.h - PureDarwin reconstruction.
+ * IOUSBController.h - OpenOSX reconstruction.
  *
  * Apple's real IOUSBController.h/.cpp were 0 bytes in every open-source
  * IOUSBFamily drop we could find - only the class's *callers* survived

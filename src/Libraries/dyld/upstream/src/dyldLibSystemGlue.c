@@ -68,7 +68,7 @@ static volatile struct __DATA__dyld  myDyldSection __attribute__ ((section ("__D
 // dylib1.o is used, it overrides this, otherwise this implementation is used.
 __attribute__((weak))
 #endif
-/* PureDarwin: upstream marks this hidden (it's meant to be called only from
+/* OpenOSX: upstream marks this hidden (it's meant to be called only from
  * within libdyld.dylib itself, by code compiled into the same image -- e.g.
  * the registration constructor that used to live here too). PD's build splits
  * that constructor out into libSystem.B.dylib (pd_libSystem_init.c, moved

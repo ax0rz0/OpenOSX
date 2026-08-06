@@ -85,7 +85,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-gtk3";
+  pname = "openosx-gtk3";
   inherit (gtk3) version src;
 
   nativeBuildInputs = [ meson ninja pkg-config python3 glibNative ]
@@ -107,7 +107,7 @@ else
   quartz_enabled = false
 endif"""
 # Upstream forces X11 and Wayland off on Darwin because it assumes Quartz is
-# the only display server there. PureDarwin has neither, so drop the special
+# the only display server there. OpenOSX has neither, so drop the special
 # case entirely and let the backend options decide; Quartz is never wanted.
 new = """quartz_enabled = false"""
 assert old in content, "os_darwin backend-forcing block not found"
@@ -125,7 +125,7 @@ with open('meson.build', 'w') as f:
     f.write(content)
 PYEOF
 
-    # PureDarwin's current dlsym/dlopen(NULL) path can report GTK2's
+    # OpenOSX's current dlsym/dlopen(NULL) path can report GTK2's
     # gtk_progress_get_type marker as present even though no loaded image
     # exports it.
     sed -i '/_gtk_module_has_mixed_deps (NULL)/,+1d' gtk/gtkmain.c
@@ -182,7 +182,7 @@ ${lib.optionalString waylandEnabled ''    export PATH="${waylandScanner}/bin:$PA
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
     export PATH="${glibNative}/bin:$PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -209,7 +209,7 @@ needs_exe_wrapper = true
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
@@ -282,7 +282,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "GTK3, cross-built for PureDarwin";
+    description = "GTK3, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

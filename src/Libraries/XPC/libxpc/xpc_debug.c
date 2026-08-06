@@ -17,7 +17,7 @@ void xpc_api_misuse(const char *info, ...) {
 
 	int fd = open("/dev/console", O_WRONLY | O_NOCTTY);
 	if (fd >= 0) {
-		const char prefix[] = "PureDarwin libxpc misuse: ";
+		const char prefix[] = "OpenOSX libxpc misuse: ";
 		write(fd, prefix, sizeof(prefix) - 1);
 		if (xpc_api_misuse_reason) {
 			write(fd, xpc_api_misuse_reason, strlen(xpc_api_misuse_reason));

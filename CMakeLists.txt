@@ -1,9 +1,9 @@
 if(CMAKE_GENERATOR STREQUAL "Xcode")
-    message(FATAL_ERROR "PureDarwin cannot be compiled with Xcode.")
+    message(FATAL_ERROR "OpenOSX cannot be compiled with Xcode.")
 endif()
 
 cmake_minimum_required(VERSION 3.15.1)
-project(PUREDARWIN)
+project(OPENOSX)
 # libdispatch's src/object.m (OS_object/USE_OBJC glue) needs the ObjC
 # frontend available project-wide.
 enable_language(OBJC)
@@ -55,7 +55,7 @@ foreach(_pd_h ${_pd_cf_headers})
 endforeach()
 
 if((NOT CMAKE_C_COMPILER_ID MATCHES "AppleClang") AND (NOT CMAKE_C_COMPILER_ID MATCHES "Clang"))
-    message(FATAL_ERROR "PureDarwin must be compiled with clang.")
+    message(FATAL_ERROR "OpenOSX must be compiled with clang.")
 endif()
 
 cmake_policy(SET CMP0114 NEW)
@@ -65,7 +65,7 @@ set(CMAKE_MACOSX_MIN_VERSION 11.0)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS 13)
         message(FATAL_ERROR
-            "PureDarwin's vendored libc++ runtime expects AppleClang 13 or newer."
+            "OpenOSX's vendored libc++ runtime expects AppleClang 13 or newer."
         )
     endif()
 endif()
@@ -73,26 +73,26 @@ endif()
 # Target CPU architecture. x86_64 is the primary/working target (QEMU boot,
 # loader, dyld). arm64 is an opt-in in progress: configure with
 # -DPUREDARWIN_ARCH=arm64. Falls back to CMAKE_OSX_ARCHITECTURES if that's set.
-if(NOT PUREDARWIN_ARCH)
+if(NOT OPENOSX_ARCH)
     if(CMAKE_OSX_ARCHITECTURES)
-        set(PUREDARWIN_ARCH "${CMAKE_OSX_ARCHITECTURES}")
+        set(OPENOSX_ARCH "${CMAKE_OSX_ARCHITECTURES}")
     else()
-        set(PUREDARWIN_ARCH "x86_64")
+        set(OPENOSX_ARCH "x86_64")
     endif()
 endif()
-set(PUREDARWIN_ARCH "${PUREDARWIN_ARCH}" CACHE STRING "Target architecture (x86_64 or arm64)" FORCE)
+set(OPENOSX_ARCH "${OPENOSX_ARCH}" CACHE STRING "Target architecture (x86_64 or arm64)" FORCE)
 
 # Normalize and derive the arch predicate the tree branches on.
-if(PUREDARWIN_ARCH MATCHES "^(arm64|aarch64)$")
-    set(PUREDARWIN_ARCH "arm64")
-    set(PUREDARWIN_ARM64 TRUE)
-elseif(PUREDARWIN_ARCH MATCHES "^(x86_64|amd64)$")
-    set(PUREDARWIN_ARCH "x86_64")
-    set(PUREDARWIN_ARM64 FALSE)
+if(OPENOSX_ARCH MATCHES "^(arm64|aarch64)$")
+    set(OPENOSX_ARCH "arm64")
+    set(OPENOSX_ARM64 TRUE)
+elseif(OPENOSX_ARCH MATCHES "^(x86_64|amd64)$")
+    set(OPENOSX_ARCH "x86_64")
+    set(OPENOSX_ARM64 FALSE)
 else()
-    message(FATAL_ERROR "PUREDARWIN_ARCH must be x86_64 or arm64, got '${PUREDARWIN_ARCH}'")
+    message(FATAL_ERROR "OPENOSX_ARCH must be x86_64 or arm64, got '${OPENOSX_ARCH}'")
 endif()
-message(STATUS "PureDarwin target architecture: ${PUREDARWIN_ARCH}")
+message(STATUS "OpenOSX target architecture: ${OPENOSX_ARCH}")
 
 execute_process(
     COMMAND xcrun --sdk macosx --show-sdk-path
@@ -105,18 +105,18 @@ if(_puredarwin_xcrun_macosx_sdk_result EQUAL 0 AND EXISTS "${_puredarwin_xcrun_m
 else()
     set(_puredarwin_default_macosx_sdk "/usr/local/osxcross/SDK/MacOSX11.3.sdk")
 endif()
-set(PUREDARWIN_MACOSX_SDK "${_puredarwin_default_macosx_sdk}" CACHE PATH "macOS SDK root for userspace bootstrap components")
+set(OPENOSX_MACOSX_SDK "${_puredarwin_default_macosx_sdk}" CACHE PATH "macOS SDK root for userspace bootstrap components")
 
-option(PUREDARWIN_ENABLE_PROJECTS "Configure PureDarwin project definitions" ON)
-option(PUREDARWIN_ENABLE_KERNEL "Configure PureDarwin kernel targets" ON)
-option(PUREDARWIN_ENABLE_LIBRARIES "Configure PureDarwin library targets" ON)
-option(PUREDARWIN_ENABLE_USERSPACE "Configure PureDarwin userspace targets" ON)
-option(PUREDARWIN_ENABLE_TOOLS "Configure PureDarwin tool targets" ON)
+option(OPENOSX_ENABLE_PROJECTS "Configure OpenOSX project definitions" ON)
+option(OPENOSX_ENABLE_KERNEL "Configure OpenOSX kernel targets" ON)
+option(OPENOSX_ENABLE_LIBRARIES "Configure OpenOSX library targets" ON)
+option(OPENOSX_ENABLE_USERSPACE "Configure OpenOSX userspace targets" ON)
+option(OPENOSX_ENABLE_TOOLS "Configure OpenOSX tool targets" ON)
 # Real x86_64-apple-darwin cross-compiled cctools (ld64, nm, lipo, etc.),
-# meant to eventually run ON PureDarwin itself (self-hosting), as opposed to
+# meant to eventually run ON OpenOSX itself (self-hosting), as opposed to
 # the existing host_* cctools targets which are Linux-native tools used only
 # to drive our own cross-builds. Off by default: early work-in-progress.
-option(PUREDARWIN_ENABLE_SELFHOST_CCTOOLS "Configure self-hosted (Darwin-target) cctools" OFF)
+option(OPENOSX_ENABLE_SELFHOST_CCTOOLS "Configure self-hosted (Darwin-target) cctools" OFF)
 
 include(ExternalProject)
 include(cmake/asm.cmake)
@@ -130,13 +130,13 @@ include(cmake/kext.cmake)
 include(cmake/mig.cmake)
 include(cmake/suppress_warnings.cmake)
 
-if(PUREDARWIN_ENABLE_PROJECTS)
+if(OPENOSX_ENABLE_PROJECTS)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/projects/CMakeLists.txt")
         add_subdirectory(projects)
     endif()
 endif()
 add_subdirectory(src)
-if(PUREDARWIN_ENABLE_TOOLS)
+if(OPENOSX_ENABLE_TOOLS)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tools/CMakeLists.txt")
         add_subdirectory(tools)
     endif()

@@ -311,7 +311,7 @@ int
 main(int argc, char **argv)
 {
 	static const char hello[] =
-	    "hello from the PureDarwin APFS fixture\n";
+	    "hello from the OpenOSX APFS fixture\n";
 	static const char notes[] =
 	    "This file is baked into the APFS test partition.\n"
 	    "It exercises APFS dir lookup plus file extent reads.\n";

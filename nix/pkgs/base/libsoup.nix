@@ -39,7 +39,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libsoup";
+  pname = "openosx-libsoup";
   inherit (libsoup) version src;
 
   nativeBuildInputs = [ meson ninja pkg-config python3 glibNative ];
@@ -59,7 +59,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" depPcPaths}:${lib.makeSearchPath "share/pkgconfig" depPcPaths}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
@@ -86,7 +86,7 @@ needs_exe_wrapper = true
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
@@ -140,7 +140,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libsoup 3, cross-built for PureDarwin (WebKitGTK's network backend)";
+    description = "libsoup 3, cross-built for OpenOSX (WebKitGTK's network backend)";
     platforms = platforms.linux;
   };
 }

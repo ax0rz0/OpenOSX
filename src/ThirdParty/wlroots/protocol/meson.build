@@ -6,7 +6,7 @@ wayland_protos = dependency('wayland-protocols',
 wl_protocol_dir = wayland_protos.get_variable('pkgdatadir')
 wlr_deps += wayland_protos
 
-# PureDarwin supplies the native scanner as an explicit build dependency.
+# OpenOSX supplies the native scanner as an explicit build dependency.
 wayland_scanner = find_program('wayland-scanner', native: true)
 
 protocols = {

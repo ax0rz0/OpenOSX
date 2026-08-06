@@ -7,7 +7,7 @@
  * A plain command-line -D doesn't survive: Availability.h's own #define
  * runs later (when a header first pulls it in) and unconditionally wins.
  * Force Availability.h to load now, then override its macros for the rest
- * of the translation unit - PureDarwin doesn't do availability checking, so
+ * of the translation unit - OpenOSX doesn't do availability checking, so
  * this is behavior-neutral.
  */
 #ifndef PD_NEUTER_API_AVAILABLE_H

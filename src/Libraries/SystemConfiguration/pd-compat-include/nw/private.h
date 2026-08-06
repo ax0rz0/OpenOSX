@@ -1,6 +1,6 @@
 /*
  * <nw/private.h> is the private header for Apple's libnetwork (the code behind
- * Network.framework), which is not open source. PureDarwin has no libnetwork.
+ * Network.framework), which is not open source. OpenOSX has no libnetwork.
  *
  * Most includers of this header reference nothing from it - ip_plugin.c and
  * nat64-configuration.c's siblings include it out of habit. The sources that

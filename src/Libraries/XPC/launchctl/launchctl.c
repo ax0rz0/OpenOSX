@@ -124,8 +124,8 @@ extern char **environ;
 #define LAUNCH_SECDIR _PATH_TMP "launch-XXXXXX"
 #define LAUNCH_ENV_KEEPCONTEXT	"LaunchKeepContext"
 #define LAUNCH_ENV_BOOTSTRAPPINGSYSTEM "LaunchBootstrappingSystem"
-#define PUREDARWIN_LAUNCHD_DB_DIR LAUNCHD_DB_PREFIX "/org.puredarwin.launchd"
-#define PUREDARWIN_LAUNCHD_OVERRIDES_DB PUREDARWIN_LAUNCHD_DB_DIR "/overrides.plist"
+#define OPENOSX_LAUNCHD_DB_DIR LAUNCHD_DB_PREFIX "/org.openosx.launchd"
+#define OPENOSX_LAUNCHD_OVERRIDES_DB OPENOSX_LAUNCHD_DB_DIR "/overrides.plist"
 
 #define CFTypeCheck(cf, type) (CFGetTypeID(cf) == type ## GetTypeID())
 #define CFReleaseIfNotNULL(cf) if (cf) CFRelease(cf);
@@ -2775,8 +2775,8 @@ load_and_unload_cmd(int argc, char *const argv[])
 		if (_launchctl_system_bootstrap || getenv(LAUNCH_ENV_BOOTSTRAPPINGSYSTEM)) {
 			mkdir(_PATH_VARDB, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
 			mkdir(LAUNCHD_DB_PREFIX, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
-			mkdir(PUREDARWIN_LAUNCHD_DB_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
-			_launchctl_job_overrides_db_path = PUREDARWIN_LAUNCHD_OVERRIDES_DB;
+			mkdir(OPENOSX_LAUNCHD_DB_DIR, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH);
+			_launchctl_job_overrides_db_path = OPENOSX_LAUNCHD_OVERRIDES_DB;
 		} else if (bootstrap_port) {
 			launchctl_log(LOG_ERR, "Could not get location of job overrides database: ppid/bootstrap: %d/0x%x", getppid(), bootstrap_port);
 		}
@@ -2825,7 +2825,7 @@ load_and_unload_cmd(int argc, char *const argv[])
 
 		bool should_glob = true;
 		if (_launchctl_verbose_boot) {
-			launchctl_log(LOG_NOTICE, "PureDarwin bootstrap scanning: %s", nspath);
+			launchctl_log(LOG_NOTICE, "OpenOSX bootstrap scanning: %s", nspath);
 		}
 
 #if TARGET_OS_EMBEDDED
@@ -2890,7 +2890,7 @@ load_and_unload_cmd(int argc, char *const argv[])
 		{ char m[160]; int n = snprintf(m, sizeof(m), "PD-DIAG load_cmd: after distill_jobs count=%u sysbootstrap=%d xpcdomain=%d\n", (unsigned)launch_data_array_get_count(lus.pass1), (int)_launchctl_system_bootstrap, (int)launchctl_use_xpc_domain_bootstrap());
 		  write(2, m, n > 0 ? (size_t)n : 0); }
 		if (_launchctl_verbose_boot) {
-			launchctl_log(LOG_NOTICE, "PureDarwin bootstrap found %zu jobs",
+			launchctl_log(LOG_NOTICE, "OpenOSX bootstrap found %zu jobs",
 					launch_data_array_get_count(lus.pass1));
 		}
 		if ((_launchctl_system_bootstrap || _launchctl_peruser_bootstrap) && launchctl_use_xpc_domain_bootstrap()) {
@@ -2947,7 +2947,7 @@ out:
 bool
 launchctl_use_xpc_domain_bootstrap(void)
 {
-	const char *value = getenv("PUREDARWIN_XPC_DOMAIN_BOOTSTRAP");
+	const char *value = getenv("OPENOSX_XPC_DOMAIN_BOOTSTRAP");
 
 	return value && strcmp(value, "0") != 0;
 }
@@ -3068,12 +3068,12 @@ submit_job_pass(launch_data_t jobs)
 	if (launch_data_array_get_count(jobs) == 0)
 		return;
 
-	launchctl_log(LOG_NOTICE, "PureDarwin launchctl: submit_job_pass count=%zu",
+	launchctl_log(LOG_NOTICE, "OpenOSX launchctl: submit_job_pass count=%zu",
 			launch_data_array_get_count(jobs));
 	for (i = 0; i < launch_data_array_get_count(jobs); i++) {
 		launch_data_t job = launch_data_array_get_index(jobs, i);
 		launch_data_t label = job ? launch_data_dict_lookup(job, LAUNCH_JOBKEY_LABEL) : NULL;
-		launchctl_log(LOG_NOTICE, "PureDarwin launchctl: submit job[%zu]=%s type=%d",
+		launchctl_log(LOG_NOTICE, "OpenOSX launchctl: submit job[%zu]=%s type=%d",
 				i, label ? launch_data_get_string(label) : "(no label)",
 				job ? launch_data_get_type(job) : -1);
 	}
@@ -4462,7 +4462,7 @@ fix_bogus_file_metadata(void)
 		{ "/var/folders", 0, 0, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, S_ISUID | S_ISGID, true },
 		{ LAUNCHD_DB_PREFIX, 0, 0, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, S_IWGRP | S_IWOTH, true },
 		{ LAUNCHD_DB_PREFIX "/com.apple.launchd", 0, 0, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, S_IWGRP | S_IWOTH, true },
-		{ PUREDARWIN_LAUNCHD_DB_DIR, 0, 0, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, S_IWGRP | S_IWOTH, true },
+		{ OPENOSX_LAUNCHD_DB_DIR, 0, 0, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, S_IWGRP | S_IWOTH, true },
 		// Fixing <rdar://problem/7571633>.
 		{ _PATH_VARDB, 0, 0, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, S_IWGRP | S_IWOTH | S_ISUID | S_ISGID, true },
 		{ _PATH_VARDB "mds/", 0, 0, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH, S_IWGRP | S_IWOTH | S_ISUID | S_ISGID, true },

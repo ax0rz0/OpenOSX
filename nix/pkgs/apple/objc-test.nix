@@ -43,7 +43,7 @@ let
   '';
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-objc-test";
+  pname = "openosx-objc-test";
   version = "1";
 
   dontUnpack = true;

@@ -1,5 +1,5 @@
 /*
- * Minimal PureDarwin os/log_private.h compatibility shim.
+ * Minimal OpenOSX os/log_private.h compatibility shim.
  *
  * Libc's os_crash() formatting path only needs the packed-log type and helpers
  * at build time. Full libtrace/os_log is not present in this tree yet, so make a

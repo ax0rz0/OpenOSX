@@ -9,7 +9,7 @@
     <key>CFBundleGetInfoString</key>
     <string>1.0.0, Copyright (C) 2026 PureDarwin Project. All rights reserved.</string>
     <key>CFBundleIdentifier</key>
-    <string>org.puredarwin.driver.PDE1000</string>
+    <string>org.openosx.driver.PDE1000</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
@@ -27,7 +27,7 @@
         <key>PDE1000</key>
         <dict>
             <key>CFBundleIdentifier</key>
-            <string>org.puredarwin.driver.PDE1000</string>
+            <string>org.openosx.driver.PDE1000</string>
             <key>IOClass</key>
             <string>PDE1000</string>
             <key>IOPCIPrimaryMatch</key>
