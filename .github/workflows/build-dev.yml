@@ -1,0 +1,50 @@
+name: OpenOSX Dev Build
+
+on:
+  push:
+    branches: [openosx-dev]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Clone
+        uses: actions/checkout@v4
+
+      - name: Install packages
+        run: |
+          export HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
+          brew install openssl@3 ninja
+
+      - name: Configure
+        run: |
+          mkdir build && cd build
+          cmake -G Ninja -DKERNEL_BUILD_XNU=1 -DOPENSSL_ROOT_DIR="$(brew --prefix openssl@3)" .. 2>&1 | tee ../configure.log
+
+      - name: Build
+        run: |
+          cd build
+          ninja -k 0 2>&1 | tee ../build.log
+
+      - name: Collect artifacts
+        if: always()
+        run: |
+          mkdir -p out
+          cp configure.log build.log out/ 2>/dev/null || true
+          find build -type f -name 'kernel*' -not -path '*CMakeFiles*' -not -name '*.o' -exec cp {} out/ \; 2>/dev/null || true
+          find build -type d -name '*.kext' -not -path '*CMakeFiles*' | while read -r k; do
+            tar -C "$(dirname "$k")" -czf "out/$(basename "$k").tgz" "$(basename "$k")"
+          done
+          find build -maxdepth 5 -type f -name '*.dylib' -not -path '*CMakeFiles*' -exec cp {} out/ \; 2>/dev/null || true
+          echo "=== Artifact inventory ==="
+          ls -la out/
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: openosx-build-${{ github.run_number }}
+          path: out/
+          retention-days: 14
