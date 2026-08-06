@@ -3,7 +3,7 @@ function(add_darwin_executable name)
 
     add_executable(${name})
     add_dependencies(${name} host_ld)
-    target_compile_definitions(${name} PRIVATE __PUREDARWIN__)
+    target_compile_definitions(${name} PRIVATE __OPENOSX__)
     target_link_options(${name} PRIVATE -fuse-ld=$<TARGET_FILE:host_ld>)
 
     if(NOT SL_USE_HOST_SDK)
@@ -28,7 +28,7 @@ function(add_darwin_static_library name)
 
     add_library(${name} STATIC)
     add_dependencies(${name} host_libtool)
-    target_compile_definitions(${name} PRIVATE __PUREDARWIN__)
+    target_compile_definitions(${name} PRIVATE __OPENOSX__)
 
     if(SL_MACOSX_VERSION_MIN)
         set_property(TARGET ${name} PROPERTY CMAKE_OSX_DEPLOYMENT_TARGET ${SL_MACOSX_VERSION_MIN})
@@ -55,7 +55,7 @@ function(add_darwin_shared_library name)
 
     add_dependencies(${name} host_ld)
     target_link_options(${name} PRIVATE -fuse-ld=$<TARGET_FILE:host_ld>)
-    target_compile_definitions(${name} PRIVATE __PUREDARWIN__)
+    target_compile_definitions(${name} PRIVATE __OPENOSX__)
 
     string(SUBSTRING ${name} 0 3 name_prefix)
     if(name_prefix STREQUAL "lib")
@@ -102,7 +102,7 @@ function(add_darwin_object_library name)
 
     add_library(${name} OBJECT)
     set_property(TARGET ${name} PROPERTY LINKER_LANGUAGE C)
-    target_compile_definitions(${name} PRIVATE __PUREDARWIN__)
+    target_compile_definitions(${name} PRIVATE __OPENOSX__)
 
     if(SL_MACOSX_VERSION_MIN)
         set_property(TARGET ${name} PROPERTY CMAKE_OSX_DEPLOYMENT_TARGET ${SL_MACOSX_VERSION_MIN})

@@ -27,7 +27,7 @@
 #if defined(KERNEL)
 
 // FIXME: Revert this once we have IOACPIFamily
-#if (defined(__i386__) || defined(__x86_64__)) && !defined(__PUREDARWIN__)
+#if (defined(__i386__) || defined(__x86_64__)) && !defined(__OPENOSX__)
 #define ACPI_SUPPORT            1
 #else
 #define ACPI_SUPPORT            0
