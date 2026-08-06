@@ -17,10 +17,10 @@ OpenOSX is a successor to [PureDarwin](https://github.com/PureDarwin/PureDarwin)
 ([puredarwin.org](https://www.puredarwin.org)), the community project that kept
 the dream of a usable standalone Darwin alive after OpenDarwin, and before that
 to Apple's own open-source Darwin releases. Substantial portions of this tree
-were authored by the PureDarwin developers and by Apple; see
+were authored by the OpenOSX developers and by Apple; see
 [PUREDARWIN_LICENSE.txt](PUREDARWIN_LICENSE.txt), [APPLE_LICENSE.txt](APPLE_LICENSE.txt),
 [APPLE_DRIVER_LICENSE.txt](APPLE_DRIVER_LICENSE.txt), and
-[docs/PUREDARWIN_ATTRIBUTION.md](docs/PUREDARWIN_ATTRIBUTION.md). We are
+[docs/OPENOSX_ATTRIBUTION.md](docs/OPENOSX_ATTRIBUTION.md). We are
 grateful to both.
 
 ## Building OpenOSX
@@ -63,6 +63,6 @@ A classic CMake build of individual components on macOS also works; see
 Code inherited from Apple is under the
 [Apple Public Source License](APPLE_LICENSE.txt) (drivers:
 [APPLE_DRIVER_LICENSE.txt](APPLE_DRIVER_LICENSE.txt)). Code authored by the
-PureDarwin project is under the [PureDarwin license](PUREDARWIN_LICENSE.txt).
-New OpenOSX code is under the same terms as the PureDarwin license unless
+OpenOSX project is under the [OpenOSX license](PUREDARWIN_LICENSE.txt).
+New OpenOSX code is under the same terms as the OpenOSX license unless
 noted otherwise.
