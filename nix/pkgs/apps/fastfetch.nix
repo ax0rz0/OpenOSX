@@ -186,7 +186,7 @@ VEREOF
     // OpenOSX
     {
         .names = { "openosx" },
-        .lines = FASTFETCH_DATATEXT_LOGO_PUREDARWIN,
+        .lines = FASTFETCH_DATATEXT_LOGO_OPENOSX,
         .colors = {
             FF_COLOR_FG_RED,
             FF_COLOR_FG_DEFAULT,
