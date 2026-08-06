@@ -1,6 +1,6 @@
 # OpenOSX Engineering Roadmap
 
-**Revision 2 — next-base.** OpenOSX is based on upstream PureDarwin's `next`
+**Revision 2 — next-base.** OpenOSX is based on upstream OpenOSX's `next`
 branch, which already builds a bootable image (kernel, kexts, launchd, shell,
 X11/Wayland, XFCE) entirely from open source via the Nix flake, on Linux or
 macOS. The original bring-up roadmap (rev 1, on the `openosx-dev` branch)
@@ -18,7 +18,7 @@ rebranding, hardening, and extension.
   the serial log for the Darwin banner / launchd / panic signatures.
 - The deep rename is replayable after upstream syncs: `perl tools/rename-openosx.pl`
   (guards: copyright lines, license files/markers, `github:PureDarwin` inputs,
-  vendored subtrees). See `docs/PUREDARWIN_ATTRIBUTION.md`.
+  vendored subtrees). See `docs/OPENOSX_ATTRIBUTION.md`.
 
 ## Near-term
 
@@ -61,4 +61,4 @@ cannot be linked into kexts):
 
 - Real ACPI platform expert on x86 (upstream PDACPIPlatform) where applicable.
 - Audio (RavynHDAudio in-tree) validation.
-- Upstream sync cadence: merge `PureDarwin/next` regularly + re-run rename.
+- Upstream sync cadence: merge `OpenOSX/next` regularly + re-run rename.
