@@ -464,7 +464,7 @@ typedef struct dispatch_queue_specific_head_s {
 #define DISPATCH_WORKLOOP_ATTR_NEEDS_DESTROY  0x0010u
 #define DISPATCH_WORKLOOP_ATTR_HAS_OBSERVERS  0x0020u
 /*
- * PureDarwin: relocated up from further down in this file (was defined
+ * OpenOSX: relocated up from further down in this file (was defined
  * after its first use in dispatch_workloop_attr_s below - a genuine
  * forward-reference ordering issue in this vendored source snapshot).
  */

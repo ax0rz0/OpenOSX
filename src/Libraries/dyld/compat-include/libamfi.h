@@ -1,14 +1,14 @@
 /*
- * libamfi.h  (PureDarwin stub)
+ * libamfi.h  (OpenOSX stub)
  *
  * dyld2.cpp includes <libamfi.h> on non-simulator builds for the AMFI
- * (AppleMobileFileIntegrity) dyld-policy interface. PureDarwin has no AMFI, so
+ * (AppleMobileFileIntegrity) dyld-policy interface. OpenOSX has no AMFI, so
  * we provide the minimal declarations dyld needs -- identical to the ones dyld
  * declares inline on its TARGET_OS_SIMULATOR path. The amfi_check_dyld_policy_self
- * symbol must be furnished at link time (a permissive PureDarwin stub).
+ * symbol must be furnished at link time (a permissive OpenOSX stub).
  */
-#ifndef PUREDARWIN_LIBAMFI_STUB_H
-#define PUREDARWIN_LIBAMFI_STUB_H
+#ifndef OPENOSX_LIBAMFI_STUB_H
+#define OPENOSX_LIBAMFI_STUB_H
 
 #include <stdint.h>
 
@@ -33,4 +33,4 @@ extern "C"
 #endif
 int amfi_check_dyld_policy_self(uint64_t input_flags, uint64_t* output_flags);
 
-#endif /* PUREDARWIN_LIBAMFI_STUB_H */
+#endif /* OPENOSX_LIBAMFI_STUB_H */

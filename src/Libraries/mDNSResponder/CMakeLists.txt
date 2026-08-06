@@ -11,7 +11,7 @@ target_include_directories(mDNSResponder_dnssd_static PUBLIC
 )
 
 target_compile_definitions(mDNSResponder_dnssd_static PRIVATE
-    __PUREDARWIN__
+    __OPENOSX__
     # cdefs.h's generated libc-features.h #errors out unless this matches what
     # libc_static itself was compiled with (see libc/CMakeLists.txt).
     __DARWIN_ONLY_UNIX_CONFORMANCE=1
@@ -33,7 +33,7 @@ target_include_directories(mDNSResponder_dnssd_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libplatform/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libplatform/private
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libdispatch
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
 )
 
 target_link_libraries(mDNSResponder_dnssd_static PRIVATE

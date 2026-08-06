@@ -21,7 +21,7 @@
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>PureDarwin Project</string>
+	<string>OpenOSX Project</string>
 	<key>IOKitPersonalities</key>
 	<dict>
 		<key>com.apple.filesystems.ext4</key>

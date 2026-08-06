@@ -9089,7 +9089,7 @@ job_mig_check_in2(job_t j, name_t servicename, mach_port_t *serviceportp, uuid_t
 
 			if (strcmp(servicename, "com.apple.logd") == 0) {
 				launchd_syslog(LOG_NOTICE | LOG_CONSOLE,
-						"PureDarwin launchd: check_in(%s) denied caller_job=%s owner_job=%s pid=%d",
+						"OpenOSX launchd: check_in(%s) denied caller_job=%s owner_job=%s pid=%d",
 						servicename, j ? j->label : "(null)", jo ? jo->label : "(null)", ldc ? ldc->pid : -1);
 			}
 
@@ -9104,7 +9104,7 @@ owner_checkin:
 		if (unlikely(machservice_active(ms))) {
 			if (strcmp(servicename, "com.apple.logd") == 0) {
 				launchd_syslog(LOG_NOTICE | LOG_CONSOLE,
-						"PureDarwin launchd: check_in(%s) active caller_job=%s pid=%d",
+						"OpenOSX launchd: check_in(%s) active caller_job=%s pid=%d",
 						servicename, j ? j->label : "(null)", ldc ? ldc->pid : -1);
 			}
 			job_log(j, LOG_WARNING, "Check-in of Mach service failed. Already active: %s", servicename);

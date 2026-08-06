@@ -60,7 +60,7 @@
 #include <os/lock_private.h>
 #include <System/machine/cpu_capabilities.h>
 #include <System/sys/reason.h>
-// #include <kern/kcdata.h>  // PureDarwin: unused here, and this XNU kernel
+// #include <kern/kcdata.h>  // OpenOSX: unused here, and this XNU kernel
 // header uses strnlen() before <string.h>; dropped (we build KCs ourselves).
 #include <sys/attr.h>
 #include <sys/fsgetpath.h>
@@ -6488,9 +6488,9 @@ static ClosureMode getPlatformDefaultClosureMode() {
 #endif // TARGET_OS_OSX
 }
 
-// PureDarwin: inDenyList() is referenced but never defined in the opensource
+// OpenOSX: inDenyList() is referenced but never defined in the opensource
 // dyld-832 drop (Apple defines it in an unpublished internal source file). It
-// gates forcing dyld2 for launch-closure-denylisted paths; PureDarwin has no
+// gates forcing dyld2 for launch-closure-denylisted paths; OpenOSX has no
 // such denylist, so it is always false.
 static bool inDenyList(const char* path) { return false; }
 

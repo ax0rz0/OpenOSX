@@ -53,7 +53,7 @@ set_source_files_properties(${DYLD_SRC_DIR}/src/dyld_stub_binder.s PROPERTIES
     LANGUAGE ASM COMPILE_FLAGS "-x assembler-with-cpp")
 
 set(_pd_cpu_caps_redirect ${CMAKE_CURRENT_BINARY_DIR}/compat-include/System/machine/cpu_capabilities.h)
-if(PUREDARWIN_ARM64)
+if(OPENOSX_ARM64)
     set(_pd_cpu_caps_real ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/osfmk/arm/cpu_capabilities.h)
 else()
     set(_pd_cpu_caps_real ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/osfmk/i386/cpu_capabilities.h)
@@ -103,8 +103,8 @@ endif()
 target_compile_options(libdyld PRIVATE
     -mno-red-zone -fno-stack-protector
     $<$<COMPILE_LANGUAGE:CXX>:-std=c++17;-fno-rtti>
-    $<$<COMPILE_LANGUAGE:C>:-isysroot ${PUREDARWIN_MACOSX_SDK}>
-    $<$<COMPILE_LANGUAGE:CXX>:-isysroot ${PUREDARWIN_MACOSX_SDK}>
+    $<$<COMPILE_LANGUAGE:C>:-isysroot ${OPENOSX_MACOSX_SDK}>
+    $<$<COMPILE_LANGUAGE:CXX>:-isysroot ${OPENOSX_MACOSX_SDK}>
     # bridgeos availability shim: threadLocalVariables.c pulls mach-o/dyld.h,
     # whose bridgeos __API_UNAVAILABLE entries neither the SDK nor PD define
     # (same fix dyld's own CMakeLists applies via dyld_sdk_compat.h).
@@ -134,7 +134,7 @@ target_link_libraries(libdyld PRIVATE
     $<TARGET_FILE:libcxx_static>)
 
 target_link_options(libdyld PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -compatibility_version 1.0.0
     -current_version 1292.100.5
     -Wl,-dead_strip

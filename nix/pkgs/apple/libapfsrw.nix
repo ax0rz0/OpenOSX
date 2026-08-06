@@ -17,7 +17,7 @@ stdenv.mkDerivation {
   ];
 
   meta = with lib; {
-    description = "PureDarwin userspace APFS image read/write library and tool";
+    description = "OpenOSX userspace APFS image read/write library and tool";
     platforms = platforms.unix;
   };
 }

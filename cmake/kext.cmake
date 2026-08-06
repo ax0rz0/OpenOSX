@@ -21,7 +21,7 @@ function(add_kext_bundle name)
     # The XNU kernel proper is built with -mno-red-zone; kexts must match.
     # The red zone is an x86-64 SysV ABI feature; -mno-red-zone is x86-only
     # (clang rejects it on arm64, which has no red zone to disable).
-    if(NOT PUREDARWIN_ARM64)
+    if(NOT OPENOSX_ARM64)
         target_compile_options(${name} PRIVATE -mno-red-zone)
     endif()
 
@@ -98,7 +98,7 @@ function(add_kmod_info target)
         set(KEXT_ANTIMAIN_FUNCTION "0")
     endif()
 
-    configure_file(${PUREDARWIN_SOURCE_DIR}/cmake/templates/kmod_info.c.in ${CMAKE_CURRENT_BINARY_DIR}/kmod_info.c)
+    configure_file(${OPENOSX_SOURCE_DIR}/cmake/templates/kmod_info.c.in ${CMAKE_CURRENT_BINARY_DIR}/kmod_info.c)
     target_sources(${target} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/kmod_info.c)
     target_link_libraries(${target} PRIVATE libkmod)
 endfunction()

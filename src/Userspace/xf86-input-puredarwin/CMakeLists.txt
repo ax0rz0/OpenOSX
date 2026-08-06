@@ -1,5 +1,5 @@
-if(NOT PUREDARWIN_XORG_INCLUDE_DIRS)
-    message(STATUS "xf86-input-puredarwin: PUREDARWIN_XORG_INCLUDE_DIRS not set, skipping Xorg input driver")
+if(NOT OPENOSX_XORG_INCLUDE_DIRS)
+    message(STATUS "xf86-input-openosx: OPENOSX_XORG_INCLUDE_DIRS not set, skipping Xorg input driver")
     return()
 endif()
 
@@ -29,7 +29,7 @@ if(_opts)
 endif()
 
 target_compile_options(puredarwininput_drv PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -fno-builtin
     -fno-stack-protector
 )
@@ -44,7 +44,7 @@ target_compile_definitions(puredarwininput_drv PRIVATE
 )
 
 target_include_directories(puredarwininput_drv PRIVATE
-    ${PUREDARWIN_XORG_INCLUDE_DIRS}
+    ${OPENOSX_XORG_INCLUDE_DIRS}
 )
 
 if(NOT TARGET migcom AND DEFINED ENV{NIX_MIGCOM_PATH})

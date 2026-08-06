@@ -5,7 +5,7 @@
 }:
 
 stdenv.mkDerivation {
-  pname = "puredarwin-meson";
+  pname = "openosx-meson";
   inherit (meson) version src;
 
   dontConfigure = true;
@@ -31,7 +31,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "Meson build system, running under PureDarwin's CPython";
+    description = "Meson build system, running under OpenOSX's CPython";
     homepage = "https://mesonbuild.com/";
     license = licenses.asl20;
     platforms = platforms.linux;

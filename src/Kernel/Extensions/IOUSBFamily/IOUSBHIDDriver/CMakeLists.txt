@@ -1,5 +1,5 @@
 add_kext_bundle(IOUSBHIDDriver.kext KERNEL_PRIVATE INFO_PLIST Info.plist
-    BUNDLE_IDENTIFIER org.puredarwin.driver.IOUSBHIDDriver BUNDLE_VERSION 1.0.0)
+    BUNDLE_IDENTIFIER org.openosx.driver.IOUSBHIDDriver BUNDLE_VERSION 1.0.0)
 set_property(TARGET IOUSBHIDDriver.kext PROPERTY OUTPUT_NAME IOUSBHIDDriver)
 
 target_sources(IOUSBHIDDriver.kext PRIVATE

@@ -1,5 +1,5 @@
 /*
- * PureDarwin console login helper.
+ * OpenOSX console login helper.
  *
  * launchd opens StandardInPath with O_NOCTTY, so a direct /bin/zsh
  * LaunchDaemon has file descriptors for /dev/console but no controlling tty.

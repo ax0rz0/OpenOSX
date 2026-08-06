@@ -26,7 +26,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-wayland";
+  pname = "openosx-wayland";
   version = "1.25.0";
   inherit src;
 
@@ -40,7 +40,7 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
@@ -65,7 +65,7 @@ EOF
     export PKG_CONFIG_PATH="${waylandScanner}/lib/pkgconfig:${libffi}/lib/pkgconfig"
     export PKG_CONFIG_PATH_FOR_BUILD="${waylandScanner}/lib/pkgconfig"
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
@@ -95,7 +95,7 @@ EOF
   dontStrip = true;
 
   meta = with lib; {
-    description = "Wayland client and server libraries cross-built for PureDarwin";
+    description = "Wayland client and server libraries cross-built for OpenOSX";
     homepage = "https://wayland.freedesktop.org/";
     license = licenses.mit;
     platforms = platforms.linux;

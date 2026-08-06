@@ -3,7 +3,7 @@
 }:
 
 stdenv.mkDerivation {
-  pname = "puredarwin-unifdef-native";
+  pname = "openosx-unifdef-native";
   version = "0.1";
 
   src = lib.fileset.toSource {
@@ -27,7 +27,7 @@ stdenv.mkDerivation {
   '';
 
   meta = with lib; {
-    description = "Native ELF build of PureDarwin's tools/unifdef, for use as a build-time host tool";
+    description = "Native ELF build of OpenOSX's tools/unifdef, for use as a build-time host tool";
     platforms = platforms.linux;
   };
 }

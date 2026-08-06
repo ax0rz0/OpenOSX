@@ -11,7 +11,7 @@ target_sources(ext4tool PRIVATE
 )
 
 target_compile_options(ext4tool PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -fno-builtin
     -fno-stack-protector
 )

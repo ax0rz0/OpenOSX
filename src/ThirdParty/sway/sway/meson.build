@@ -219,7 +219,7 @@ sway_sources = files(
 )
 
 if host_machine.system() == 'darwin'
-	sway_sources += files('../puredarwin/libevdev.c')
+	sway_sources += files('../openosx/libevdev.c')
 endif
 
 sway_deps = [

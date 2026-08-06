@@ -21,7 +21,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-file";
+  pname = "openosx-file";
   inherit (file) version;
   src = file.src;
 

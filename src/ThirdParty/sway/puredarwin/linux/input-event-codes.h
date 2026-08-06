@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
-#ifndef PUREDARWIN_INPUT_EVENT_CODES_H
-#define PUREDARWIN_INPUT_EVENT_CODES_H
+#ifndef OPENOSX_INPUT_EVENT_CODES_H
+#define OPENOSX_INPUT_EVENT_CODES_H
 
 #include <libevdev/libevdev.h>
 

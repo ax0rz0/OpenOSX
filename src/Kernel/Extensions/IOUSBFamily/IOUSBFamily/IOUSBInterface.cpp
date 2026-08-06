@@ -1,5 +1,5 @@
 /*
- * IOUSBInterface.cpp - PureDarwin reconstruction (Apple's original was 0
+ * IOUSBInterface.cpp - OpenOSX reconstruction (Apple's original was 0
  * bytes; only IOUSBInterface.h survived). Implements withDescriptors/init,
  * property publishing (so IOKit personality matching on interface class/
  * subclass/protocol/vendor/product works), and FindNextPipe/GetPipeObj

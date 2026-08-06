@@ -27,7 +27,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-corefoundation";
+  pname = "openosx-corefoundation";
   version = "1338";
 
   inherit src;
@@ -108,7 +108,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "PureDarwin CoreFoundation (from apple/swift-corelibs-foundation), cross-built as a real dylib";
+    description = "OpenOSX CoreFoundation (from apple/swift-corelibs-foundation), cross-built as a real dylib";
     platforms = platforms.linux;
   };
 }

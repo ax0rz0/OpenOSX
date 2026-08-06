@@ -20,7 +20,7 @@ if(CMAKE_HOST_APPLE AND NOT CMAKE_CROSSCOMPILING)
 
     find_program(_real_clang NAMES clang REQUIRED)
 
-    set(_target_flags -arch "${PUREDARWIN_ARCH}")
+    set(_target_flags -arch "${OPENOSX_ARCH}")
 else()
     # osxcross tools normally look like:
     #   x86_64-apple-darwin20.4-ar
@@ -38,7 +38,7 @@ else()
         set(_sdk "$ENV{OSXCROSS_SDK}")
     endif()
     if(NOT _sdk)
-        set(_sdk "${PUREDARWIN_MACOSX_SDK}")
+        set(_sdk "${OPENOSX_MACOSX_SDK}")
     endif()
 
     set(_real_clang "${_toolchain_bin}/${_triple}-clang")
@@ -78,11 +78,11 @@ set(_abi_flags
 # be a plain -I, ahead of it), while osxcross's from-source clang build
 # puts its bundled libc/stdint headers ahead of everything, even beyond an
 # explicit -idirafter (so ours must be -idirafter, or it shadows them and
-# math.h/stdint.h contents go missing). PUREDARWIN_NIX_TOOLCHAIN (set by
+# math.h/stdint.h contents go missing). OPENOSX_NIX_TOOLCHAIN (set by
 # cmake/nix-toolchain.cmake) is a thin wrapper around vanilla nixpkgs
 # clang, which follows ordinary -idirafter semantics (always dead last) -
 # same as real Apple clang here, not osxcross's inverted ordering.
-if((CMAKE_HOST_APPLE AND NOT CMAKE_CROSSCOMPILING) OR PUREDARWIN_NIX_TOOLCHAIN)
+if((CMAKE_HOST_APPLE AND NOT CMAKE_CROSSCOMPILING) OR OPENOSX_NIX_TOOLCHAIN)
     list(APPEND _abi_flags -I ${_libcxx}/include)
 else()
     list(APPEND _abi_flags -idirafter ${_libcxx}/include)
@@ -160,7 +160,7 @@ set(_uw_flags
     -D_LIBUNWIND_BUILDING_LIBUNWIND=1
 )
 # See the matching comment on _abi_flags above for why this is conditional.
-if((CMAKE_HOST_APPLE AND NOT CMAKE_CROSSCOMPILING) OR PUREDARWIN_NIX_TOOLCHAIN)
+if((CMAKE_HOST_APPLE AND NOT CMAKE_CROSSCOMPILING) OR OPENOSX_NIX_TOOLCHAIN)
     list(APPEND _uw_flags -I ${_libcxx}/include)
 else()
     list(APPEND _uw_flags -idirafter ${_libcxx}/include)

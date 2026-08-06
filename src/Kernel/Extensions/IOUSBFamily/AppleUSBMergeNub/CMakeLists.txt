@@ -2,7 +2,7 @@
 # Info.plist) - built to confirm it compiles cleanly against our
 # IOUSBFamily reconstruction, not currently instantiated by anything.
 add_kext_bundle(AppleUSBMergeNub.kext INFO_PLIST Info.plist KERNEL_PRIVATE
-    BUNDLE_IDENTIFIER org.puredarwin.driver.AppleUSBMergeNub BUNDLE_VERSION 1.0.0)
+    BUNDLE_IDENTIFIER org.openosx.driver.AppleUSBMergeNub BUNDLE_VERSION 1.0.0)
 set_property(TARGET AppleUSBMergeNub.kext PROPERTY OUTPUT_NAME AppleUSBMergeNub)
 
 target_sources(AppleUSBMergeNub.kext PRIVATE

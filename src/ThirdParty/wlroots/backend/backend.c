@@ -33,7 +33,7 @@
 #endif
 
 #if WLR_HAS_PUREDARWIN_BACKEND
-#include <wlr/backend/puredarwin.h>
+#include <wlr/backend/openosx.h>
 #endif
 
 #define WAIT_SESSION_TIMEOUT 10000 // ms
@@ -301,11 +301,11 @@ static bool attempt_backend_by_name(struct wl_event_loop *loop,
 		backend = attempt_x11_backend(loop, NULL);
 	} else if (strcmp(name, "headless") == 0) {
 		backend = attempt_headless_backend(loop);
-	} else if (strcmp(name, "puredarwin") == 0) {
+	} else if (strcmp(name, "openosx") == 0) {
 #if WLR_HAS_PUREDARWIN_BACKEND
 		backend = wlr_puredarwin_backend_create(loop);
 #else
-		wlr_log(WLR_ERROR, "Cannot create PureDarwin backend: disabled at compile-time");
+		wlr_log(WLR_ERROR, "Cannot create OpenOSX backend: disabled at compile-time");
 		return false;
 #endif
 	} else if (strcmp(name, "drm") == 0 || strcmp(name, "libinput") == 0) {

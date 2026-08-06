@@ -9,7 +9,7 @@ function(add_text_cmd name)
 
     target_sources(${name} PRIVATE ${ARGN})
     target_compile_options(${name} PRIVATE
-        -isysroot ${PUREDARWIN_MACOSX_SDK}
+        -isysroot ${OPENOSX_MACOSX_SDK}
         -fno-builtin
         -fno-stack-protector
     )

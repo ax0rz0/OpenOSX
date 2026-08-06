@@ -39,7 +39,7 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-foundation";
+  pname = "openosx-foundation";
   version = "1";
 
   inherit src;
@@ -68,7 +68,7 @@ stdenv.mkDerivation {
     mkdir -p cf-headers
     ln -s ${corefoundation}/include cf-headers/CoreFoundation
 
-    CFLAGS="-x objective-c -fno-objc-arc -fPIC -Os -DNDEBUG -D__PUREDARWIN__=1 \
+    CFLAGS="-x objective-c -fno-objc-arc -fPIC -Os -DNDEBUG -D__OPENOSX__=1 \
       -DDEPLOYMENT_RUNTIME_OBJC=1 -DINCLUDE_OBJC=1 \
       -isysroot $DARWIN_SDK_ROOT \
       -Ifoundation-headers \
@@ -107,7 +107,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "PureDarwin Foundation (NSString/NSCFString real toll-free bridge slice), cross-built as /usr/lib/libFoundation.dylib";
+    description = "OpenOSX Foundation (NSString/NSCFString real toll-free bridge slice), cross-built as /usr/lib/libFoundation.dylib";
     platforms = platforms.linux;
   };
 }

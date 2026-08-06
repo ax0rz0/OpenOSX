@@ -20,7 +20,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-icucore";
+  pname = "openosx-icucore";
   version = "76.1";
 
   src = icuSrc;

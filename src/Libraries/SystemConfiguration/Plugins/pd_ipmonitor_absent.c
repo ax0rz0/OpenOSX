@@ -1,6 +1,6 @@
 /*
  * Entry points for the four IPMonitor features that cannot be built here, each
- * left out for a dependency PureDarwin does not have. ip_plugin.c calls all of
+ * left out for a dependency OpenOSX does not have. ip_plugin.c calls all of
  * them unconditionally, so they have to resolve; every one below does nothing,
  * and the specific capability that is therefore missing is named.
  *
@@ -13,7 +13,7 @@
  *
  *   smb-configuration.c   needs <smb_server_prefs.h> from Apple's smb project.
  *                         Effect: no NetBIOS name or workgroup is computed.
- *                         Nothing in PureDarwin serves SMB.
+ *                         Nothing in OpenOSX serves SMB.
  *
  *   nat64-configuration.c uses the nw_* object API from libnetwork. Effect: no
  *                         NAT64 prefix discovery, so IPv6-only networks that

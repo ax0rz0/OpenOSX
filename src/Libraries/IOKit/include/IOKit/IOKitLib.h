@@ -1,5 +1,5 @@
 /*
- * PureDarwin's small userspace IOKit client surface.
+ * OpenOSX's small userspace IOKit client surface.
  *
  * This intentionally avoids CoreFoundation so early userspace and simple X
  * drivers can talk to the kernel's real IOKit MIG interface before the full

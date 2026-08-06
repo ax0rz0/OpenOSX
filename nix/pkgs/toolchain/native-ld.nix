@@ -55,7 +55,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-native-ld";
+  pname = "openosx-native-ld";
   version = "0.1";
 
   src = nativeLdSource;
@@ -95,7 +95,7 @@ EOF
 
     cat > CMakeLists.txt <<'EOF'
 cmake_minimum_required(VERSION 3.15.1)
-project(PUREDARWIN_NATIVE_LD)
+project(OPENOSX_NATIVE_LD)
 
 include(cmake/suppress_warnings.cmake)
 add_compile_options(-Wno-return-type -Wno-error=cpp -Wno-nullability-completeness)
@@ -159,7 +159,7 @@ EOF
   '';
 
   meta = with lib; {
-    description = "Apple's cctools ld64, built for linking PureDarwin (host and target)";
+    description = "Apple's cctools ld64, built for linking OpenOSX (host and target)";
     platforms = platforms.linux;
   };
 }

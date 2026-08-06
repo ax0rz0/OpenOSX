@@ -1,5 +1,5 @@
 /*
- * PureDarwin: real xpc_event_publisher_* is Apple's private XPC event
+ * OpenOSX: real xpc_event_publisher_* is Apple's private XPC event
  * streaming/matching API - never open-sourced anywhere
  *
  * The XPC_EVENT_PUBLISHER_ACTION_INITIAL_BARRIER handler is

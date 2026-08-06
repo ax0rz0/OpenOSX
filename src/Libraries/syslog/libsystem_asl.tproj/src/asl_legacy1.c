@@ -28,7 +28,7 @@
 #include <sys/stat.h>
 #include <sys/errno.h>
 #include <string.h>
-#if !defined(PUREDARWIN_ASL_NO_ACL)
+#if !defined(OPENOSX_ASL_NO_ACL)
 #include <membership.h>
 #endif
 #include <mach/mach.h>

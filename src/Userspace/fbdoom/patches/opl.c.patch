@@ -64,7 +64,7 @@
 +//
 +// The stock implementation schedules a callback and blocks on an SDL
 +// condvar until the (separate) audio thread renders far enough to fire
-+// it. PureDarwin's driver is single-threaded pull - there is no audio
++// it. OpenOSX's driver is single-threaded pull - there is no audio
 +// thread to make progress while we block, so instead the driver advances
 +// the emulated clock synchronously (rendering into a scratch buffer and
 +// firing any due callbacks along the way).

@@ -1,5 +1,5 @@
 /*
- * PureDarwin: os/trace_private.h itself now lives at compat/os/trace_private.h
+ * OpenOSX: os/trace_private.h itself now lives at compat/os/trace_private.h
  * (a real includable file, since notifyd.c has its own #include for it)
  */
 #ifndef PD_NOTIFYD_COMPAT_H
@@ -15,7 +15,7 @@ xpc_copy_entitlement_for_token(const char *key, void *token)
 }
 
 /*
- * PureDarwin: real Apple private XPC event streaming/matching API - see
+ * OpenOSX: real Apple private XPC event streaming/matching API - see
  * pd_xpc_event_publisher.c for why these are implemented there (not a
  * pure stub - the INITIAL_BARRIER action drives notifyd's real Mach
  * channel connection).

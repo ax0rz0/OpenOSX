@@ -1,7 +1,7 @@
 /*
  * ext4.h - ext2/3/4 on-disk format + in-core structures
  *
- * Read-write ext4 driver for PureDarwin/XNU. Handles extent-based inodes,
+ * Read-write ext4 driver for OpenOSX/XNU. Handles extent-based inodes,
  * 32- and 64-bit block numbers, and now maintains metadata checksums
  * (metadata_csum / uninit_bg) and initializes uninitialized block/inode
  * groups on demand (see ext4_csum.c), so filesystems from a stock

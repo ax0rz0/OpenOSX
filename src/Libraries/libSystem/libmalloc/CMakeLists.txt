@@ -27,7 +27,7 @@ add_library(libmalloc_static STATIC EXCLUDE_FROM_ALL
     src/msl_lite_support.c
 )
 
-set_property(TARGET libmalloc_static PROPERTY OSX_ARCHITECTURES "${PUREDARWIN_ARCH}")
+set_property(TARGET libmalloc_static PROPERTY OSX_ARCHITECTURES "${OPENOSX_ARCH}")
 
 target_compile_definitions(libmalloc_static PRIVATE
     MALLOC_TARGET_EXCLAVES=0
@@ -51,8 +51,8 @@ target_include_directories(libmalloc_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../libplatform/private
     ${CMAKE_CURRENT_SOURCE_DIR}/../libplatform/include
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/libkern
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/osfmk
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/bsd)
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/osfmk
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/bsd)
 
 target_link_libraries(libmalloc_static PRIVATE
     AvailabilityHeaders
@@ -67,7 +67,7 @@ target_link_libraries(libmalloc_static PRIVATE
 
 target_compile_options(libmalloc_static PRIVATE
     -mno-red-zone -fno-stack-protector
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -Wno-availability
     # bridgeos availability shim + PD SDK compat (reuse the existing ones).
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../libplatform/pd_bridgeos_compat.h>

@@ -21,7 +21,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-ioreg";
+  pname = "openosx-ioreg";
   version = "0.1";
 
   src = ../../../src/Userspace/ioreg;

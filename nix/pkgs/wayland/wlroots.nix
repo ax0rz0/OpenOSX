@@ -42,7 +42,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-wlroots";
+  pname = "openosx-wlroots";
   version = "0.20.1";
   inherit src;
 
@@ -50,7 +50,7 @@ stdenv.mkDerivation {
   buildInputs = deps;
 
   postPatch = ''
-    # PureDarwin exposes realtime APIs through libSystem rather than librt.
+    # OpenOSX exposes realtime APIs through libSystem rather than librt.
     substituteInPlace meson.build \
       --replace "rt = cc.find_library('rt')" "rt = cc.find_library('rt', required: false)"
 
@@ -62,10 +62,10 @@ stdenv.mkDerivation {
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
-    cp ${pdgopSource}/PDGOP.c backend/puredarwin/puredarwin-pdgop.c
-    cp ${pdgopSource}/include/PDGOP.h backend/puredarwin/PDGOP.h
+    cp ${pdgopSource}/PDGOP.c backend/openosx/openosx-pdgop.c
+    cp ${pdgopSource}/include/PDGOP.h backend/openosx/PDGOP.h
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
@@ -92,7 +92,7 @@ EOF
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
@@ -104,7 +104,7 @@ EOF
       -Dcolor-management=disabled \
       -Dlibliftoff=disabled \
       -Dxcb-errors=disabled \
-      -Dbackends=puredarwin \
+      -Dbackends=openosx \
       -Drenderers=[] \
       -Dallocators=[]
 
@@ -127,7 +127,7 @@ EOF
   dontStrip = true;
 
   meta = with lib; {
-    description = "Wayland compositor library for PureDarwin";
+    description = "Wayland compositor library for OpenOSX";
     homepage = "https://gitlab.freedesktop.org/wlroots/wlroots";
     license = licenses.mit;
     platforms = platforms.linux;

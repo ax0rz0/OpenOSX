@@ -24,7 +24,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-pkgconf";
+  pname = "openosx-pkgconf";
   inherit (pkgconf) version src;
 
   nativeBuildInputs = [ autoconf automake libtool gnumake ];
@@ -75,7 +75,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "pkgconf, cross-built for PureDarwin";
+    description = "pkgconf, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

@@ -1,5 +1,5 @@
 /*
- * PureDarwin: setreuid(2) is marked NO_SYSCALL_STUB in syscalls.master
+ * OpenOSX: setreuid(2) is marked NO_SYSCALL_STUB in syscalls.master
  * (real Apple hides it from the public API, though the kernel trap - and
  * the kauth_cred_setresuid() logic behind it - is present), so no automatic
  * stub exists to base a real getresuid/setresuid emulation on. This is the

@@ -41,7 +41,7 @@ extern void _CFGetFrameworkPath(wchar_t *path, int maxLength);
 #endif
 
 /*
- * PureDarwin: let the build choose. Apple's CoreFoundation ships the Unicode
+ * OpenOSX: let the build choose. Apple's CoreFoundation ships the Unicode
  * tables in a __UNICODE segment created with ld's -sectcreate, which is what
  * USE_MACHO_SEGMENT reads. This tree instead embeds them with .incbin from
  * String.subproj/CFCharacterSetData.S and friends, producing the raw symbols

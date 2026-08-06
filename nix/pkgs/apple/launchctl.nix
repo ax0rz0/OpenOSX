@@ -22,7 +22,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-launchctl";
+  pname = "openosx-launchctl";
   version = "0.1";
 
   dontUnpack = true;
@@ -76,7 +76,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "Real PureDarwin/XPC launchctl (launchd 842.91.1 lineage)";
+    description = "Real OpenOSX/XPC launchctl (launchd 842.91.1 lineage)";
     platforms = platforms.linux;
   };
 }

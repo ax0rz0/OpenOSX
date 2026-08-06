@@ -41,7 +41,7 @@ extern void mig_os_release(void* ptr);
 #endif
 
 /*
- * PureDarwin: these allocator wrappers dispatch through _libkernel_functions,
+ * OpenOSX: these allocator wrappers dispatch through _libkernel_functions,
  * which is NULL until __libkernel_init() runs (during libSystem's initializer).
  * dyld links libsystem_kernel statically but never runs that init, and provides
  * its OWN malloc/free/realloc (a pre-libSystem pool allocator in dyldNew.cpp).
@@ -112,7 +112,7 @@ pthread_current_stack_contains_np(const void *addr, size_t len)
  */
 
 /*
- * PureDarwin: the upstream _libkernel_generic_string_functions table only
+ * OpenOSX: the upstream _libkernel_generic_string_functions table only
  * populated a subset of the slots -- on a real system the FULL optimized table
  * is installed by __libkernel_platform_init() (during libSystem's initializer)
  * before any string function is ever called, so the gaps never mattered. But

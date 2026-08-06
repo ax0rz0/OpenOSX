@@ -814,7 +814,7 @@ struct PerThreadErrorMessage
 static void dlerror_perThreadKey_once(void* ctx)
 {
     pthread_key_t* dlerrorPThreadKeyPtr = (pthread_key_t*)ctx;
-    // PureDarwin: pthread_key_create() only writes *key on success, and it always
+    // OpenOSX: pthread_key_create() only writes *key on success, and it always
     // fails here - dyld links libpthread's VARIANT_DYLD build, which excludes
     // pthread_key_create entirely
     //
@@ -850,7 +850,7 @@ static void setErrorString(const char* format, ...)
         va_end(list);
         size_t strLen = strlen(_simple_string(buf)) + 1;
         size_t sizeNeeded = sizeof(PerThreadErrorMessage) + strLen;
-        // PureDarwin: see dlerror_perThreadKey_once() - with no usable key there is
+        // OpenOSX: see dlerror_perThreadKey_once() - with no usable key there is
         // nowhere to stash the message, and slot 0 is pthread_self. Drop it here;
         // libSystem's dl* shims record the error on their side instead.
         pthread_key_t dlerrorKey = dlerror_perThreadKey();
@@ -883,7 +883,7 @@ char* dlerror()
 {
     log_apis("dlerror()\n");
 
-    // PureDarwin: key 0 means no key at all - slot 0 is pthread_self, never our
+    // OpenOSX: key 0 means no key at all - slot 0 is pthread_self, never our
     // buffer, so it must not be read or freed.
     pthread_key_t dlerrorKey = dlerror_perThreadKey();
     PerThreadErrorMessage* errorBuffer = (dlerrorKey == 0)
@@ -1588,7 +1588,7 @@ static const struct dyld_func dyld_funcs[] = {
     // <rdar://problem/59265987> support old licenseware plug ins on macOS
     {"__dyld_lookup_and_bind",          (void*)dyld3::_dyld_lookup_and_bind },
 #endif
-    // PureDarwin: the *_internal dl* entry points. PD's libSystem does not ship
+    // OpenOSX: the *_internal dl* entry points. PD's libSystem does not ship
     // Apple's dyldAPIsInLibSystem.cpp; its dlopen/dlsym/dlclose/dlerror shims
     // (Libraries/libSystem/stub/pd_libSystem_compat.c) reach dyld through
     // _dyld_func_lookup by these exact names. They were absent from this table,
@@ -1601,12 +1601,12 @@ static const struct dyld_func dyld_funcs[] = {
     {"__dyld_dlsym_internal",           (void*)dyld3::dlsym_internal },
     {"__dyld_dlclose",                  (void*)dyld3::dlclose },
     {"__dyld_dlerror",                  (void*)dyld3::dlerror },
-    // PureDarwin: real dyldAPIsInLibSystem.cpp's own _dyld_is_memory_immutable
+    // OpenOSX: real dyldAPIsInLibSystem.cpp's own _dyld_is_memory_immutable
     // is a thin _dyld_func_lookup("__dyld_is_memory_immutable", ...) trampoline
     // to this exact dyld3 implementation - same pattern as the dl* entries
     // above. Publish it the same way for pd_libSystem_compat.c's forwarder.
     {"__dyld_is_memory_immutable",      (void*)dyld3::_dyld_is_memory_immutable },
-    // PureDarwin: compatFuncLookup() below walks this array until p->name is
+    // OpenOSX: compatFuncLookup() below walks this array until p->name is
     // NULL, but there was no terminating entry - so any name not matched above
     // read past the end of the array and strcmp'd whatever happened to follow it
     // in __DATA_CONST. Terminate it.

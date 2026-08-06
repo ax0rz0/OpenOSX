@@ -14,7 +14,7 @@ let
     if fbdoomExternalSrcEnv == "" then null
     else builtins.path { path = /. + fbdoomExternalSrcEnv; name = "fbdoom-external-src"; };
 
-  chocolateDoomPatchedSrc = pkgs.runCommand "puredarwin-chocolate-doom-patched" { } ''
+  chocolateDoomPatchedSrc = pkgs.runCommand "openosx-chocolate-doom-patched" { } ''
     mkdir -p $out
     cp -r ${pkgs.chocolate-doom.src}/opl $out/opl
     cp ${pkgs.chocolate-doom.src}/src/midifile.c ${pkgs.chocolate-doom.src}/src/midifile.h \
@@ -28,7 +28,7 @@ let
     patch -p1 < ${../src/Userspace/fbdoom/patches/opl.c.patch}
     patch -p1 < ${../src/Userspace/fbdoom/patches/opl_internal.h.patch}
   '';
-  kernelSource = sourceWith "puredarwin-kernel-source" [
+  kernelSource = sourceWith "openosx-kernel-source" [
     "projects"
     "src/Kernel/CMakeLists.txt"
     "src/Kernel/xnu"
@@ -40,8 +40,8 @@ let
     "src/Libraries/libSystem/pthread"
     "tools"
   ];
-  libSystemSource = sourceWith "puredarwin-libsystem-source" libSystemSourcePaths;
-  kextsSource = sourceWith "puredarwin-kexts-source" [
+  libSystemSource = sourceWith "openosx-libsystem-source" libSystemSourcePaths;
+  kextsSource = sourceWith "openosx-kexts-source" [
     "projects"
     "src/Kernel/CMakeLists.txt"
     "src/Kernel/xnu/EXTERNAL_HEADERS"
@@ -52,7 +52,7 @@ let
     "src/Libraries"
     "tools"
   ];
-  userlandSource = sourceWith "puredarwin-userland-source" [
+  userlandSource = sourceWith "openosx-userland-source" [
     "src/Kernel/xnu/osfmk"
     # ping(8) from network_cmds needs <netinet/ip_var.h>,
     # <netinet/in_systm.h>, <netinet/ip_icmp.h> and the SO_TC_* socket
@@ -73,7 +73,7 @@ let
     "src/Userspace"
     "tools/mig"
   ];
-  fbdoomSource = sourceWith "puredarwin-fbdoom-source" [
+  fbdoomSource = sourceWith "openosx-fbdoom-source" [
     "src/Kernel/xnu/EXTERNAL_HEADERS"
     "src/Kernel/xnu/osfmk"
     "src/Kernel/xnu/libkern/libkern"
@@ -107,7 +107,7 @@ let
     "tools/cctools/include/stuff/openstep_mach.h"
     "tools/cctools/include/mach/machine.h"
   ];
-  cctoolsSource = sourceWith "puredarwin-cctools-source" [
+  cctoolsSource = sourceWith "openosx-cctools-source" [
     "src/Kernel/xnu/osfmk"
     "src/Libraries/IOKit"
     "src/Libraries/PDGOP"
@@ -124,14 +124,14 @@ let
     "src/Userspace"
     "tools"
   ];
-  coreFoundationSource = sourceWith "puredarwin-corefoundation-source" [
+  coreFoundationSource = sourceWith "openosx-corefoundation-source" [
     "src/Libraries/CoreFoundation"
     "src/Libraries/libSystem/libc/pd-compat-include"
   ];
-  coreServicesSource = sourceWith "puredarwin-coreservices-source" [
+  coreServicesSource = sourceWith "openosx-coreservices-source" [
     "src/Libraries/CoreServices"
   ];
-  securitySource = sourceWith "puredarwin-security-source" [
+  securitySource = sourceWith "openosx-security-source" [
     "src/Libraries/Security"
   ];
   # SystemConfiguration builds inside the same CMake project as libSystem
@@ -140,7 +140,7 @@ let
   # SystemConfiguration builds inside the same CMake project as libSystem
   # (it links -lSystem), so it needs libSystem's whole source set plus
   # its own directory.
-  systemConfigurationSource = sourceWith "puredarwin-systemconfiguration-source"
+  systemConfigurationSource = sourceWith "openosx-systemconfiguration-source"
     (libSystemSourcePaths ++ [
       "src/Libraries/SystemConfiguration"
       # SCPreferences.h includes <Security/Security.h>, and
@@ -160,9 +160,9 @@ let
       "src/Kernel/Extensions/IOUSBFamily/include"
       "src/Libraries/dyld/upstream/include"
     ]);
-  iokitCFSource = sourceWith "puredarwin-iokitcf-source"
+  iokitCFSource = sourceWith "openosx-iokitcf-source"
     (libSystemSourcePaths ++ [ "src/Kernel/xnu/iokit" ]);
-  diskArbitrationSource = sourceWith "puredarwin-diskarbitration-source"
+  diskArbitrationSource = sourceWith "openosx-diskarbitration-source"
     (libSystemSourcePaths ++ [
       "src/Libraries/DiskArbitration"
       # DAServer.defs imports <Security/Authorization.h>.
@@ -182,16 +182,16 @@ let
       "src/Libraries/architecture"
       "src/Libraries/libsystem_trace"
     ]);
-  objcSource = sourceWith "puredarwin-objc-source" [
+  objcSource = sourceWith "openosx-objc-source" [
     "src/Libraries/objc4"
   ];
-  libcxxDylibSource = sourceWith "puredarwin-libcxx-dylib-source" [
+  libcxxDylibSource = sourceWith "openosx-libcxx-dylib-source" [
     "src/Libraries/libcxxabi"
     "src/Libraries/libcxx"
     "src/Libraries/libunwind"
     "src/Libraries/llvm-libc"
   ];
-  foundationSource = sourceWith "puredarwin-foundation-source" [
+  foundationSource = sourceWith "openosx-foundation-source" [
     "src/Libraries/Foundation"
   ];
 

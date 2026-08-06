@@ -13,7 +13,7 @@
 // GNU General Public License for more details.
 //
 // DESCRIPTION:
-//     PureDarwin OPL driver: software OPL3 emulation (opl3.c, the same
+//     OpenOSX OPL driver: software OPL3 emulation (opl3.c, the same
 //     Nuked-lineage emulator chocolate-doom's SDL driver uses) with a
 //     PULL model instead of an SDL audio callback. i_sound_pd.c calls
 //     I_PD_OPL_Mix() once per output chunk; samples are rendered on
@@ -337,7 +337,7 @@ static void OPL_PD_AdjustCallbacks(float factor)
 
 opl_driver_t opl_pd_driver =
 {
-    "PureDarwin",
+    "OpenOSX",
     OPL_PD_Init,
     OPL_PD_Shutdown,
     OPL_PD_PortRead,

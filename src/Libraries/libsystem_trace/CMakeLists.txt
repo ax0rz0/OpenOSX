@@ -1,7 +1,7 @@
 # libsystem_trace: os_log(3) / os_signpost(3).
 #
 # Vendored from ravynOS (Libraries/Libsystem/libsystem_trace). This is Zoe
-# Knox's work, vendored for PureDarwin
+# Knox's work, vendored for OpenOSX
 # Kindly stolen and used kindly. (go steal my work back :P)
 
 add_darwin_static_library(libsystem_trace_static)
@@ -37,13 +37,13 @@ target_include_directories(libsystem_trace_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/pthread/private          # pthread/tsd_private.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libsystem_kernel/private_include # os/tsd.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libsystem_kernel/include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
 )
 
 # Same feature/availability contract every static library joining libSystem
 # needs (see libresolv/CMakeLists.txt).
 target_compile_definitions(libsystem_trace_static PRIVATE
-    __PUREDARWIN__
+    __OPENOSX__
     __DARWIN_ONLY_UNIX_CONFORMANCE=1
     # <machine/cpu_capabilities.h>, reached via firehose/tracepoint_private.h,
     # is entirely inside #ifdef PRIVATE - without this the _COMM_PAGE_* address

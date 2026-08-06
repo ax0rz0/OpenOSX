@@ -501,7 +501,7 @@ bool IONetworkStack::interfacePublished(
         detach(netif);
     }
 
-    // PureDarwin: there is no userspace interface-naming daemon (configd/kextd),
+    // OpenOSX: there is no userspace interface-naming daemon (configd/kextd),
     // so a newly published interface would otherwise sit unnamed in _ifListNaming
     // forever and never attach to BSD (no enN would ever appear). Auto-assign the
     // lowest available unit number and BSD-attach it here, which is exactly what

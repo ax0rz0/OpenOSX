@@ -30,7 +30,7 @@
 , iig
 , tinycc
 , src ? ./.
-, pname ? "puredarwin-nix-toolchain"
+, pname ? "openosx-nix-toolchain"
 , buildTargets ? [ "launchd" ]
 , enableProjects ? true
 , enableKernel ? true

@@ -1,4 +1,4 @@
-set(tcc_libtcc "${PUREDARWIN_TCC_SOURCE_COPY}/libtcc.c")
+set(tcc_libtcc "${OPENOSX_TCC_SOURCE_COPY}/libtcc.c")
 
 file(READ "${tcc_libtcc}" tcc_libtcc_contents)
 

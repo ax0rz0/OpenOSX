@@ -13,7 +13,7 @@ foreach(_pd_net_target netsetup pd-networkd)
     )
 
     target_compile_options(${_pd_net_target} PRIVATE
-        -isysroot ${PUREDARWIN_MACOSX_SDK}
+        -isysroot ${OPENOSX_MACOSX_SDK}
         -fno-builtin
         -fno-stack-protector
     )
@@ -31,4 +31,4 @@ endforeach()
 
 install(TARGETS netsetup DESTINATION bin COMPONENT BaseSystem)
 install(TARGETS pd-networkd DESTINATION usr/libexec COMPONENT BaseSystem)
-install(FILES org.puredarwin.network.plist DESTINATION System/Library/LaunchDaemons COMPONENT BaseSystem)
+install(FILES org.openosx.network.plist DESTINATION System/Library/LaunchDaemons COMPONENT BaseSystem)

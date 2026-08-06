@@ -5,7 +5,7 @@
  * where IOBSDConsole picks them up for console input.
  *
  * Modeled on Apple's historic ApplePS2Keyboard (APSL); rewritten for the
- * PureDarwin bring-up against IOHIDFamily-1633's IOHIKeyboard.
+ * OpenOSX bring-up against IOHIDFamily-1633's IOHIKeyboard.
  */
 #include <IOKit/IOLib.h>
 #include <IOKit/hidsystem/IOHIDParameter.h>

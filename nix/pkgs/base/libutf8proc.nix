@@ -20,7 +20,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libutf8proc";
+  pname = "openosx-libutf8proc";
   inherit (libutf8proc) version src;
 
   buildPhase = ''
@@ -76,7 +76,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libutf8proc, cross-built for PureDarwin";
+    description = "libutf8proc, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

@@ -23,7 +23,7 @@ let
   cc = "${darwinCrossToolchain}/bin/${targetTriple}-clang";
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-wayland-startup";
+  pname = "openosx-wayland-startup";
   version = "1";
   src = ../../../src/Userspace/wayland-startup;
 
@@ -66,7 +66,7 @@ stdenv.mkDerivation {
   dontStrip = true;
 
   meta = with lib; {
-    description = "Minimal visible Wayland startup client for PureDarwin";
+    description = "Minimal visible Wayland startup client for OpenOSX";
     license = licenses.mit;
     platforms = platforms.linux;
   };

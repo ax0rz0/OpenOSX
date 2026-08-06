@@ -40,7 +40,7 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libparserutils";
+  pname = "openosx-libparserutils";
   inherit (libparserutils) version src;
 
   nativeBuildInputs = [ perl ];
@@ -103,7 +103,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libparserutils (NetSurf parser-building library), cross-built for PureDarwin";
+    description = "libparserutils (NetSurf parser-building library), cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

@@ -26,7 +26,7 @@ target_sources(libresolv_static PRIVATE
 )
 
 target_compile_definitions(libresolv_static PRIVATE
-    __PUREDARWIN__
+    __OPENOSX__
     # cdefs.h's generated libc-features.h #errors out unless this matches
     # what libc_static itself was compiled with (see libc/CMakeLists.txt).
     __DARWIN_ONLY_UNIX_CONFORMANCE=1
@@ -63,7 +63,7 @@ target_include_directories(libresolv_static PRIVATE
     # dir as INTERFACE; the actual generated libc-features.h lives one level
     # deeper, under a per-arch subdir that libc_static's own CMakeLists adds
     # to itself directly rather than through the libc_features interface.
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
 )
 
 target_link_libraries(libresolv_static PRIVATE

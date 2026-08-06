@@ -34,7 +34,7 @@ let
   rawClangxx = "/nix/store/h6wfr7hsc4013lzp1igizkcd1awx8mcm-clang-21.1.8/bin/clang++";
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-dbus";
+  pname = "openosx-dbus";
   inherit (dbus) version;
   src = dbus.src;
 
@@ -160,7 +160,7 @@ CROSSFILE
   dontFixup = true;
 
   meta = with lib; {
-    description = "D-Bus (libdbus + dbus-daemon), cross-built for PureDarwin (no systemd/SELinux/AppArmor/audit, kqueue/epoll off)";
+    description = "D-Bus (libdbus + dbus-daemon), cross-built for OpenOSX (no systemd/SELinux/AppArmor/audit, kqueue/epoll off)";
     platforms = platforms.linux;
   };
 }

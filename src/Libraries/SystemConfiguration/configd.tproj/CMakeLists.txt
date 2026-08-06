@@ -8,7 +8,7 @@ mig(../SystemConfiguration.fproj/config.defs
     USER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/configUser.c
     SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/configServer.h
     SERVER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/configServer.c
-    ARCH ${PUREDARWIN_ARCH}
+    ARCH ${OPENOSX_ARCH}
     NOVOUCHERS)
 
 target_sources(configd PRIVATE
@@ -107,7 +107,7 @@ target_include_directories(configd PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../Plugins/IPMonitor                  # ip_plugin.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../config-agent-info                  # config_agent_info.h
     # XPC/notify before libresolv/include: the latter carries a cut-down
-    # notify.h stub, written before PureDarwin had a notifyd, which would
+    # notify.h stub, written before OpenOSX had a notifyd, which would
     # otherwise shadow the real header.
     ${CMAKE_CURRENT_SOURCE_DIR}/../../XPC/notify                      # real notify.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libresolv/include              # ifaddrs.h
@@ -125,7 +125,7 @@ target_include_directories(configd PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../include
     # configd.m includes <objc/objc-runtime.h> but uses nothing from it; the
     # header alone is enough, no libobjc link required.
-    ${PUREDARWIN_LIBOBJC_PREFIX}/usr/include
+    ${OPENOSX_LIBOBJC_PREFIX}/usr/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libsystem_trace/os-include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libplatform/include
     # xnu's os/log_private.h must win over libc's pd-compat-include stand-in,
@@ -156,7 +156,7 @@ target_include_directories(configd PRIVATE
     ${CMAKE_SOURCE_DIR}/src/Libraries/libSystem/libsystem_kernel/mach
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/osfmk
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/iokit
 )
 
@@ -167,7 +167,7 @@ target_compile_definitions(configd PRIVATE
 
 target_compile_options(configd PRIVATE
     -fblocks
-    -F${PUREDARWIN_COREFOUNDATION_PREFIX}/System/Library/Frameworks
+    -F${OPENOSX_COREFOUNDATION_PREFIX}/System/Library/Frameworks
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libplatform/pd_bridgeos_compat.h>
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../pd_sc_prelude.h>
     -w)
@@ -177,9 +177,9 @@ target_link_options(configd PRIVATE
     -Wl,-L,$<TARGET_FILE_DIR:libSystem_B_stub>
     -Wl,-dylinker_install_name,/usr/lib/dyld
     -Wl,-platform_version,macos,11.0,11.5
-    "${PUREDARWIN_COREFOUNDATION_PREFIX}/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation"
+    "${OPENOSX_COREFOUNDATION_PREFIX}/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation"
     $<TARGET_FILE:SystemConfiguration>
-    "${PUREDARWIN_SECURITY_PREFIX}/System/Library/Frameworks/Security.framework/Versions/A/Security"
+    "${OPENOSX_SECURITY_PREFIX}/System/Library/Frameworks/Security.framework/Versions/A/Security"
     $<TARGET_FILE:CrashReporterClient>
     -lSystem)
 

@@ -27,7 +27,7 @@ target_include_directories(XPC_libnv_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/pthread/include/pthread
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libsystem_kernel/private_include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libsystem_kernel/include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
 )
 
 target_link_libraries(XPC_libnv_static PRIVATE

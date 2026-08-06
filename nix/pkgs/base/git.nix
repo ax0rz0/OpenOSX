@@ -32,7 +32,7 @@ let
     + " PTHREAD_LIBS= SANE_TOOL_PATH=";
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-git";
+  pname = "openosx-git";
   inherit (git) version;
   src = git.src;
 

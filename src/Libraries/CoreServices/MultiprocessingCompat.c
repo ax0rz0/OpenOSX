@@ -2,7 +2,7 @@
  * CarbonCore Multiprocessing Services - the surviving preemptive-task queries.
  * Deprecated since Mac OS 8; on Darwin every thread is preemptive, so the
  * answers are constant. Callers still link them, typically touching them early
- * from the main thread to avoid an MP init quirk that PureDarwin does not have.
+ * from the main thread to avoid an MP init quirk that OpenOSX does not have.
  */
 
 #include <stdint.h>

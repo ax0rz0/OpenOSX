@@ -1,5 +1,5 @@
 /*
- * os/activity.h - minimal PureDarwin declarations for the os_activity(3) bits
+ * os/activity.h - minimal OpenOSX declarations for the os_activity(3) bits
  * libsystem_asl references.
  *
  * Activity tracing is part of Apple's closed libsystem_trace; the vendored

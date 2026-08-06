@@ -1,4 +1,4 @@
-/* PureDarwin device discovery for libdrm consumers. */
+/* OpenOSX device discovery for libdrm consumers. */
 #ifndef XF86DRM_PUREDARWIN_H
 #define XF86DRM_PUREDARWIN_H
 
@@ -18,7 +18,7 @@ typedef struct drmPuredarwinDevice {
 /* Returns the number of matching devices, or a negative errno-style result. */
 int drmPuredarwinGetDevices(drmPuredarwinDevice devices[], int max_devices);
 
-/* Open a PureDarwin IOKit user client. The returned value is a Mach port,
+/* Open a OpenOSX IOKit user client. The returned value is a Mach port,
  * intentionally distinct from the Linux DRM fd APIs. */
 int drmPuredarwinOpen(const char *class_name, uint32_t user_client_type,
                       uint32_t *connection);

@@ -30,7 +30,7 @@ static bool output_test(struct wlr_output *wlr_output,
 		const struct wlr_output_state *state) {
 	uint32_t unsupported = state->committed & ~supported_state;
 	if (unsupported != 0) {
-		wlr_log(WLR_DEBUG, "PureDarwin output rejected state 0x%" PRIx32,
+		wlr_log(WLR_DEBUG, "OpenOSX output rejected state 0x%" PRIx32,
 			unsupported);
 		return false;
 	}
@@ -55,7 +55,7 @@ static bool output_commit(struct wlr_output *wlr_output,
 		size_t stride = 0;
 		if (!wlr_buffer_begin_data_ptr_access(state->buffer,
 			WLR_BUFFER_DATA_PTR_ACCESS_READ, &data, &format, &stride)) {
-			wlr_log(WLR_ERROR, "PureDarwin output could not access buffer data");
+			wlr_log(WLR_ERROR, "OpenOSX output could not access buffer data");
 			return false;
 		}
 
@@ -130,7 +130,7 @@ static bool output_commit(struct wlr_output *wlr_output,
 			int present_result = pd_virgl_present(output->backend->gpu, 0, 0,
 				max_width, max_height);
 			if (present_result != 0) {
-				wlr_log(WLR_ERROR, "PureDarwin GPU present failed: %d",
+				wlr_log(WLR_ERROR, "OpenOSX GPU present failed: %d",
 					present_result);
 			}
 		}
@@ -157,7 +157,7 @@ static bool output_commit(struct wlr_output *wlr_output,
 }
 
 /* virtio-gpu cursors are a fixed 64x64 BGRA plane. */
-#define PUREDARWIN_CURSOR_EDGE 64
+#define OPENOSX_CURSOR_EDGE 64
 
 static bool output_set_cursor(struct wlr_output *wlr_output,
 		struct wlr_buffer *buffer, int hotspot_x, int hotspot_y) {
@@ -170,8 +170,8 @@ static bool output_set_cursor(struct wlr_output *wlr_output,
 	if (buffer == NULL) {
 		return pd_virgl_set_cursor(output->backend->gpu, NULL, 0, 0, 0, 0) == 0;
 	}
-	if (buffer->width > PUREDARWIN_CURSOR_EDGE ||
-			buffer->height > PUREDARWIN_CURSOR_EDGE) {
+	if (buffer->width > OPENOSX_CURSOR_EDGE ||
+			buffer->height > OPENOSX_CURSOR_EDGE) {
 		return false;
 	}
 
@@ -184,7 +184,7 @@ static bool output_set_cursor(struct wlr_output *wlr_output,
 	}
 
 	/* The shim wants tightly packed rows; the buffer rarely is one. */
-	uint8_t packed[PUREDARWIN_CURSOR_EDGE * PUREDARWIN_CURSOR_EDGE * 4] = {0};
+	uint8_t packed[OPENOSX_CURSOR_EDGE * OPENOSX_CURSOR_EDGE * 4] = {0};
 	size_t row_bytes = (size_t)buffer->width * 4;
 	for (int y = 0; y < buffer->height; y++) {
 		memcpy(packed + (size_t)y * row_bytes,
@@ -227,7 +227,7 @@ static const struct wlr_drm_format_set *output_get_cursor_formats(
 static const struct wlr_output_cursor_size *output_get_cursor_sizes(
 		struct wlr_output *wlr_output, size_t *len) {
 	static const struct wlr_output_cursor_size sizes[] = {
-		{ .width = PUREDARWIN_CURSOR_EDGE, .height = PUREDARWIN_CURSOR_EDGE },
+		{ .width = OPENOSX_CURSOR_EDGE, .height = OPENOSX_CURSOR_EDGE },
 	};
 	*len = sizeof(sizes) / sizeof(sizes[0]);
 	return sizes;
@@ -279,8 +279,8 @@ struct wlr_puredarwin_output *puredarwin_output_create(
 	wlr_output_state_finish(&state);
 
 	output->backend = backend;
-	wlr_output_set_name(&output->wlr_output, "PUREDARWIN-0");
-	wlr_output_set_description(&output->wlr_output, "PureDarwin IOGOP framebuffer");
+	wlr_output_set_name(&output->wlr_output, "OPENOSX-0");
+	wlr_output_set_description(&output->wlr_output, "OpenOSX IOGOP framebuffer");
 	output->frame_timer = wl_event_loop_add_timer(backend->event_loop,
 		signal_frame, output);
 	if (output->frame_timer == NULL) {

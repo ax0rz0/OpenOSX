@@ -25,8 +25,8 @@ target_sources(IONetworkingFamily.kext PRIVATE
 # Mirror the public headers into a local IOKit/network/ shim dir at configure
 # time instead of installing them system-wide (they're not needed anywhere
 # else yet).
-set(PUREDARWIN_IONF_SHIM_DIR "${CMAKE_CURRENT_BINARY_DIR}/shim-include")
-file(MAKE_DIRECTORY "${PUREDARWIN_IONF_SHIM_DIR}/IOKit/network")
+set(OPENOSX_IONF_SHIM_DIR "${CMAKE_CURRENT_BINARY_DIR}/shim-include")
+file(MAKE_DIRECTORY "${OPENOSX_IONF_SHIM_DIR}/IOKit/network")
 foreach(hdr
     IOBasicOutputQueue.h IOEthernetController.h IOEthernetInterface.h
     IOEthernetStats.h IOGatedOutputQueue.h IOKernelDebugger.h
@@ -36,12 +36,12 @@ foreach(hdr
     IONetworkStats.h IONetworkTypesPrivate.h IONetworkUserClient.h
     IOOutputQueue.h IOPacketQueue.h)
     file(CREATE_LINK "${CMAKE_CURRENT_SOURCE_DIR}/${hdr}"
-        "${PUREDARWIN_IONF_SHIM_DIR}/IOKit/network/${hdr}" SYMBOLIC)
+        "${OPENOSX_IONF_SHIM_DIR}/IOKit/network/${hdr}" SYMBOLIC)
 endforeach()
 
 target_include_directories(IONetworkingFamily.kext PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PUREDARWIN_IONF_SHIM_DIR}
+    ${OPENOSX_IONF_SHIM_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../../xnu/EXTERNAL_HEADERS)
 target_link_libraries(IONetworkingFamily.kext PRIVATE xnu_kernel_private_headers)
 # The .cpp sources define members (outputStart, pollInputPackets,

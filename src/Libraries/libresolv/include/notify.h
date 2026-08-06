@@ -1,6 +1,6 @@
 /*
  * Minimal stand-in for Apple's notifyd client API (usually shipped by
- * Libnotify, backed by the notifyd daemon over Mach IPC). PureDarwin has
+ * Libnotify, backed by the notifyd daemon over Mach IPC). OpenOSX has
  * neither Libnotify nor a notifyd daemon yet - libresolv only uses this API
  * to opportunistically notice "network config changed, re-read
  * resolv.conf" and "please cancel this in-flight query, thread is exiting"

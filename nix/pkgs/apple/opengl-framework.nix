@@ -29,7 +29,7 @@ let
   installName = "/System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL";
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-opengl-framework";
+  pname = "openosx-opengl-framework";
   version = "0.1";
 
   dontUnpack = true;
@@ -86,7 +86,7 @@ stdenv.mkDerivation {
   dontStrip = true;
 
   meta = with lib; {
-    description = "PureDarwin OpenGL.framework: CGL over GLX pbuffers, re-exporting the GL API";
+    description = "OpenOSX OpenGL.framework: CGL over GLX pbuffers, re-exporting the GL API";
     platforms = platforms.linux;
   };
 }

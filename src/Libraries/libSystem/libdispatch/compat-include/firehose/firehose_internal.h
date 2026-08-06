@@ -1,5 +1,5 @@
 /*
- * PureDarwin: minimal stand-in for firehose/firehose_internal.h, which lives
+ * OpenOSX: minimal stand-in for firehose/firehose_internal.h, which lives
  * in Apple's separate (not vendored here) firehose project. internal.h
  * includes this unconditionally, but with VOUCHER_USE_MACH_VOUCHER=0
  * (see libdispatch/CMakeLists.txt) voucher.c's real firehose_buffer_*

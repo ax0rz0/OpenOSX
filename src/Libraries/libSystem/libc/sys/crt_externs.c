@@ -47,7 +47,7 @@ DECLARE_VAR(environ, char **);
 DECLARE_VAR(_mh_execute_header, struct mach_header);
 DECLARE_PROGNAME(__progname, char *);
 
-#if defined(PUREDARWIN_EARLY_USERLAND) && defined(__DYNAMIC__)
+#if defined(OPENOSX_EARLY_USERLAND) && defined(__DYNAMIC__)
 char **environ;
 #endif
 
@@ -101,7 +101,7 @@ _program_vars_init(const struct ProgramVars* vars) {
 #endif
     NXArgv_pointer		= vars->NXArgvPtr;
     NXArgc_pointer		= vars->NXArgcPtr;
-#if defined(PUREDARWIN_EARLY_USERLAND)
+#if defined(OPENOSX_EARLY_USERLAND)
     environ			= vars->environPtr ? *vars->environPtr : NULL;
     environ_pointer		= &environ;
 #else

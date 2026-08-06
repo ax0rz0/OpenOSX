@@ -1,4 +1,4 @@
-set(_puredarwin_prebuilt_libsystem_root "${PUREDARWIN_PREBUILT_LIBSYSTEM_ROOT}")
+set(_puredarwin_prebuilt_libsystem_root "${OPENOSX_PREBUILT_LIBSYSTEM_ROOT}")
 
 set(_puredarwin_prebuilt_libsystem_b "${_puredarwin_prebuilt_libsystem_root}/usr/lib/libSystem.B.dylib")
 set(_puredarwin_prebuilt_libsystem "${_puredarwin_prebuilt_libsystem_root}/usr/lib/libSystem.dylib")

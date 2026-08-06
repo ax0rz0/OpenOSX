@@ -1,5 +1,5 @@
 /*
- * Real CommonCrypto digest API, bridged onto corecrypto (which PureDarwin
+ * Real CommonCrypto digest API, bridged onto corecrypto (which OpenOSX
  * already has real and cross-built - see src/Libraries/libSystem/corecrypto).
  * Apple never open-sourced CommonCrypto's own digest-bridging code (only
  * its checksum/CRC helpers live in libcn/), so this fills that gap for the

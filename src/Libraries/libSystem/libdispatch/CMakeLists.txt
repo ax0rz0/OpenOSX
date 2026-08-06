@@ -51,7 +51,7 @@ set_source_files_properties(src/object.m src/data.m PROPERTIES
     COMPILE_OPTIONS "-fno-objc-arc;-fobjc-exceptions")
 
 target_compile_definitions(libdispatch_static PRIVATE
-    __PUREDARWIN__=1
+    __OPENOSX__=1
     # Must match libc_static and libsystem_kernel_static (see the note in
     # libsystem_kernel/CMakeLists.txt): without it, <unistd.h> asm-renames
     # close/read/pread/pwrite to their $UNIX2003 spellings, which do not exist
@@ -104,7 +104,7 @@ if(TARGET pthread_common_headers)
     target_link_libraries(libdispatch_static PRIVATE pthread_common_headers pthread_common_private_headers)
 endif()
 target_compile_options(libdispatch_static PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -Wno-availability
     -include${CMAKE_CURRENT_SOURCE_DIR}/compat-include/pd_neuter_api_available.h
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../libplatform/pd_bridgeos_compat.h>
@@ -113,7 +113,7 @@ target_compile_options(libdispatch_static PRIVATE
     -include${CMAKE_SOURCE_DIR}/src/Kernel/xnu/bsd/sys_private/kdebug_private.h
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_SOURCE_DIR}/src/Kernel/xnu/libkern/os/base_private.h>
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/compat-include/pd_work_interval_instance.h>
-    $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++17;-fblocks;-fno-rtti;-fno-exceptions;-isystem${PUREDARWIN_MACOSX_SDK}/usr/include/c++/v1;-isystem${PUREDARWIN_MACOSX_SDK}/usr/include>)
+    $<$<COMPILE_LANGUAGE:CXX>:-std=gnu++17;-fblocks;-fno-rtti;-fno-exceptions;-isystem${OPENOSX_MACOSX_SDK}/usr/include/c++/v1;-isystem${OPENOSX_MACOSX_SDK}/usr/include>)
 
 add_dependencies(libdispatch_static libsystem_kernel_static)
 

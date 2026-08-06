@@ -28,7 +28,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-openssl";
+  pname = "openosx-openssl";
   inherit (openssl) version;
   src = openssl.src;
 

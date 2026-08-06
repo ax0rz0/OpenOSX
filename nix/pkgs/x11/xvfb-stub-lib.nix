@@ -15,7 +15,7 @@ let
   targetInfo = import ../../lib/target-info.nix targetTriple;
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-${name}";
+  pname = "openosx-${name}";
   inherit version;
 
   dontUnpack = true;

@@ -43,7 +43,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-sway";
+  pname = "openosx-sway";
   version = "1.12";
   inherit src;
 
@@ -51,7 +51,7 @@ stdenv.mkDerivation {
   buildInputs = deps;
 
   postPatch = ''
-    # PureDarwin provides realtime APIs from libSystem, not a separate librt.
+    # OpenOSX provides realtime APIs from libSystem, not a separate librt.
     substituteInPlace meson.build \
       --replace "rt = cc.find_library('rt')" "rt = cc.find_library('rt', required: false)"
   '';
@@ -62,7 +62,7 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
@@ -70,7 +70,7 @@ strip = '${darwinCrossToolchain}/bin/${targetTriple}-strip'
 pkg-config = '${pkg-config}/bin/pkg-config'
 
 [built-in options]
-    c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-D_DARWIN_C_SOURCE', '-fno-stack-protector', '-I${libSystem}/usr/include', '-I${waylandProtocols}/include', '-I$PWD/puredarwin']
+    c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-D_DARWIN_C_SOURCE', '-fno-stack-protector', '-I${libSystem}/usr/include', '-I${waylandProtocols}/include', '-I$PWD/openosx']
 c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-lSystem']
 
 [host_machine]
@@ -88,7 +88,7 @@ EOF
     export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" deps}:${lib.makeSearchPath "share/pkgconfig" deps}:${lib.makeSearchPath "usr/lib/pkgconfig" deps}:${lib.makeSearchPath "usr/share/pkgconfig" deps}:${waylandScanner}/lib/pkgconfig:${waylandScanner}/share/pkgconfig"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
@@ -115,18 +115,18 @@ EOF
     runHook preInstall
     ninja -C build install
     # The generated sample config embeds Nix store paths.  Keep the guest
-    # config self-contained; PureDarwin does not install Sway's wallpaper or
+    # config self-contained; OpenOSX does not install Sway's wallpaper or
     # config.d tree.
     sed -i \
-      -e '/^# Default wallpaper /c\\# PureDarwin does not select a default wallpaper.' \
+      -e '/^# Default wallpaper /c\\# OpenOSX does not select a default wallpaper.' \
       -e '/^output .* bg /d' \
       -e '/^    position top$/i\\    swaybar_command \/bin\/swaybar' \
-      -e '/^include .*config\.d\/\*$/c\\# PureDarwin has no system config.d overrides.' \
+      -e '/^include .*config\.d\/\*$/c\\# OpenOSX has no system config.d overrides.' \
       "$out/etc/sway/config"
-    cat > $out/bin/puredarwin-sway <<'EOF'
+    cat > $out/bin/openosx-sway <<'EOF'
 #!/bin/sh
 :
-: "''${WLR_BACKENDS:=puredarwin}"
+: "''${WLR_BACKENDS:=openosx}"
 : "''${WLR_RENDERER:=pixman}"
 export WLR_BACKENDS WLR_RENDERER
 if [ -f /etc/sway/config ]; then
@@ -134,7 +134,7 @@ if [ -f /etc/sway/config ]; then
 fi
 exec sway "$@"
 EOF
-    chmod +x $out/bin/puredarwin-sway
+    chmod +x $out/bin/openosx-sway
     runHook postInstall
   '';
 
@@ -142,7 +142,7 @@ EOF
   dontStrip = true;
 
   meta = with lib; {
-    description = "Sway Wayland compositor for PureDarwin's wlroots backend";
+    description = "Sway Wayland compositor for OpenOSX's wlroots backend";
     homepage = "https://swaywm.org/";
     license = licenses.mit;
     platforms = platforms.linux;

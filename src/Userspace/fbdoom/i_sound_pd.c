@@ -13,7 +13,7 @@
 // GNU General Public License for more details.
 //
 // DESCRIPTION:
-//	Sound effects for PureDarwin, real: a small mixer over the DMX-format
+//	Sound effects for OpenOSX, real: a small mixer over the DMX-format
 //	sfx lumps (8-bit unsigned PCM, 11025 Hz mono, an 8-byte header we
 //	skip - see fbDOOM's own getsfx()/W_CacheLumpNum usage in
 //	i_sound_dummy.c for the same access pattern), resampled and

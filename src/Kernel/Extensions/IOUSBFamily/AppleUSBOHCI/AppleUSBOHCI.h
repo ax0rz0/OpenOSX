@@ -344,7 +344,7 @@ protected:
                                 AppleOHCIEndpointDescriptorPtr 	head,
                                 AppleOHCIEndpointDescriptorPtr 	tail);
         
-    // PureDarwin minimal-UIM additions
+    // OpenOSX minimal-UIM additions
     IOMemoryDescriptor *        _barDesc;
     UInt32                      _rootHubNumPorts;
     IOReturn                    DoControlTransfer(UInt8 address, const UInt8 *setup,

@@ -3,8 +3,8 @@ wlr_files += files(
 	'backend.c',
 	'input.c',
 	'output.c',
-	'puredarwin-pdgop.c',
+	'openosx-pdgop.c',
 )
 
 wlr_inc = [wlr_inc, include_directories('.')]
-features += { 'puredarwin-backend': true }
+features += { 'openosx-backend': true }

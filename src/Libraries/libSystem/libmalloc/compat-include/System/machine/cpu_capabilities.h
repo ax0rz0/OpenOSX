@@ -1,4 +1,4 @@
-/* PureDarwin compat redirect (see System/i386/cpu_capabilities.h). */
+/* OpenOSX compat redirect (see System/i386/cpu_capabilities.h). */
 #if defined(__i386__) || defined(__x86_64__)
 #include <System/i386/cpu_capabilities.h>
 #elif defined(__arm__) || defined(__arm64__)

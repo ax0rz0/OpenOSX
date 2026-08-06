@@ -20,7 +20,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-gnumake";
+  pname = "openosx-gnumake";
   inherit (gnumake) version src;
 
   nativeBuildInputs = [ gnumake ];
@@ -71,7 +71,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "GNU Make, cross-built for PureDarwin";
+    description = "GNU Make, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

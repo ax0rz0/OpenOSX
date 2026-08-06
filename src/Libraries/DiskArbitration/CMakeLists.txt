@@ -1,12 +1,12 @@
-if(NOT PUREDARWIN_ENABLE_DISKARBITRATION)
+if(NOT OPENOSX_ENABLE_DISKARBITRATION)
     return()
 endif()
 
-if(NOT PUREDARWIN_COREFOUNDATION_PREFIX AND DEFINED ENV{PUREDARWIN_COREFOUNDATION_PREFIX})
-    set(PUREDARWIN_COREFOUNDATION_PREFIX "$ENV{PUREDARWIN_COREFOUNDATION_PREFIX}")
+if(NOT OPENOSX_COREFOUNDATION_PREFIX AND DEFINED ENV{OPENOSX_COREFOUNDATION_PREFIX})
+    set(OPENOSX_COREFOUNDATION_PREFIX "$ENV{OPENOSX_COREFOUNDATION_PREFIX}")
 endif()
-if(NOT PUREDARWIN_COREFOUNDATION_PREFIX)
-    message(FATAL_ERROR "PUREDARWIN_COREFOUNDATION_PREFIX must point to the CoreFoundation install prefix")
+if(NOT OPENOSX_COREFOUNDATION_PREFIX)
+    message(FATAL_ERROR "OPENOSX_COREFOUNDATION_PREFIX must point to the CoreFoundation install prefix")
 endif()
 
 add_darwin_shared_library(DiskArbitration
@@ -20,7 +20,7 @@ mig(diskarbitrationd/DAServer.defs
     USER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/DAServerUser.c
     SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/DAServerServer.h
     SERVER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/DAServerServer.c
-    ARCH ${PUREDARWIN_ARCH}
+    ARCH ${OPENOSX_ARCH}
     NOVOUCHERS)
 
 target_sources(DiskArbitration PRIVATE
@@ -50,7 +50,7 @@ target_include_directories(DiskArbitration PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libc/pd-compat-include
     ${CMAKE_CURRENT_SOURCE_DIR}/../CrashReporterClient/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../Security/include
-    # Apple's CoreFoundation-based IOKitLib (IOKitUser), not PureDarwin's
+    # Apple's CoreFoundation-based IOKitLib (IOKitUser), not OpenOSX's
     # CF-free PDIOKitLib - DA needs IOBSDNameMatching, the registry property
     # calls and kIOServicePlane.
     ${CMAKE_CURRENT_SOURCE_DIR}/../IOKit/iokituser/include
@@ -84,7 +84,7 @@ target_include_directories(DiskArbitration PRIVATE
     ${CMAKE_SOURCE_DIR}/src/Libraries/libSystem/libsystem_kernel/mach
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/osfmk
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/iokit
 )
 
@@ -95,7 +95,7 @@ target_compile_definitions(DiskArbitration PRIVATE
 
 target_compile_options(DiskArbitration PRIVATE
     -fblocks
-    -F${PUREDARWIN_COREFOUNDATION_PREFIX}/System/Library/Frameworks
+    -F${OPENOSX_COREFOUNDATION_PREFIX}/System/Library/Frameworks
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libplatform/pd_bridgeos_compat.h>
     -w
     # DiskArbitration.c passes void * straight to mach_vm_offset_t parameters -
@@ -111,11 +111,11 @@ target_link_options(DiskArbitration PRIVATE
     -nostdlib
     -Wl,-L,$<TARGET_FILE_DIR:libSystem_B_stub>
     -Wl,-platform_version,macos,11.0,11.5
-    "${PUREDARWIN_COREFOUNDATION_PREFIX}/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation"
+    "${OPENOSX_COREFOUNDATION_PREFIX}/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation"
     $<TARGET_FILE:CrashReporterClient>
-    -Wl,-L,${PUREDARWIN_IOKIT_PREFIX}/usr/lib
+    -Wl,-L,${OPENOSX_IOKIT_PREFIX}/usr/lib
     -lIOKitCF
-    "${PUREDARWIN_SECURITY_PREFIX}/System/Library/Frameworks/Security.framework/Versions/A/Security"
+    "${OPENOSX_SECURITY_PREFIX}/System/Library/Frameworks/Security.framework/Versions/A/Security"
     -lSystem)
 
 target_link_libraries(DiskArbitration PRIVATE
@@ -142,7 +142,7 @@ mig(diskarbitrationd/DAServer.defs
     USER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/daemon/DAServerUser.c
     SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/daemon/DAServerServer.h
     SERVER_SOURCE ${CMAKE_CURRENT_BINARY_DIR}/daemon/DAServerServer.c
-    ARCH ${PUREDARWIN_ARCH}
+    ARCH ${OPENOSX_ARCH}
     NOVOUCHERS)
 
 file(GLOB _da_daemon_sources ${CMAKE_CURRENT_SOURCE_DIR}/diskarbitrationd/*.c)
@@ -172,7 +172,7 @@ target_include_directories(diskarbitrationd PRIVATE
     ${CMAKE_SOURCE_DIR}/src/Libraries/XPC/launchd/System-compat        # sandbox.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../dyld/upstream/include              # mach-o/dyld.h
     ${CMAKE_SOURCE_DIR}/src/Libraries/architecture/include
-    ${PUREDARWIN_SYSTEMCONFIGURATION_PREFIX}/include                  # SystemConfiguration/*.h
+    ${OPENOSX_SYSTEMCONFIGURATION_PREFIX}/include                  # SystemConfiguration/*.h
     ${CMAKE_SOURCE_DIR}/src/Kernel/Extensions/IOStorageFamily/include
     ${CMAKE_SOURCE_DIR}/src/Kernel/Extensions/IOCDStorageFamily/include
     ${CMAKE_SOURCE_DIR}/src/Kernel/Extensions/IODVDStorageFamily/include
@@ -197,7 +197,7 @@ target_include_directories(diskarbitrationd PRIVATE
     ${CMAKE_SOURCE_DIR}/src/Libraries/libSystem/libsystem_kernel/mach
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/osfmk
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/iokit
 )
 
@@ -212,7 +212,7 @@ target_compile_definitions(diskarbitrationd PRIVATE
 
 target_compile_options(diskarbitrationd PRIVATE
     -fblocks
-    -F${PUREDARWIN_COREFOUNDATION_PREFIX}/System/Library/Frameworks
+    -F${OPENOSX_COREFOUNDATION_PREFIX}/System/Library/Frameworks
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libplatform/pd_bridgeos_compat.h>
     -w
     -Wno-error=int-conversion
@@ -224,10 +224,10 @@ target_link_options(diskarbitrationd PRIVATE
     -Wl,-L,$<TARGET_FILE_DIR:libSystem_B_stub>
     -Wl,-dylinker_install_name,/usr/lib/dyld
     -Wl,-platform_version,macos,11.0,11.5
-    "${PUREDARWIN_COREFOUNDATION_PREFIX}/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation"
-    "${PUREDARWIN_SECURITY_PREFIX}/System/Library/Frameworks/Security.framework/Versions/A/Security"
-    "${PUREDARWIN_SYSTEMCONFIGURATION_PREFIX}/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration"
-    -Wl,-L,${PUREDARWIN_IOKIT_PREFIX}/usr/lib
+    "${OPENOSX_COREFOUNDATION_PREFIX}/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation"
+    "${OPENOSX_SECURITY_PREFIX}/System/Library/Frameworks/Security.framework/Versions/A/Security"
+    "${OPENOSX_SYSTEMCONFIGURATION_PREFIX}/System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration"
+    -Wl,-L,${OPENOSX_IOKIT_PREFIX}/usr/lib
     -lIOKitCF
     $<TARGET_FILE:CrashReporterClient>
     -lSystem)

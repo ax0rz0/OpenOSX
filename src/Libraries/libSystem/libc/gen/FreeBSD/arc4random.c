@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/arc4random.c,v 1.25 2008/09/09 09:46:36 ach
 #include <pthread.h>
 
 #include <TargetConditionals.h>
-#if defined(__PUREDARWIN__)
+#if defined(__OPENOSX__)
 extern void _os_crash(const char *);
 #define os_crash(...) do { \
 		_os_crash("arc4random: fatal RNG initialization failure"); \

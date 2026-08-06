@@ -17,7 +17,7 @@
  * Please see the License for the specific language governing rights and
  * limitations under the License.
  *
- * This file was modified by William Kent in 2017 to support the PureDarwin
+ * This file was modified by William Kent in 2017 to support the OpenOSX
  * project. This notice is included in support of clause 2.2(b) of the License.
  */
 

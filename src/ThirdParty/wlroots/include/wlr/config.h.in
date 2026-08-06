@@ -16,7 +16,7 @@
  */
 #mesondefine WLR_HAS_LIBINPUT_BACKEND
 /**
- * Whether the PureDarwin IOGOP backend is compile-time enabled.
+ * Whether the OpenOSX IOGOP backend is compile-time enabled.
  */
 #mesondefine WLR_HAS_PUREDARWIN_BACKEND
 /**

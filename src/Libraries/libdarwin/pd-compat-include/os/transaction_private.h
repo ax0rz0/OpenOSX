@@ -1,7 +1,7 @@
 /*
  * os_transaction: libdispatch SPI telling the system a process has work in
- * flight and should not be suspended or jetsammed. PureDarwin's libdispatch does
- * not implement it, and PureDarwin does not suspend or jetsam daemons, so there
+ * flight and should not be suspended or jetsammed. OpenOSX's libdispatch does
+ * not implement it, and OpenOSX does not suspend or jetsam daemons, so there
  * is nothing for a transaction to hold off.
  *
  * os_transaction_create() therefore reports that no transaction was taken.

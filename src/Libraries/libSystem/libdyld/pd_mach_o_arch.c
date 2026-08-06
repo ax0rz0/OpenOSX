@@ -1,5 +1,5 @@
 /*
- * PureDarwin: getsegbyname()/NXGetLocalArchInfo()/NXFindBestFatArch() - the
+ * OpenOSX: getsegbyname()/NXGetLocalArchInfo()/NXFindBestFatArch() - the
  * three real Darwin ABI functions CoreFoundation's CFBundle_Grok.c needs and
  * that were still missing after wiring up dyld_priv.h. Real cctools has full
  * implementations of these (tools/cctools/libmacho/getsegbyname.c and

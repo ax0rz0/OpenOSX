@@ -36,7 +36,7 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-ninja";
+  pname = "openosx-ninja";
   inherit (ninja) version src;
 
   dontConfigure = true;
@@ -77,7 +77,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "Ninja build tool, cross-built to run on PureDarwin";
+    description = "Ninja build tool, cross-built to run on OpenOSX";
     homepage = "https://ninja-build.org/";
     license = licenses.asl20;
     platforms = platforms.linux;

@@ -1,5 +1,5 @@
 /*
- * PureDarwin: real os/assumes.c (os_assumes/os_assert failure logging)
+ * OpenOSX: real os/assumes.c (os_assumes/os_assert failure logging)
  * composes its crash-report message through the real os_log firehose
  * private ABI (os_log_pack_t, firehose tracepoint plumbing) - a genuinely
  * separate subsystem this tree doesn't back with a running logd/
@@ -23,7 +23,7 @@
 void
 _os_assumes_log(uint64_t code)
 {
-    fprintf(stderr, "PureDarwin: os_assumes failure (code 0x%llx)\n", (unsigned long long)code);
+    fprintf(stderr, "OpenOSX: os_assumes failure (code 0x%llx)\n", (unsigned long long)code);
 }
 
 void
@@ -31,7 +31,7 @@ _os_assumes_log_ctx(void *callout, void *ctx, uint64_t code)
 {
     (void)callout;
     (void)ctx;
-    fprintf(stderr, "PureDarwin: os_assumes failure with context (code 0x%llx)\n", (unsigned long long)code);
+    fprintf(stderr, "OpenOSX: os_assumes failure with context (code 0x%llx)\n", (unsigned long long)code);
 }
 
 char *
@@ -39,7 +39,7 @@ _os_assert_log(uint64_t code)
 {
     static char buf[64];
     snprintf(buf, sizeof(buf), "os_assert failure (code 0x%llx)", (unsigned long long)code);
-    fprintf(stderr, "PureDarwin: %s\n", buf);
+    fprintf(stderr, "OpenOSX: %s\n", buf);
     return buf;
 }
 
@@ -48,13 +48,13 @@ _os_assert_log_ctx(void *callout, void *ctx, uint64_t code)
 {
     (void)callout;
     (void)ctx;
-    fprintf(stderr, "PureDarwin: os_assert failure with context (code 0x%llx)\n", (unsigned long long)code);
+    fprintf(stderr, "OpenOSX: os_assert failure with context (code 0x%llx)\n", (unsigned long long)code);
 }
 
 void
 _os_crash(const char *message)
 {
-    fprintf(stderr, "PureDarwin: fatal: %s\n", message);
+    fprintf(stderr, "OpenOSX: fatal: %s\n", message);
     CRSetCrashLogMessage(message);
     abort();
 }

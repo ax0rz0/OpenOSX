@@ -25,7 +25,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-cmake";
+  pname = "openosx-cmake";
   inherit (cmake) version src;
 
   nativeBuildInputs = [ cmake ninja ];
@@ -37,7 +37,7 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
-    cat > puredarwin-toolchain.cmake <<EOF
+    cat > openosx-toolchain.cmake <<EOF
 set(CMAKE_SYSTEM_NAME Darwin)
 set(CMAKE_SYSTEM_PROCESSOR ${targetInfo.mesonCpu})
 set(CMAKE_OSX_SYSROOT "$DARWIN_SDK_ROOT")
@@ -65,7 +65,7 @@ EOF
     # KWSys probes several libc features with try_run, which cannot run a
     # Darwin binary here. These are the answers for this target.
     cmake -S . -B build -G Ninja \
-      -DCMAKE_TOOLCHAIN_FILE="$PWD/puredarwin-toolchain.cmake" \
+      -DCMAKE_TOOLCHAIN_FILE="$PWD/openosx-toolchain.cmake" \
       -DCMAKE_BUILD_TYPE=Release \
       -DCMAKE_INSTALL_PREFIX=/usr \
       -DBUILD_TESTING=OFF \
@@ -103,7 +103,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "CMake, cross-built to run on PureDarwin";
+    description = "CMake, cross-built to run on OpenOSX";
     homepage = "https://cmake.org/";
     license = licenses.bsd3;
     platforms = platforms.linux;

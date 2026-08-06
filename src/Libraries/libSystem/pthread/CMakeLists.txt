@@ -37,7 +37,7 @@ target_include_directories(pthread_static PRIVATE
     # platform/string.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../libplatform/private
     ${CMAKE_CURRENT_SOURCE_DIR}/../libmalloc/private   # stack_logging.h
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/bsd        # pthread/bsdthread_private.h, pthread/workqueue_syscalls.h
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/bsd        # pthread/bsdthread_private.h, pthread/workqueue_syscalls.h
 )
 target_link_libraries(pthread_static PRIVATE
     AvailabilityHeaders
@@ -96,7 +96,7 @@ target_include_directories(pthread_full_static PRIVATE
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include
     ${CMAKE_CURRENT_SOURCE_DIR}/../libplatform/private
     ${CMAKE_CURRENT_SOURCE_DIR}/../libmalloc/private
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/bsd
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/bsd
 )
 target_link_libraries(pthread_full_static PRIVATE
     AvailabilityHeaders

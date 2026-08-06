@@ -23,7 +23,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-bison";
+  pname = "openosx-bison";
   inherit (bison) version src;
 
   nativeBuildInputs = [ gnumake perl m4 ];
@@ -86,7 +86,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "GNU Bison, cross-built for PureDarwin";
+    description = "GNU Bison, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

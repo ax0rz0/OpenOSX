@@ -24,7 +24,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-iomediacheck";
+  pname = "openosx-iomediacheck";
   version = "0.1";
 
   src = ../../../src/Userspace/iomediacheck;

@@ -60,7 +60,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xmessage";
+  pname = "openosx-xmessage";
   inherit (xmessage) version;
   src = xmessage.src;
 

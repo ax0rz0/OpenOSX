@@ -20,7 +20,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-ncurses";
+  pname = "openosx-ncurses";
   inherit (ncurses) version;
   src = ncurses.src;
 
@@ -43,7 +43,7 @@ stdenv.mkDerivation {
     export CFLAGS="-isysroot $DARWIN_SDK_ROOT -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0"
     export LDFLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-dylinker_install_name,/usr/lib/dyld -Wl,-platform_version,macos,11.0,11.5 -Wl,-undefined,dynamic_lookup -lSystem"
 
-    # PureDarwin ships no /usr/share/terminfo database. --with-fallbacks bakes
+    # OpenOSX ships no /usr/share/terminfo database. --with-fallbacks bakes
     # a fixed set of terminal descriptions directly into the library so
     # setupterm()/curses can work without ever touching the filesystem; ncurses
     # falls back to these automatically when TERMINFO lookups fail. xterm and

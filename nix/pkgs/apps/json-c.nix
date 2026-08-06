@@ -20,7 +20,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-json-c";
+  pname = "openosx-json-c";
   version = "0.18";
   inherit src;
 
@@ -31,7 +31,7 @@ stdenv.mkDerivation {
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
-    cat > puredarwin-toolchain.cmake <<EOF
+    cat > openosx-toolchain.cmake <<EOF
 set(CMAKE_SYSTEM_NAME Darwin)
 set(CMAKE_SYSTEM_PROCESSOR ${targetInfo.mesonCpu})
 set(CMAKE_C_COMPILER ${darwinCrossToolchain}/bin/${targetTriple}-clang)
@@ -47,7 +47,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 EOF
     cmake -S . -B build -G Ninja \
-      -DCMAKE_TOOLCHAIN_FILE=$PWD/puredarwin-toolchain.cmake \
+      -DCMAKE_TOOLCHAIN_FILE=$PWD/openosx-toolchain.cmake \
       -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
       -DCMAKE_INSTALL_PREFIX=$out \
       -DBUILD_SHARED_LIBS=ON \
@@ -73,7 +73,7 @@ EOF
   dontStrip = true;
 
   meta = with lib; {
-    description = "JSON-C cross-built for PureDarwin";
+    description = "JSON-C cross-built for OpenOSX";
     homepage = "https://github.com/json-c/json-c";
     license = licenses.mit;
     platforms = platforms.linux;

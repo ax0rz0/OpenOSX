@@ -3,7 +3,7 @@
 , vanilla-dmz
 }:
 
-runCommand "puredarwin-cursor-theme" { } ''
+runCommand "openosx-cursor-theme" { } ''
   mkdir -p "$out/usr/share/icons"
   cp -a ${vanilla-dmz}/share/icons/DMZ-White "$out/usr/share/icons/"
   chmod -R u+w "$out/usr/share/icons"
@@ -12,7 +12,7 @@ runCommand "puredarwin-cursor-theme" { } ''
   cat > "$out/usr/share/icons/default/index.theme" <<'EOF'
 [Icon Theme]
 Name=Default
-Comment=PureDarwin default cursor theme
+Comment=OpenOSX default cursor theme
 Inherits=DMZ-White
 EOF
 ''

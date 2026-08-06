@@ -439,7 +439,7 @@ copy_missing_header_tree "${XNU_BSD_DIR}/uuid" "${INCDIR}/uuid"
 copy_missing_header_tree "${PD_LIBMALLOC_COMPAT_DIR}/machine" "${INCDIR}/machine"
 copy_missing_header_tree "${PD_LIBMALLOC_COMPAT_DIR}/System" "${INCDIR}/System"
 if [ -f "${XNU_BSD_DIR}/kern/makesyscalls.sh" ] && [ -f "${XNU_BSD_DIR}/kern/syscalls.master" ]; then
-	SYSCALL_HDR_TMP=${DERIVED_FILES_DIR}/puredarwin-syscall-h
+	SYSCALL_HDR_TMP=${DERIVED_FILES_DIR}/openosx-syscall-h
 	${MKDIR} "${SYSCALL_HDR_TMP}"
 	(cd "${SYSCALL_HDR_TMP}" && "${BASH}" "${XNU_BSD_DIR}/kern/makesyscalls.sh" "${XNU_BSD_DIR}/kern/syscalls.master" header)
 	if [ -f "${SYSCALL_HDR_TMP}/syscall.h" ]; then

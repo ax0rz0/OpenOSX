@@ -6,7 +6,7 @@ if(CMAKE_HOST_APPLE AND NOT CMAKE_CROSSCOMPILING)
         OUTPUT_STRIP_TRAILING_WHITESPACE
     )
     find_program(_ld_real_clang NAMES clang REQUIRED)
-    set(_ld_target_flags -arch "${PUREDARWIN_ARCH}")
+    set(_ld_target_flags -arch "${OPENOSX_ARCH}")
 else()
     get_filename_component(_ld_ar_name "${CMAKE_AR}" NAME)
     if(NOT _ld_ar_name MATCHES "^(.+)-ar$")
@@ -17,7 +17,7 @@ else()
         set(_ld_sdk "$ENV{OSXCROSS_SDK}")
     endif()
     if(NOT _ld_sdk)
-        set(_ld_sdk "${PUREDARWIN_MACOSX_SDK}")
+        set(_ld_sdk "${OPENOSX_MACOSX_SDK}")
     endif()
     set(_ld_real_clang "${_ld_toolchain_bin}/${_ld_triple}-clang")
     if(NOT EXISTS "${_ld_real_clang}")
@@ -57,7 +57,7 @@ set(_ld_cxx_flags
     -Wno-deprecated "-Wno-#warnings"
     ${_ld_includes}
 )
-if((CMAKE_HOST_APPLE AND NOT CMAKE_CROSSCOMPILING) OR PUREDARWIN_NIX_TOOLCHAIN)
+if((CMAKE_HOST_APPLE AND NOT CMAKE_CROSSCOMPILING) OR OPENOSX_NIX_TOOLCHAIN)
     list(APPEND _ld_cxx_flags -I ${_ld_libcxx_config} -I ${_ld_libcxx}/include)
 else()
     list(APPEND _ld_cxx_flags -idirafter ${_ld_libcxx_config} -idirafter ${_ld_libcxx}/include)
@@ -138,7 +138,7 @@ endforeach()
 
 # Real CC_MD5, bridged onto corecrypto (see the file for why it's not part
 # of the vendored ld64 tree). Not reachable via a commoncrypto_static CMake
-# target here since PUREDARWIN_ENABLE_LIBRARIES is off for this build.
+# target here since OPENOSX_ENABLE_LIBRARIES is off for this build.
 set(_ld_ccmd5_src "${CMAKE_SOURCE_DIR}/src/Libraries/CommonCrypto/libcn/pd_cc_digest_bridge.c")
 set(_ld_ccmd5_obj "${CMAKE_CURRENT_BINARY_DIR}/pd_cc_digest_bridge.o")
 add_custom_command(

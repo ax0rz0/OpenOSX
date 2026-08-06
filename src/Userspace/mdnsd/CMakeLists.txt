@@ -54,7 +54,7 @@ target_include_directories(mdnsd PRIVATE
 # worth patching for it.
 target_compile_definitions(mdnsd PRIVATE POSIX_BUILD)
 target_compile_options(mdnsd PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -fno-builtin
     -fno-stack-protector
     -w

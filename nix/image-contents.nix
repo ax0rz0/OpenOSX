@@ -229,7 +229,7 @@
 
 let
   fullBuild = mkPureDarwinBuild {
-    pname = "puredarwin";
+    pname = "openosx";
     src = ../.;
     buildTargets = [ "xnu" "kexts" "libsystem_kernel" "pcmplay" ];
     installUserland = false;
@@ -237,7 +237,7 @@ let
     installBaseSystem = true;
     enableIOGraphicsFamily = true;
   };
-  splitBaseSystem = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } (''
+  splitBaseSystem = pkgs.runCommand "openosx-basesystem-split-0.1" { } (''
     mkdir -p "$out"
     cp -a ${kernelBuild}/. "$out/"
     chmod -R u+w "$out"
@@ -277,7 +277,7 @@ let
     chmod -R u+w "$out"
     cp -a ${xvfbFontsBuild}/. "$out/"
   '');
-  splitBaseSystemStripped = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } (''
+  splitBaseSystemStripped = pkgs.runCommand "openosx-basesystem-split-0.1" { } (''
     mkdir -p "$out"
     cp -a ${kernelBuild}/. "$out/"
     chmod -R u+w "$out"
@@ -297,7 +297,7 @@ let
       rm -rf "$out/pd-sbin"
     fi
   '');
-  splitBaseSystemStrippedDebug = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } (''
+  splitBaseSystemStrippedDebug = pkgs.runCommand "openosx-basesystem-split-0.1" { } (''
     mkdir -p "$out"
     cp -a ${kernelDebugBuild}/. "$out/"
     chmod -R u+w "$out"
@@ -324,7 +324,7 @@ let
   # Stripped base plus the CLI userland (sw_vers, mount, virgl-smoke,
   # etc.) - a lean image that still has usable tools, without the heavy
   # tcc/cctools/X of the full base.
-  splitBaseSystemMinimal = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } ''
+  splitBaseSystemMinimal = pkgs.runCommand "openosx-basesystem-split-0.1" { } ''
     mkdir -p "$out"
     cp -a ${splitBaseSystemStripped}/. "$out/"
     chmod -R u+w "$out"
@@ -332,7 +332,7 @@ let
   '';
 
 
-  splitBaseSystemMinimalDebug = pkgs.runCommand "puredarwin-basesystem-split-0.1" { } ''
+  splitBaseSystemMinimalDebug = pkgs.runCommand "openosx-basesystem-split-0.1" { } ''
     mkdir -p "$out"
     cp -a ${splitBaseSystemStrippedDebug}/. "$out/"
     chmod -R u+w "$out"
@@ -652,7 +652,7 @@ let
         kc = kcDebugBuild;
         xnuLoader = xnu-loader.packages.${system}.default;
         apfsprogs = pkgs.apfsprogs;
-        imageFileName = "puredarwin-debug.img";
+        imageFileName = "openosx-debug.img";
       };
       imageArm64VirtBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystem;
@@ -661,7 +661,7 @@ let
         xnuLoader = xnu-loader.packages.${system}.arm64-virt;
         apfsprogs = pkgs.apfsprogs;
         efiBinary = "BOOTAA64.EFI";
-        imageFileName = "puredarwin-arm64-virt.img";
+        imageFileName = "openosx-arm64-virt.img";
       };
       imageArm64VirtMinimalBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystemArm64VirtMinimal;
@@ -672,7 +672,7 @@ let
         efiBinary = "BOOTAA64.EFI";
         espMB = 64;
         rootMB = 256;
-        imageFileName = "puredarwin-arm64-virt-minimal.img";
+        imageFileName = "openosx-arm64-virt-minimal.img";
         bootArgs = "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 -noprogress gen9_debug=1 vgpu_debug=1 pdtrace=1 ahci_debug=1 no_interrupt_masked_debug=1";
       };
       # Full arm64 image: the same userland as the x86 .#image, on the
@@ -687,7 +687,7 @@ let
         efiBinary = "BOOTAA64.EFI";
         espMB = 64;
         rootMB = 3072;
-        imageFileName = "puredarwin-arm64-virt-full.img";
+        imageFileName = "openosx-arm64-virt-full.img";
         bootArgs = "serial=3 -noprogress";
       };
       imageArm64VirtMinimalReleaseBuild = pkgs.callPackage ../image.nix {
@@ -701,7 +701,7 @@ let
         efiBinary = "BOOTAA64.EFI";
         espMB = 64;
         rootMB = 512;
-        imageFileName = "puredarwin-arm64-virt-minimal-release.img";
+        imageFileName = "openosx-arm64-virt-minimal-release.img";
         bootArgs = "serial=3 -noprogress ahci_debug=1 kext=0xffff io=0xffff";
       };
       strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild gsbaseTestBuild ];
@@ -711,7 +711,7 @@ let
         kc = kcBuild;
         xnuLoader = xnu-loader.packages.${system}.default;
         apfsprogs = pkgs.apfsprogs;
-        imageFileName = "puredarwin-stripped.img";
+        imageFileName = "openosx-stripped.img";
       };
       imageMinimalBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystemMinimal;
@@ -719,7 +719,7 @@ let
         kc = kcBuild;
         xnuLoader = xnu-loader.packages.${system}.default;
         apfsprogs = pkgs.apfsprogs;
-        imageFileName = "puredarwin-minimal.img";
+        imageFileName = "openosx-minimal.img";
         espMB = 64;
         rootMB = 384;
         bootArgs = "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 -noprogress gen9_debug=1";
@@ -730,30 +730,30 @@ let
         kc = kcDebugBuild;
         xnuLoader = xnu-loader.packages.${system}.default;
         apfsprogs = pkgs.apfsprogs;
-        imageFileName = "puredarwin-minimal-debug.img";
+        imageFileName = "openosx-minimal-debug.img";
         espMB = 64;
         rootMB = 384;
         bootArgs = "-v debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 -noprogress gen9_debug=1 serial_video_mirror=1 pdtrace=1";
       };
       runVm = pkgs.writeShellApplication {
-        name = "puredarwin-vm";
+        name = "openosx-vm";
         runtimeInputs = [ pkgs.qemu ];
         text = ''
           set -euo pipefail
 
-          state_dir="''${PUREDARWIN_VM_STATE_DIR:-$PWD/.puredarwin-vm}"
-          image="''${PUREDARWIN_IMAGE:-}"
-          ovmf_code="''${PUREDARWIN_OVMF_CODE:-${pkgs.OVMF.fd}/FV/OVMF_CODE.fd}"
-          ovmf_vars_template="''${PUREDARWIN_OVMF_VARS_TEMPLATE:-${pkgs.OVMF.fd}/FV/OVMF_VARS.fd}"
-          ovmf_vars="''${PUREDARWIN_OVMF_VARS:-$state_dir/OVMF_VARS.fd}"
+          state_dir="''${OPENOSX_VM_STATE_DIR:-$PWD/.openosx-vm}"
+          image="''${OPENOSX_IMAGE:-}"
+          ovmf_code="''${OPENOSX_OVMF_CODE:-${pkgs.OVMF.fd}/FV/OVMF_CODE.fd}"
+          ovmf_vars_template="''${OPENOSX_OVMF_VARS_TEMPLATE:-${pkgs.OVMF.fd}/FV/OVMF_VARS.fd}"
+          ovmf_vars="''${OPENOSX_OVMF_VARS:-$state_dir/OVMF_VARS.fd}"
 
           if [ -z "$image" ]; then
-            if [ -e "$PWD/puredarwin.img" ]; then
-              image="$PWD/puredarwin.img"
-            elif [ -e "$PWD/result/puredarwin.img" ]; then
-              image="$PWD/result/puredarwin.img"
+            if [ -e "$PWD/openosx.img" ]; then
+              image="$PWD/openosx.img"
+            elif [ -e "$PWD/result/openosx.img" ]; then
+              image="$PWD/result/openosx.img"
             else
-              echo "puredarwin-vm: no image found; set PUREDARWIN_IMAGE or run nix build .#image" >&2
+              echo "openosx-vm: no image found; set OPENOSX_IMAGE or run nix build .#image" >&2
               exit 1
             fi
           fi
@@ -770,9 +770,9 @@ let
 
           exec qemu-system-x86_64 \
             -M q35 \
-            -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
-            -smp "''${PUREDARWIN_VM_SMP:-4}" \
-            -vga "''${PUREDARWIN_VM_VGA:-std}" \
+            -m "''${OPENOSX_VM_MEMORY:-4096}" \
+            -smp "''${OPENOSX_VM_SMP:-4}" \
+            -vga "''${OPENOSX_VM_VGA:-std}" \
             -cpu IvyBridge,vendor=GenuineIntel \
             -fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=2048 \
             -drive if=pflash,format=raw,unit=0,readonly=on,file="$ovmf_code" \
@@ -783,7 +783,7 @@ let
             -device usb-mouse,bus=xhci.0 \
             -device intel-hda,id=hda \
             -device hda-duplex,audiodev=snd0 \
-            -audiodev "''${PUREDARWIN_VM_AUDIODEV:-none},id=snd0" \
+            -audiodev "''${OPENOSX_VM_AUDIODEV:-none},id=snd0" \
             -serial mon:stdio \
             -no-reboot \
             -no-shutdown \
@@ -791,24 +791,24 @@ let
         '';
       };
       runKvm = pkgs.writeShellApplication {
-        name = "puredarwin-kvm";
+        name = "openosx-kvm";
         runtimeInputs = [ pkgs.qemu ];
         text = ''
           set -euo pipefail
 
-          state_dir="''${PUREDARWIN_VM_STATE_DIR:-$PWD/.puredarwin-kvm}"
-          image="''${PUREDARWIN_IMAGE:-}"
-          ovmf_code="''${PUREDARWIN_OVMF_CODE:-${pkgs.OVMF.fd}/FV/OVMF_CODE.fd}"
-          ovmf_vars_template="''${PUREDARWIN_OVMF_VARS_TEMPLATE:-${pkgs.OVMF.fd}/FV/OVMF_VARS.fd}"
-          ovmf_vars="''${PUREDARWIN_OVMF_VARS:-$state_dir/OVMF_VARS.fd}"
+          state_dir="''${OPENOSX_VM_STATE_DIR:-$PWD/.openosx-kvm}"
+          image="''${OPENOSX_IMAGE:-}"
+          ovmf_code="''${OPENOSX_OVMF_CODE:-${pkgs.OVMF.fd}/FV/OVMF_CODE.fd}"
+          ovmf_vars_template="''${OPENOSX_OVMF_VARS_TEMPLATE:-${pkgs.OVMF.fd}/FV/OVMF_VARS.fd}"
+          ovmf_vars="''${OPENOSX_OVMF_VARS:-$state_dir/OVMF_VARS.fd}"
 
           if [ -z "$image" ]; then
-            if [ -e "$PWD/puredarwin.img" ]; then
-              image="$PWD/puredarwin.img"
-            elif [ -e "$PWD/result/puredarwin.img" ]; then
-              image="$PWD/result/puredarwin.img"
+            if [ -e "$PWD/openosx.img" ]; then
+              image="$PWD/openosx.img"
+            elif [ -e "$PWD/result/openosx.img" ]; then
+              image="$PWD/result/openosx.img"
             else
-              echo "puredarwin-kvm: no image found; set PUREDARWIN_IMAGE or run nix build .#image" >&2
+              echo "openosx-kvm: no image found; set OPENOSX_IMAGE or run nix build .#image" >&2
               exit 1
             fi
           fi
@@ -825,10 +825,10 @@ let
 
           exec qemu-system-x86_64 \
             -machine q35,accel=kvm \
-            -cpu "''${PUREDARWIN_KVM_CPU:-host}" \
-            -smp "''${PUREDARWIN_VM_SMP:-4}" \
-            -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
-            -vga "''${PUREDARWIN_VM_VGA:-std}" \
+            -cpu "''${OPENOSX_KVM_CPU:-host}" \
+            -smp "''${OPENOSX_VM_SMP:-4}" \
+            -m "''${OPENOSX_VM_MEMORY:-4096}" \
+            -vga "''${OPENOSX_VM_VGA:-std}" \
             -fw_cfg name=opt/ovmf/X-PciMmio64Mb,string=2048 \
             -drive if=pflash,format=raw,unit=0,readonly=on,file="$ovmf_code" \
             -drive if=pflash,format=raw,unit=1,file="$ovmf_vars" \
@@ -837,30 +837,30 @@ let
             -device ide-hd,bus=sata.0,drive=system \
             -device e1000-82545em,netdev=net0 \
             -netdev user,id=net0,hostfwd=tcp::2222-:22 \
-            ''${PUREDARWIN_VM_NETDUMP:+-object filter-dump,id=netdump,netdev=net0,file="$PUREDARWIN_VM_NETDUMP"} \
+            ''${OPENOSX_VM_NETDUMP:+-object filter-dump,id=netdump,netdev=net0,file="$OPENOSX_VM_NETDUMP"} \
             -device qemu-xhci,id=xhci \
             -device usb-kbd,bus=xhci.0 \
             -device usb-mouse,bus=xhci.0 \
             -device intel-hda,id=hda \
             -device hda-duplex,audiodev=snd0 \
-            -audiodev "''${PUREDARWIN_VM_AUDIODEV:-none},id=snd0" \
+            -audiodev "''${OPENOSX_VM_AUDIODEV:-none},id=snd0" \
             -serial mon:stdio \
             "$@"
         '';
       };
       runArm64Uefi = pkgs.writeShellApplication {
-        name = "puredarwin-arm64-uefi";
+        name = "openosx-arm64-uefi";
         runtimeInputs = [ pkgs.qemu ];
         text = ''
           set -euo pipefail
 
-          state_dir="''${PUREDARWIN_ARM64_UEFI_STATE_DIR:-$PWD/.puredarwin-arm64-uefi}"
-          aavmf_code="''${PUREDARWIN_AAVMF_CODE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_CODE.fd}"
-          aavmf_vars_template="''${PUREDARWIN_AAVMF_VARS_TEMPLATE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_VARS.fd}"
-          aavmf_vars="''${PUREDARWIN_AAVMF_VARS:-$state_dir/AAVMF_VARS.fd}"
+          state_dir="''${OPENOSX_ARM64_UEFI_STATE_DIR:-$PWD/.openosx-arm64-uefi}"
+          aavmf_code="''${OPENOSX_AAVMF_CODE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_CODE.fd}"
+          aavmf_vars_template="''${OPENOSX_AAVMF_VARS_TEMPLATE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_VARS.fd}"
+          aavmf_vars="''${OPENOSX_AAVMF_VARS:-$state_dir/AAVMF_VARS.fd}"
 
           mkdir -p "$state_dir"
-          if [ "''${PUREDARWIN_ARM64_RESET_VARS:-0}" = 1 ]; then
+          if [ "''${OPENOSX_ARM64_RESET_VARS:-0}" = 1 ]; then
             rm -f "$aavmf_vars"
           fi
           if [ ! -e "$aavmf_vars" ]; then
@@ -870,32 +870,32 @@ let
 
           exec qemu-system-aarch64 \
             -machine virt,gic-version=3 \
-            -cpu "''${PUREDARWIN_ARM64_VM_CPU:-max}" \
-            -m "''${PUREDARWIN_VM_MEMORY:-1024}" \
+            -cpu "''${OPENOSX_ARM64_VM_CPU:-max}" \
+            -m "''${OPENOSX_VM_MEMORY:-1024}" \
             -drive if=pflash,format=raw,unit=0,readonly=on,file="$aavmf_code" \
             -drive if=pflash,format=raw,unit=1,file="$aavmf_vars" \
             -device virtio-gpu-pci \
             -serial mon:stdio \
-            -display "''${PUREDARWIN_ARM64_UEFI_DISPLAY:-gtk}" \
+            -display "''${OPENOSX_ARM64_UEFI_DISPLAY:-gtk}" \
             -no-reboot \
             -no-shutdown \
             "$@"
         '';
       };
       runArm64Uboot = pkgs.writeShellApplication {
-        name = "puredarwin-arm64-uboot";
+        name = "openosx-arm64-uboot";
         runtimeInputs = [ pkgs.qemu ];
         text = ''
           set -euo pipefail
 
-          image="''${PUREDARWIN_IMAGE:-}"
+          image="''${OPENOSX_IMAGE:-}"
           if [ -z "$image" ]; then
-            if [ -e "$PWD/puredarwin-arm64-virt.img" ]; then
-              image="$PWD/puredarwin-arm64-virt.img"
-            elif [ -e "$PWD/result/puredarwin-arm64-virt.img" ]; then
-              image="$PWD/result/puredarwin-arm64-virt.img"
+            if [ -e "$PWD/openosx-arm64-virt.img" ]; then
+              image="$PWD/openosx-arm64-virt.img"
+            elif [ -e "$PWD/result/openosx-arm64-virt.img" ]; then
+              image="$PWD/result/openosx-arm64-virt.img"
             else
-              echo "puredarwin-arm64-uboot: no image found" >&2
+              echo "openosx-arm64-uboot: no image found" >&2
               exit 1
             fi
           fi
@@ -907,9 +907,9 @@ let
 
           exec qemu-system-aarch64 \
             -machine virt,gic-version=3 \
-            -cpu "''${PUREDARWIN_ARM64_VM_CPU:-max}" \
-            -smp "''${PUREDARWIN_VM_SMP:-4}" \
-            -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
+            -cpu "''${OPENOSX_ARM64_VM_CPU:-max}" \
+            -smp "''${OPENOSX_VM_SMP:-4}" \
+            -m "''${OPENOSX_VM_MEMORY:-4096}" \
             -bios "${pkgs.pkgsCross.aarch64-multiplatform.ubootQemuAarch64}/u-boot.bin" \
             -drive if=none,id=system,file="$image",format=raw$image_readonly_opt \
             -device ich9-ahci,id=ahci0 \
@@ -922,24 +922,24 @@ let
         '';
       };
       runArm64Virt = pkgs.writeShellApplication {
-        name = "puredarwin-arm64-virt";
+        name = "openosx-arm64-virt";
         runtimeInputs = [ pkgs.qemu ];
         text = ''
           set -euo pipefail
 
-          state_dir="''${PUREDARWIN_ARM64_VM_STATE_DIR:-$PWD/.puredarwin-arm64-virt}"
-          image="''${PUREDARWIN_IMAGE:-}"
-          aavmf_code="''${PUREDARWIN_AAVMF_CODE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_CODE.fd}"
-          aavmf_vars_template="''${PUREDARWIN_AAVMF_VARS_TEMPLATE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_VARS.fd}"
-          aavmf_vars="''${PUREDARWIN_AAVMF_VARS:-$state_dir/AAVMF_VARS.fd}"
+          state_dir="''${OPENOSX_ARM64_VM_STATE_DIR:-$PWD/.openosx-arm64-virt}"
+          image="''${OPENOSX_IMAGE:-}"
+          aavmf_code="''${OPENOSX_AAVMF_CODE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_CODE.fd}"
+          aavmf_vars_template="''${OPENOSX_AAVMF_VARS_TEMPLATE:-${pkgs.pkgsCross.aarch64-multiplatform.OVMF.fd}/FV/AAVMF_VARS.fd}"
+          aavmf_vars="''${OPENOSX_AAVMF_VARS:-$state_dir/AAVMF_VARS.fd}"
 
           if [ -z "$image" ]; then
-            if [ -e "$PWD/puredarwin-arm64-virt.img" ]; then
-              image="$PWD/puredarwin-arm64-virt.img"
-            elif [ -e "$PWD/result/puredarwin-arm64-virt.img" ]; then
-              image="$PWD/result/puredarwin-arm64-virt.img"
+            if [ -e "$PWD/openosx-arm64-virt.img" ]; then
+              image="$PWD/openosx-arm64-virt.img"
+            elif [ -e "$PWD/result/openosx-arm64-virt.img" ]; then
+              image="$PWD/result/openosx-arm64-virt.img"
             else
-              echo "puredarwin-arm64-virt: no image found; run nix build .#image-arm64-virt" >&2
+              echo "openosx-arm64-virt: no image found; run nix build .#image-arm64-virt" >&2
               exit 1
             fi
           fi
@@ -950,7 +950,7 @@ let
           fi
 
           mkdir -p "$state_dir"
-          if [ "''${PUREDARWIN_ARM64_RESET_VARS:-0}" = 1 ]; then
+          if [ "''${OPENOSX_ARM64_RESET_VARS:-0}" = 1 ]; then
             rm -f "$aavmf_vars"
           fi
           if [ ! -e "$aavmf_vars" ]; then
@@ -961,9 +961,9 @@ let
           exec qemu-system-aarch64 \
             -machine virt,gic-version=3 \
             -boot order=c,strict=on \
-            -cpu "''${PUREDARWIN_ARM64_VM_CPU:-max}" \
-            -smp "''${PUREDARWIN_VM_SMP:-4}" \
-            -m "''${PUREDARWIN_VM_MEMORY:-4096}" \
+            -cpu "''${OPENOSX_ARM64_VM_CPU:-max}" \
+            -smp "''${OPENOSX_VM_SMP:-4}" \
+            -m "''${OPENOSX_VM_MEMORY:-4096}" \
             -drive if=pflash,format=raw,unit=0,readonly=on,file="$aavmf_code" \
             -drive if=pflash,format=raw,unit=1,file="$aavmf_vars" \
             -drive if=none,id=system,file="$image",format=raw$image_readonly_opt \
@@ -1029,27 +1029,27 @@ let
     in {
       default = {
         type = "app";
-        program = "${runVm}/bin/puredarwin-vm";
+        program = "${runVm}/bin/openosx-vm";
       };
       vm = {
         type = "app";
-        program = "${runVm}/bin/puredarwin-vm";
+        program = "${runVm}/bin/openosx-vm";
       };
       arm64-virt = {
         type = "app";
-        program = "${runVirt}/bin/puredarwin-arm64-virt";
+        program = "${runVirt}/bin/openosx-arm64-virt";
       };
       arm64-uefi = {
         type = "app";
-        program = "${linuxPackages.arm64-uefi-runner}/bin/puredarwin-arm64-uefi";
+        program = "${linuxPackages.arm64-uefi-runner}/bin/openosx-arm64-uefi";
       };
       arm64-uboot = {
         type = "app";
-        program = "${linuxPackages.arm64-uboot-runner}/bin/puredarwin-arm64-uboot";
+        program = "${linuxPackages.arm64-uboot-runner}/bin/openosx-arm64-uboot";
       };
       kvm = {
         type = "app";
-        program = "${runKvm}/bin/puredarwin-kvm";
+        program = "${runKvm}/bin/openosx-kvm";
       };
     };
 in {

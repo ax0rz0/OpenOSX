@@ -71,7 +71,7 @@ function(mig filename)
     elseif(DEFINED ENV{NIX_MIGCOM_PATH})
         set(MIGCOM_ENV_PREFIX ${CMAKE_COMMAND} -E env "MIGCOM=$ENV{NIX_MIGCOM_PATH}")
         set(MIGCOM_DEPENDS)
-    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND PUREDARWIN_ENABLE_TOOLS)
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND OPENOSX_ENABLE_TOOLS)
         set(MIGCOM_ENV_PREFIX ${CMAKE_COMMAND} -E env "MIGCOM=$<TARGET_FILE:migcom>")
         set(MIGCOM_DEPENDS migcom)
     elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
@@ -82,7 +82,7 @@ function(mig filename)
     endif()
 
     add_custom_command(OUTPUT ${MIG_DEPS}
-        COMMAND ${MIGCOM_ENV_PREFIX} ${PUREDARWIN_SOURCE_DIR}/tools/mig/mig.sh -arch ${MIG_ARCH}
+        COMMAND ${MIGCOM_ENV_PREFIX} ${OPENOSX_SOURCE_DIR}/tools/mig/mig.sh -arch ${MIG_ARCH}
             -user ${MIG_USER_SOURCE} -header ${MIG_USER_HEADER} -server ${MIG_SERVER_SOURCE}
             -sheader ${MIG_SERVER_HEADER} ${MIG_FLAGS} ${filename_abs}
         DEPENDS ${MIGCOM_DEPENDS}

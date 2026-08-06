@@ -276,7 +276,7 @@ char *index(const char *s, int c)
 
 /*
  * The rest of this file back-fills libc/libutil/libinfo functions that xterm
- * references but PureDarwin's static libc archives don't yet provide, so the
+ * references but OpenOSX's static libc archives don't yet provide, so the
  * flat-namespace symbols it defers at link time actually resolve at load
  * instead of aborting dyld. Where a real implementation is cheap and correct
  * (alarm, the *_r passwd wrappers, openpty) we provide it; where the feature is
@@ -340,7 +340,7 @@ pd_pwcopy(struct passwd *dst, const struct passwd *src,
 
 
 /*
- * PureDarwin's libc archive ships none of the Unix98 pty helpers, so provide
+ * OpenOSX's libc archive ships none of the Unix98 pty helpers, so provide
  * them here directly over /dev/ptmx using Darwin's pty ioctls (sys/ttycom.h).
  * These are the same operations Apple's libc performs; whether they succeed at
  * runtime depends on the kernel's ptmx/ptsd driver being present.
@@ -362,7 +362,7 @@ pd_pwcopy(struct passwd *dst, const struct passwd *src,
 
 /*
  * popen$DARWIN_EXTSN: xterm references the versioned symbol (the SDK's
- * <stdio.h> asm-renames popen). PureDarwin's libc archive exports neither
+ * <stdio.h> asm-renames popen). OpenOSX's libc archive exports neither
  * variant, so implement it here via fork/exec/pipe. Book-kept fds so the
  * companion pclose can reap; if pclose isn't linked the child is simply
  * reaped by the kernel at exit.
@@ -589,7 +589,7 @@ pthread_atfork(void (*prepare)(void), void (*parent)(void), void (*child)(void))
 /*
  * issetugid(): real Apple semantics report whether the process is running
  * with elevated privilege from a setuid/setgid exec (libc/CF/etc use it to
- * decide whether to trust environment variables). PureDarwin doesn't run
+ * decide whether to trust environment variables). OpenOSX doesn't run
  * setuid binaries, so this is never true here - always report "no".
  */
 int
@@ -605,7 +605,7 @@ issetugid(void)
  * domain first. The state is opaque to callers, so it just packs the directory
  * selector with the domains left to visit; 0 ends the enumeration.
  *
- * Only the directories PureDarwin actually has are mapped. An unmapped
+ * Only the directories OpenOSX actually has are mapped. An unmapped
  * directory yields no paths at all rather than a plausible-looking one, so a
  * caller iterating it finds nothing instead of a path that never exists.
  */
@@ -962,7 +962,7 @@ snprintf_l(char *str, size_t size, locale_t loc, const char *format, ...)
 }
 
 /*
- * PureDarwin: real uuid_generate/uuid_generate_random/uuid_generate_time
+ * OpenOSX: real uuid_generate/uuid_generate_random/uuid_generate_time
  * (plus uuid_clear/compare/copy/is_null/unparse/pack/unpack) now come from
  * the vendored libc/uuid/uuidsrc sources (see libc/CMakeLists.txt) instead
  * of this hand-rolled arc4random-only stub.
@@ -1178,7 +1178,7 @@ ldexpl(long double x, int n)
 /*
  * slot_name (mach/mach_init.h): hostinfo(1)'s only non-MIG dependency.
  * Real Darwin has a large historical table covering every CPU type/subtype
- * combination it ever ran on (68k, PowerPC, ARM, ...); PureDarwin only ever
+ * combination it ever ran on (68k, PowerPC, ARM, ...); OpenOSX only ever
  * targets CPU_TYPE_X86_64, so give real names for that family and a generic
  * fallback for anything else rather than porting the whole table.
  */

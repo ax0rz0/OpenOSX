@@ -103,7 +103,7 @@ target_include_directories(dyld PRIVATE
 # ___memset_chk) which would otherwise need a libc we don't link.
 target_compile_definitions(dyld PRIVATE NDEBUG BUILDING_DYLD=1 BUILDING_LIBDYLD=1
     PRIVATE=1 _DARWIN_C_SOURCE CORECRYPTO_DONOT_USE_TRANSPARENT_UNION _FORTIFY_SOURCE=0)
-if(PUREDARWIN_USE_LD64_LLD)
+if(OPENOSX_USE_LD64_LLD)
     target_compile_definitions(dyld PRIVATE PD_LD64LLD_WEAK_DYLD_FALLBACKS)
 endif()
 
@@ -120,7 +120,7 @@ target_compile_options(dyld PRIVATE
     # sysroot. dyld compiles against the SDK's coherent libc/libc++ instead (its
     # wrapper headers #include_next into the C library), so it needs -isysroot.
     # PD's own headers still take priority via -I.
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     # The C++ compat force-include must NOT reach the .s files (it would inject
     # C++ into assembly); scope it to C/C++ translation units only.
     $<$<COMPILE_LANGUAGE:C,CXX>:-include${CMAKE_CURRENT_SOURCE_DIR}/dyld_sdk_compat.h>
@@ -197,7 +197,7 @@ target_link_options(dyld PRIVATE
     # of which dyld's used call graph reaches.
     -Wl,-dead_strip
 )
-if(PUREDARWIN_USE_LD64_LLD)
+if(OPENOSX_USE_LD64_LLD)
     # ld64.lld diagnoses duplicate archive members before ordinary dead_strip
     # can discard them. Apple's ld64 accepts this dyld link as-is.
     target_link_options(dyld PRIVATE -Wl,--dead-strip-duplicates)

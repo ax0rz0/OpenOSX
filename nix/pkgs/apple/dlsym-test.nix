@@ -20,7 +20,7 @@ let
   cc = "${darwinCrossToolchain}/bin/${targetTriple}-clang";
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-dlsym-test";
+  pname = "openosx-dlsym-test";
   version = "1";
   dontUnpack = true;
 

@@ -15,7 +15,7 @@ in
   # cpu is the finer-grained name and meson places no constraints on it.
   mesonCpu = arch;
 
-  # Both architectures PureDarwin targets are little-endian.
+  # Both architectures OpenOSX targets are little-endian.
   mesonEndian = "little";
 
   # The -target clang expects, which is spelled differently from the triple

@@ -21,7 +21,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-gnum4";
+  pname = "openosx-gnum4";
   inherit (gnum4) version src;
 
   nativeBuildInputs = [ gnumake ];
@@ -74,7 +74,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "GNU m4, cross-built for PureDarwin";
+    description = "GNU m4, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

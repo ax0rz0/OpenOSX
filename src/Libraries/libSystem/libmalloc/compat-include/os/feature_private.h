@@ -1,5 +1,5 @@
 /*
- * PureDarwin minimal os_feature_enabled_simple.
+ * OpenOSX minimal os_feature_enabled_simple.
  *
  * Real Darwin backs this with a compact feature-flag table baked into the dyld shared cache / kernel commpage;
  * we have neither, so this is a genuine (not faked) minimal implementation:

@@ -53,8 +53,8 @@ static const uint16_t usb_to_evdev[256] = {
 	[0xe4] = 97, [0xe5] = 54, [0xe6] = 100, [0xe7] = 126,
 };
 
-static const struct wlr_keyboard_impl keyboard_impl = { .name = "puredarwin-hid" };
-static const struct wlr_pointer_impl pointer_impl = { .name = "puredarwin-hid" };
+static const struct wlr_keyboard_impl keyboard_impl = { .name = "openosx-hid" };
+static const struct wlr_pointer_impl pointer_impl = { .name = "openosx-hid" };
 
 static int keyboard_readable(int fd, uint32_t mask, void *data) {
 	struct wlr_puredarwin_backend *backend = data;
@@ -130,7 +130,7 @@ static int mouse_readable(int fd, uint32_t mask, void *data) {
 
 static void input_emit_ready(struct wlr_puredarwin_backend *backend) {
 	if (backend->keyboard_fd >= 0 && !backend->keyboard_emitted) {
-		/* PureDarwin HID character devices are readable but are not
+		/* OpenOSX HID character devices are readable but are not
 		 * kqueue-filterable. They are drained by the timer below. */
 		backend->keyboard_emitted = true;
 		wl_signal_emit_mutable(&backend->backend.events.new_input,
@@ -167,22 +167,22 @@ static int input_retry(void *data) {
 bool puredarwin_input_init(struct wlr_puredarwin_backend *backend) {
 	backend->keyboard_fd = -1;
 	backend->mouse_fd = -1;
-	wlr_keyboard_init(&backend->keyboard, &keyboard_impl, "PureDarwin HID Keyboard");
-	wlr_pointer_init(&backend->pointer, &pointer_impl, "PureDarwin HID Pointer");
+	wlr_keyboard_init(&backend->keyboard, &keyboard_impl, "OpenOSX HID Keyboard");
+	wlr_pointer_init(&backend->pointer, &pointer_impl, "OpenOSX HID Pointer");
 	backend->input_ready = true;
 	backend->input_retry_timer = wl_event_loop_add_timer(backend->event_loop,
 		input_retry, backend);
 	if (backend->input_retry_timer == NULL) {
-		wlr_log(WLR_ERROR, "PureDarwin HID retry timer failed");
+		wlr_log(WLR_ERROR, "OpenOSX HID retry timer failed");
 	}
 	if (!backend->keyboard_emitted || !backend->pointer_emitted) {
-		wlr_log(WLR_INFO, "PureDarwin HID waiting for devices (keyboard=%s mouse=%s)",
+		wlr_log(WLR_INFO, "OpenOSX HID waiting for devices (keyboard=%s mouse=%s)",
 			backend->keyboard_emitted ? "ready" : "waiting",
 			backend->pointer_emitted ? "ready" : "waiting");
 		if (backend->input_retry_timer != NULL)
 			wl_event_source_timer_update(backend->input_retry_timer, 8);
 	} else {
-		wlr_log(WLR_INFO, "PureDarwin HID input ready (keyboard=yes mouse=yes)");
+		wlr_log(WLR_INFO, "OpenOSX HID input ready (keyboard=yes mouse=yes)");
 	}
 	/* Run once immediately, then continue from the timer. */
 	input_retry(backend);

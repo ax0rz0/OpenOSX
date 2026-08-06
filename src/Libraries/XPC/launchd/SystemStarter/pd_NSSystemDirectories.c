@@ -1,5 +1,5 @@
 /*
- * PureDarwin: see NSSystemDirectories.h for why this exists. Real
+ * OpenOSX: see NSSystemDirectories.h for why this exists. Real
  * enumeration-state contract: state 0 means "start", each call returns
  * the next state (nonzero) with `path` filled in, or 0 when done. We
  * encode the two real domain roots as small distinct nonzero state

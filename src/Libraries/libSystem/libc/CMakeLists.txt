@@ -90,8 +90,8 @@ target_include_directories(libc_public_headers INTERFACE ${CMAKE_CURRENT_SOURCE_
 # interface so consumers such as corecrypto see the same architecture headers
 # as libc itself.
 target_include_directories(libc_public_headers INTERFACE
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/bsd)
-if(PUREDARWIN_ARCH STREQUAL "arm64")
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/bsd)
+if(OPENOSX_ARCH STREQUAL "arm64")
     target_compile_definitions(libc_public_headers INTERFACE
         __DARWIN_ONLY_VERS_1050=1
         __DARWIN_ONLY_UNIX_CONFORMANCE=1
@@ -106,7 +106,7 @@ target_include_directories(libc_kernel_headers INTERFACE ${libc_headers_dir}/Sys
 # END HEADER INTERFACE
 
 add_darwin_static_library(libc_static)
-if(PUREDARWIN_ARCH STREQUAL "arm64")
+if(OPENOSX_ARCH STREQUAL "arm64")
     target_compile_definitions(libc_static PRIVATE
         __DARWIN_ONLY_VERS_1050=1
         __DARWIN_ONLY_UNIX_CONFORMANCE=1
@@ -412,11 +412,11 @@ set_source_files_properties(libm/pd_libm_sincos_stret.c PROPERTIES
 get_target_property(_libc_copts libc_static COMPILE_OPTIONS)
 list(REMOVE_ITEM _libc_copts -nostdinc)
 set_target_properties(libc_static PROPERTIES COMPILE_OPTIONS "${_libc_copts}")
-target_compile_options(libc_static PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
+target_compile_options(libc_static PRIVATE -isysroot ${OPENOSX_MACOSX_SDK})
 target_compile_definitions(libc_static PRIVATE
     _FORTIFY_SOURCE=0
     PR_13085474_CHECK=0
-    PUREDARWIN_EARLY_USERLAND=1)
+    OPENOSX_EARLY_USERLAND=1)
 # bridgeos availability shim (reuse libplatform's), force-included for C: several
 # private headers (os/lock_private.h) use __API_AVAILABLE(...bridgeos(x)...) which
 # neither the SDK nor PD define.
@@ -428,11 +428,11 @@ target_compile_definitions(libc_static PRIVATE __DARWIN_ONLY_UNIX_CONFORMANCE=1)
 target_link_libraries(libc_static PRIVATE xnu_private_headers)
 target_link_libraries(libc_static PUBLIC openlibm_static)
 add_dependencies(libc_static libc_features libsystem_kernel_static)
-if(PUREDARWIN_ARM64)
+if(OPENOSX_ARM64)
     target_sources(libc_static PRIVATE darwin/pd_arm64_abi.c)
 endif()
 target_include_directories(libc_static PRIVATE
-    ${CMAKE_CURRENT_BINARY_DIR}/include/${PUREDARWIN_ARCH}   # generated libc-features.h
+    ${CMAKE_CURRENT_BINARY_DIR}/include/${OPENOSX_ARCH}   # generated libc-features.h
     ${CMAKE_CURRENT_BINARY_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}               # <os/assumes.h> (os/assumes.h), <secure/...>
     ${CMAKE_CURRENT_SOURCE_DIR}/include       # libc's own public headers for libc sources
@@ -459,10 +459,10 @@ target_include_directories(libc_static PRIVATE
     # Prefer libsystem_kernel's userspace mach headers over xnu's kernel mach.h.
     ${CMAKE_CURRENT_SOURCE_DIR}/../libsystem_kernel/mach
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/osfmk
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/libkern
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/libkern/libkern
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/bsd
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/osfmk
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/libkern
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/libkern/libkern
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/bsd
     # strtol.c/strtoul.c/strtoull.c: os/tsd.h (mach), System/machine/cpu_capabilities.h
     # redirect (libmalloc's compat-include), stack_logging.h (libmalloc/private,
     # pulled transitively).
@@ -563,7 +563,7 @@ set_source_files_properties(
     PROPERTIES COMPILE_FLAGS "-DHAVE_CONFIG_H -I${CMAKE_CURRENT_SOURCE_DIR}/regex/TRE -I${CMAKE_CURRENT_SOURCE_DIR}/regex/TRE/lib -I${CMAKE_CURRENT_SOURCE_DIR}/regex/FreeBSD")
 
 add_darwin_static_library(libc_internal_static)
-if(PUREDARWIN_ARCH STREQUAL "arm64")
+if(OPENOSX_ARCH STREQUAL "arm64")
     target_compile_definitions(libc_internal_static PRIVATE
         __DARWIN_ONLY_VERS_1050=1
         __DARWIN_ONLY_UNIX_CONFORMANCE=1
@@ -763,7 +763,7 @@ target_include_directories(libc_internal_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/pd-compat-include   # reconstructed apfs/apfs_fsctl.h
     ${CMAKE_CURRENT_SOURCE_DIR}/../libplatform/include  # libkern/OSAtomic.h (locale refcounts)
     ${CMAKE_CURRENT_SOURCE_DIR}/include             # internal std headers (dirent.h w/ __dd_*)
-    ${CMAKE_CURRENT_BINARY_DIR}/include/${PUREDARWIN_ARCH}   # generated libc-features.h
+    ${CMAKE_CURRENT_BINARY_DIR}/include/${OPENOSX_ARCH}   # generated libc-features.h
     ${CMAKE_CURRENT_SOURCE_DIR}                      # <os/...>, <secure/...>
     ${CMAKE_CURRENT_SOURCE_DIR}/darwin
     ${CMAKE_CURRENT_SOURCE_DIR}/fbsdcompat           # namespace.h / un-namespace.h
@@ -793,8 +793,8 @@ target_include_directories(libc_internal_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/libdarwin/sys-include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../XPC/libxpc/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../XPC/libinfo/compat
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/osfmk            # i386/cpu_capabilities.h
-    ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/bsd              # sys/wait.h and BSD header tree
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/osfmk            # i386/cpu_capabilities.h
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/bsd              # sys/wait.h and BSD header tree
 )
 target_link_libraries(libc_internal_static PRIVATE
     clang_bootstrap_headers      # stddef/stdarg/stdint under -nostdinc
@@ -811,7 +811,7 @@ add_dependencies(libc_internal_static libc_features libsystem_kernel_static)
 target_compile_options(libc_internal_static PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../libplatform/pd_bridgeos_compat.h>
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/fbsdcompat/_fbsd_compat_.h>
-    $<$<COMPILE_LANGUAGE:C>:-idirafter${PUREDARWIN_MACOSX_SDK}/usr/include>)
+    $<$<COMPILE_LANGUAGE:C>:-idirafter${OPENOSX_MACOSX_SDK}/usr/include>)
 # The dir sources use the short DIR field names (dd_fd/dd_lock/...); gen/__dirent.h
 # maps them onto the internal __dd_* members. Force-include it for those files.
 set_source_files_properties(

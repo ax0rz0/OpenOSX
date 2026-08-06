@@ -7,7 +7,7 @@
  * the same order and prints each result, so the failing one is named.
  *
  * The two checks worth watching both walk the registry towards the parents,
- * which nothing in PureDarwin exercised before diskarbitrationd:
+ * which nothing in OpenOSX exercised before diskarbitrationd:
  *
  *   - IORegistryEntrySearchCFProperty(..., kIORegistryIterateParents)
  *     for IOMediaIcon, which partitions inherit from the whole media
@@ -212,7 +212,7 @@ main(int argc, char *argv[])
 	 * The bus: DA walks the device's parents for the first entry that is also
 	 * in the IODeviceTree plane, then asks for its name and path *in that
 	 * plane*. Those two calls are the last untested things in DA's path, and
-	 * nothing else in PureDarwin asks for a name or path in IODeviceTree.
+	 * nothing else in OpenOSX asks for a name or path in IODeviceTree.
 	 */
 	{
 		io_service_t bus = IO_OBJECT_NULL;

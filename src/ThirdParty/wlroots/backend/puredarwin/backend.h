@@ -4,7 +4,7 @@
 
 #include <stdbool.h>
 #include <wayland-server-core.h>
-#include <wlr/backend/puredarwin.h>
+#include <wlr/backend/openosx.h>
 
 #include <PDGOP.h>
 #include <PDSurface.h>

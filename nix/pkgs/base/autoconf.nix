@@ -6,7 +6,7 @@
 }:
 
 stdenv.mkDerivation {
-  pname = "puredarwin-autoconf";
+  pname = "openosx-autoconf";
   inherit (autoconf) version src;
 
   nativeBuildInputs = [ perl m4 ];
@@ -41,7 +41,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "GNU Autoconf, installed for PureDarwin (pure Perl/m4 - no cross-compiling needed)";
+    description = "GNU Autoconf, installed for OpenOSX (pure Perl/m4 - no cross-compiling needed)";
     platforms = platforms.linux;
   };
 }

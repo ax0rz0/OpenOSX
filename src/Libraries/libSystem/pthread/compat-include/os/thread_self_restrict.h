@@ -1,5 +1,5 @@
 /*
- * os/thread_self_restrict.h  (PureDarwin reconstruction)
+ * os/thread_self_restrict.h  (OpenOSX reconstruction)
  *
  * Apple ships the real <os/thread_self_restrict.h> only in its internal SDK; the
  * open drops (incl. the xnu libsyscall copy) contain just an empty guard stub.

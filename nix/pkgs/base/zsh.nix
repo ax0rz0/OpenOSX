@@ -22,7 +22,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-zsh";
+  pname = "openosx-zsh";
   inherit (zsh) version;
   src = zsh.src;
 
@@ -85,7 +85,7 @@ stdenv.mkDerivation {
 
     substituteInPlace Src/init.c \
       --replace-fail 'opts[MONITOR] = 2;   /* may be unset in init_io() */' \
-                     'opts[MONITOR] = 0;   /* PureDarwin: tty pgrp support is incomplete */'
+                     'opts[MONITOR] = 0;   /* OpenOSX: tty pgrp support is incomplete */'
     substituteInPlace Src/signals.c \
       --replace-fail '/* Array describing the state of each signal: an element contains *' \
                      '/**/

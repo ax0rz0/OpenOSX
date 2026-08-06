@@ -36,7 +36,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-at-spi2-core";
+  pname = "openosx-at-spi2-core";
   inherit (at-spi2-core) version src;
 
   nativeBuildInputs = [ meson ninja pkg-config python3 ];
@@ -60,7 +60,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" depPcPaths}:${lib.makeSearchPath "share/pkgconfig" depPcPaths}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -85,7 +85,7 @@ needs_exe_wrapper = true
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
@@ -163,7 +163,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "AT-SPI2 core (libatspi, ATK, atk-bridge-2.0, registryd), cross-built for PureDarwin (X11/introspection/systemd disabled)";
+    description = "AT-SPI2 core (libatspi, ATK, atk-bridge-2.0, registryd), cross-built for OpenOSX (X11/introspection/systemd disabled)";
     platforms = platforms.linux;
   };
 }

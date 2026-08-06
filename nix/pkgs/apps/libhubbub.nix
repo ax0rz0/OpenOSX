@@ -59,7 +59,7 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libhubbub";
+  pname = "openosx-libhubbub";
   inherit (libhubbub) version src;
 
   nativeBuildInputs = [ perl gperf gnused ];
@@ -126,7 +126,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libhubbub (NetSurf HTML5 parsing library), cross-built for PureDarwin";
+    description = "libhubbub (NetSurf HTML5 parsing library), cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

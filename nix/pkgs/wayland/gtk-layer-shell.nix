@@ -77,7 +77,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-gtk-layer-shell";
+  pname = "openosx-gtk-layer-shell";
   inherit (gtk-layer-shell) version src;
 
   nativeBuildInputs = [ meson ninja pkg-config python3 glibNative waylandScanner ];
@@ -98,7 +98,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
     export PATH="${glibNative}/bin:$PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -125,7 +125,7 @@ needs_exe_wrapper = true
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \
@@ -178,7 +178,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "gtk-layer-shell, cross-built for PureDarwin - lets GTK3 windows be docks and desktops under a wlr-layer-shell compositor";
+    description = "gtk-layer-shell, cross-built for OpenOSX - lets GTK3 windows be docks and desktops under a wlr-layer-shell compositor";
     homepage = "https://github.com/wmww/gtk-layer-shell";
     license = licenses.lgpl3Plus;
     platforms = platforms.linux;

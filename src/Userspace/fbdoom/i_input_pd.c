@@ -13,9 +13,9 @@
 // GNU General Public License for more details.
 //
 // DESCRIPTION:
-//	Keyboard input for PureDarwin. fbDOOM's i_input_tty.c relies on
+//	Keyboard input for OpenOSX. fbDOOM's i_input_tty.c relies on
 //	Linux console KDSKBMODE/K_MEDIUMRAW raw-scancode ioctls, which have
-//	no PureDarwin equivalent (no VT keyboard-mode support), so this just
+//	no OpenOSX equivalent (no VT keyboard-mode support), so this just
 //	puts the controlling tty into raw mode and reads plain bytes. There
 //	is no real key-up event this way; each received byte is posted as a
 //	keydown and released on the following poll, which works acceptably

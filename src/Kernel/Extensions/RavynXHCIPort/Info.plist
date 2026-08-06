@@ -46,7 +46,7 @@
         <string>1.5.2</string>
         <key>com.apple.iokit.IOPCIFamily</key>
         <string>2.9</string>
-        <key>org.puredarwin.iokit.IOUSBFamily</key>
+        <key>org.openosx.iokit.IOUSBFamily</key>
         <string>1.0</string>
         <key>com.apple.kpi.iokit</key>
         <string>8.0.0</string>

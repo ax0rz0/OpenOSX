@@ -31,7 +31,7 @@
 
 /*
  * Not gated on DEBUG || DEVELOPMENT as upstream: hypercalls are enabled on every
- * PureDarwin build, since the DEBUG-only path was broken.
+ * OpenOSX build, since the DEBUG-only path was broken.
  */
 
 /*

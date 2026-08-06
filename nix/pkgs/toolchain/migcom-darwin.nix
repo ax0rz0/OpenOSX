@@ -26,7 +26,7 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-migcom";
+  pname = "openosx-migcom";
   version = "0.1";
 
   src = ../../../tools/mig;
@@ -74,7 +74,7 @@ stdenv.mkDerivation {
   dontStrip = true;
 
   meta = with lib; {
-    description = "Real Mach-O migcom + mig.sh, for PureDarwin's own image (not the native host-tool build used during our Nix build)";
+    description = "Real Mach-O migcom + mig.sh, for OpenOSX's own image (not the native host-tool build used during our Nix build)";
     platforms = platforms.linux;
   };
 }

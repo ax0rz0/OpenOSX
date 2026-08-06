@@ -93,7 +93,7 @@ xpc_connection_copy_entitlement_value(xpc_connection_t connection,
 
 /*
  * The uid an XPC connection's peer should be created as. launchd applies this
- * when it spawns the service; PureDarwin's launchd does not implement per-service
+ * when it spawns the service; OpenOSX's launchd does not implement per-service
  * target uids, and every daemon here runs as root, so recording it would have no
  * effect. diskarbitrationd sets it on its DAAgent connection.
  */

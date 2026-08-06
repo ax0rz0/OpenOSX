@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: MIT */
-#ifndef PUREDARWIN_LIBEVDEV_H
-#define PUREDARWIN_LIBEVDEV_H
+#ifndef OPENOSX_LIBEVDEV_H
+#define OPENOSX_LIBEVDEV_H
 
 #define EV_KEY 0x01
 #define BTN_LEFT 0x110

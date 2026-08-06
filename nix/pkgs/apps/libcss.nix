@@ -26,7 +26,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libcss";
+  pname = "openosx-libcss";
   inherit (libcss) version src;
 
   nativeBuildInputs = [ perl python3 buildPackages.stdenv.cc ];
@@ -101,7 +101,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libcss (NetSurf CSS parsing/selection library), cross-built for PureDarwin";
+    description = "libcss (NetSurf CSS parsing/selection library), cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

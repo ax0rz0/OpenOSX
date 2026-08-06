@@ -61,7 +61,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xterm";
+  pname = "openosx-xterm";
   inherit (xterm) version;
   src = xterm.src;
 
@@ -91,7 +91,7 @@ stdenv.mkDerivation {
     # Xpoll.h so xterm falls back to its own XFD_COPYSET, which uses fds_bits.
     export CFLAGS="-isysroot $DARWIN_SDK_ROOT -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector -DNO_XPOLL_H"
     # Darwin's struct utmpx has ut_tv, not the classic BSD ut_time xterm's utmp
-    # path writes. PureDarwin has no utmp login database anyway - disable it so
+    # path writes. OpenOSX has no utmp login database anyway - disable it so
     # the incompatible block is never compiled.
     export cf_cv_have_utmp=no
     # Trim reallocarray.o out of a writable copy of libXext.a so force_load'ing

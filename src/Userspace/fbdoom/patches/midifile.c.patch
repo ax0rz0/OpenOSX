@@ -4,7 +4,7 @@
  #include "m_misc.h"
  #include "midifile.h"
  
-+/* PureDarwin: prototypes for the pd_choco_compat.c helpers (this file's
++/* OpenOSX: prototypes for the pd_choco_compat.c helpers (this file's
 + * chocolate-doom 3.x home declares these in i_swap.h/i_system.h/m_misc.h,
 + * which the older fbDOOM base tree here does not). */
 +unsigned short SDL_SwapBE16(unsigned short x);

@@ -61,7 +61,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-dillo";
+  pname = "openosx-dillo";
   inherit (dillo) version;
   src = dillo.src;
 
@@ -126,7 +126,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "Dillo web browser, cross-built for PureDarwin against the X11 FLTK port (no JPEG/PNG/WebP)";
+    description = "Dillo web browser, cross-built for OpenOSX against the X11 FLTK port (no JPEG/PNG/WebP)";
     platforms = platforms.linux;
   };
 }

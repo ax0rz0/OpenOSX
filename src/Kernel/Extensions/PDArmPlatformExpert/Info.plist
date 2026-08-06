@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>PDArmPlatformExpert</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.puredarwin.kext.PDArmPlatformExpert</string>
+	<string>org.openosx.kext.PDArmPlatformExpert</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -20,10 +20,10 @@
 	<string>1</string>
 	<key>IOKitPersonalities</key>
 	<dict>
-		<key>PureDarwin ARM platform</key>
+		<key>OpenOSX ARM platform</key>
 		<dict>
 			<key>CFBundleIdentifier</key>
-			<string>org.puredarwin.kext.PDArmPlatformExpert</string>
+			<string>org.openosx.kext.PDArmPlatformExpert</string>
 			<key>IOClass</key>
 			<string>PDArmPlatformExpert</string>
 			<key>IONameMatch</key>

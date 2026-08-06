@@ -25,7 +25,7 @@
   #         prefers an Apple_HFS partition when deriving boot-uuid.
 , rootFsType ? "ext4"
 , testAudioFile ? null
-, imageFileName ? "puredarwin.img"
+, imageFileName ? "openosx.img"
 , efiBinary ? "BOOTX64.EFI"
   # xnu-loader reads this off the ESP at \EFI\BOOT\boot-args.txt
   # it falls back if it cannot find a boot-args.txt, so not strictly needed here
@@ -39,7 +39,7 @@ assert rootFsType == "ext4" || rootFsType == "hfs";
 assert rootFsType == "hfs" -> (hfsprogs != null && libdmg-hfsplus != null);
 
 stdenv.mkDerivation {
-  pname = "puredarwin-image";
+  pname = "openosx-image";
   version = "0.1";
 
   dontUnpack = true;
@@ -58,7 +58,7 @@ stdenv.mkDerivation {
     # boot-uuid-media for the matching volume.
     HFS_GUID=48465300-0000-11AA-AA11-00306543ECAC
 
-    img=puredarwin.img
+    img=openosx.img
     esp_sectors=$((${toString espMB} * 2048))
     root_sectors=$((${toString rootMB} * 2048))
 ${if rootFsType == "hfs" then ''
@@ -305,16 +305,16 @@ EOF
     cat > $staging/usr/libexec/pd-set-hostname <<'EOF'
 #!/bin/sh
 if test -x /bin/hostname; then
-    /bin/hostname puredarwin
+    /bin/hostname openosx
 fi
 EOF
-    cat > $staging/System/Library/LaunchDaemons/org.puredarwin.hostname.plist <<'EOF'
+    cat > $staging/System/Library/LaunchDaemons/org.openosx.hostname.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>org.puredarwin.hostname</string>
+	<string>org.openosx.hostname</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/libexec/pd-set-hostname</string>
@@ -359,13 +359,13 @@ if test -x /bin/dbus-daemon; then
 fi
 exit 0
 EOF
-    cat > $staging/System/Library/LaunchDaemons/org.puredarwin.dbus.plist <<'EOF'
+    cat > $staging/System/Library/LaunchDaemons/org.openosx.dbus.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>org.puredarwin.dbus</string>
+	<string>org.openosx.dbus</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/libexec/pd-dbus-launch</string>
@@ -397,13 +397,13 @@ if test -x /bin/mount; then
     /bin/mount -t hfs -o update,rw /dev/disk0s2 /
 fi
 EOF
-    cat > $staging/System/Library/LaunchDaemons/org.puredarwin.root-remount.plist <<'EOF'
+    cat > $staging/System/Library/LaunchDaemons/org.openosx.root-remount.plist <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>org.puredarwin.root-remount</string>
+	<string>org.openosx.root-remount</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/libexec/pd-root-remount</string>
@@ -482,9 +482,9 @@ EOF
 	<key>ProductBuildVersion</key>
 	<string>20D91</string>
 	<key>ProductCopyright</key>
-	<string>1983-2021 PureDarwin. All rights reserved.</string>
+	<string>1983-2021 OpenOSX. All rights reserved.</string>
 	<key>ProductName</key>
-	<string>PureDarwin</string>
+	<string>OpenOSX</string>
 	<key>ProductUserVisibleVersion</key>
 	<string>11.3</string>
 	<key>ProductVersion</key>
@@ -494,7 +494,7 @@ EOF
 EOF
     chmod 644 $staging/System/Library/CoreServices/SystemVersion.plist
 
-    # Xorg config selecting the PureDarwin GOP framebuffer driver. No input
+    # Xorg config selecting the OpenOSX GOP framebuffer driver. No input
     # autodetection (no udev/hal on PD); the driver reads its geometry live
     # from IOGOPFramebuffer, so no Modeline/resolution is needed here.
     mkdir -p $staging/etc/X11
@@ -656,7 +656,7 @@ ${lib.optionalString (rootFsType == "hfs") ''
       exit 1
     fi
 
-    mkfs.hfsplus -v PureDarwin root.img >/dev/null
+    mkfs.hfsplus -v OpenOSX root.img >/dev/null
 
     printf 'PDHFSRT1' | dd of=root.img bs=1 seek=$((1024 + 104)) conv=notrunc status=none
     printf 'PDHFSRT1' | dd of=root.img bs=1 seek=$((root_size * 512 - 1024 + 104)) conv=notrunc status=none
@@ -704,12 +704,12 @@ EOF
   installPhase = ''
     runHook preInstall
     mkdir -p $out
-    cp puredarwin.img $out/${imageFileName}
+    cp openosx.img $out/${imageFileName}
     runHook postInstall
   '';
 
   meta = with lib; {
-    description = "Bootable PureDarwin GPT disk image (xnu-loader ESP + kc-tools kernel collection + ext4 BaseSystem root + APFS test container)";
+    description = "Bootable OpenOSX GPT disk image (xnu-loader ESP + kc-tools kernel collection + ext4 BaseSystem root + APFS test container)";
     platforms = platforms.linux;
   };
 }

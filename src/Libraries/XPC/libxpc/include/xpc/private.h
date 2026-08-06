@@ -62,7 +62,7 @@ typedef enum {
 
 /*
  * The value of a code-signing entitlement on the peer of an XPC connection.
- * PureDarwin does not sign binaries and has no securityd, so a peer carries no
+ * OpenOSX does not sign binaries and has no securityd, so a peer carries no
  * entitlements and this always reports none - the same reasoning as Security.c's
  * SecTask. Callers read NULL as "not entitled", which is accurate here.
  */

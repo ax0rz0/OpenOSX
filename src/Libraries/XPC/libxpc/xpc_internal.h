@@ -39,7 +39,7 @@
 
 #define debugf(msg, ...) \
 	do { \
-		os_log_t logger = os_log_create("org.puredarwin.libxpc", "Debug"); \
+		os_log_t logger = os_log_create("org.openosx.libxpc", "Debug"); \
 		os_log(logger, msg, ##__VA_ARGS__); \
 		os_release(logger); \
 	} while(0);
@@ -186,7 +186,7 @@ __private_extern__ void xpc_api_misuse(const char *info, ...) __attribute__((nor
 #define XPC_RESERVED_KEY_PREFIX	"__xpc_internal__:"
 
 /*
- * PureDarwin: this project is compiled as plain C with no real Objective-C
+ * OpenOSX: this project is compiled as plain C with no real Objective-C
  * runtime (USE_OBJC=0 throughout this tree), so the upstream community
  * reimplementation's `asm("_OBJC_CLASS_$_" ...)` renaming - which forces
  * these "class" identifiers to resolve to real ObjC metaclass symbols -

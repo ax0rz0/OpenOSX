@@ -1,4 +1,4 @@
-if(NOT PUREDARWIN_ARM64)
+if(NOT OPENOSX_ARM64)
     add_subdirectory(IOACPIFamily)
     add_subdirectory(AppleAPIC)
     add_subdirectory(AppleI386GenericPlatform)
@@ -18,8 +18,8 @@ add_subdirectory(IONVMEFamily)
 add_subdirectory(IOUSBFamily)
 add_subdirectory(RavynAHCIPort)
 add_subdirectory(RavynXHCIPort)
-option(PUREDARWIN_ENABLE_IOGRAPHICS_FAMILY "Build the full IOGraphicsFamily kext" ON)
-if(PUREDARWIN_ENABLE_IOGRAPHICS_FAMILY)
+option(OPENOSX_ENABLE_IOGRAPHICS_FAMILY "Build the full IOGraphicsFamily kext" ON)
+if(OPENOSX_ENABLE_IOGRAPHICS_FAMILY)
     add_subdirectory(IOGraphicsFamily)
 endif()
 add_subdirectory(IOGOPFramebuffer)
@@ -55,13 +55,13 @@ add_dependencies(kexts
     corecrypto.kext ext4.kext msdosfs.kext apfs.kext HFSEncodings.kext hfs.kext
     AppleFileSystemDriver.kext Ext4FileSystemDriver.kext pthread.kext
 )
-if(PUREDARWIN_ARM64)
+if(OPENOSX_ARM64)
     add_dependencies(kexts PDArmPlatformExpert)
 endif()
-if(PUREDARWIN_ENABLE_IOGRAPHICS_FAMILY)
+if(OPENOSX_ENABLE_IOGRAPHICS_FAMILY)
     add_dependencies(kexts IOGraphicsFamily.kext)
 endif()
-if(NOT PUREDARWIN_ARM64)
+if(NOT OPENOSX_ARM64)
     add_dependencies(kexts
         AppleAPIC AppleI386GenericPlatform AppleI386PCI AppleIntelPIIXATA
         ApplePS2Controller IOACPIFamily IOATAFamily IOATABlockStorage.kext

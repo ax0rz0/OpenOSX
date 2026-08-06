@@ -42,7 +42,7 @@ let
     [ mesa libX11 libXext libxcb libXau libXdmcp xorgproto xtrans ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-mesa-demos";
+  pname = "openosx-mesa-demos";
   version = "9.0.0";
 
   src = fetchurl {
@@ -66,7 +66,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_PATH="${xPkgConfigPath}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -91,7 +91,7 @@ needs_exe_wrapper = true
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out/usr \
       --buildtype=release \
       -Dgles1=disabled \
@@ -127,7 +127,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "mesa-demos cross-built for PureDarwin";
+    description = "mesa-demos cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

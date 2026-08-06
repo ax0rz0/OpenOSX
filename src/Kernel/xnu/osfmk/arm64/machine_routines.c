@@ -2740,7 +2740,7 @@ ml_cluster_wfe_timeout(uint32_t wfe_cluster_id)
 }
 
 /*
- * PureDarwin: declared (osfmk/arm/machine_routines.h) and called
+ * OpenOSX: declared (osfmk/arm/machine_routines.h) and called
  * unconditionally from arm_vm_init.c's arm_vm_init(), but never defined
  * anywhere in this tree for the non-PPL (!XNU_MONITOR) case we build
  * with here. Real Apple Silicon builds enable the PPL/"monitor" hardware

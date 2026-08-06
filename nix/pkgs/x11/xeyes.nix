@@ -66,7 +66,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xeyes";
+  pname = "openosx-xeyes";
   inherit (xeyes) version;
   src = xeyes.src;
 

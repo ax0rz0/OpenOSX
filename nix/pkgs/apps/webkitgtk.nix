@@ -40,7 +40,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-webkitgtk";
+  pname = "openosx-webkitgtk";
   inherit (webkitgtk) version src;
 
   nativeBuildInputs = [
@@ -168,7 +168,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "WebKitGTK for PureDarwin - configure probe (stage 2 of the port)";
+    description = "WebKitGTK for OpenOSX - configure probe (stage 2 of the port)";
     platforms = platforms.linux;
   };
 }

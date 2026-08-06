@@ -17,7 +17,7 @@ target_sources(ext4_util PRIVATE ext4.util.c)
 target_compile_definitions(ext4_util PRIVATE __DARWIN_ONLY_UNIX_CONFORMANCE=1)
 
 target_compile_options(ext4_util PRIVATE
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -fno-builtin
     -fno-stack-protector
 )

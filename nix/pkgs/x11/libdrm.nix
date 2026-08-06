@@ -24,7 +24,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libdrm";
+  pname = "openosx-libdrm";
   version = "2.4.133";
   inherit src;
 
@@ -33,8 +33,8 @@ stdenv.mkDerivation {
   postPatch = ''
     mkdir -p compat/sys
     cat > compat/sys/sysmacros.h <<EOF
-#ifndef PUREDARWIN_SYSMACROS_H
-#define PUREDARWIN_SYSMACROS_H
+#ifndef OPENOSX_SYSMACROS_H
+#define OPENOSX_SYSMACROS_H
 #include <sys/types.h>
 #ifndef major
 #define major(dev) ((int)(((dev) >> 24) & 0xff))
@@ -61,7 +61,7 @@ EOF
     runHook preConfigure
     mkdir -p sdk
     tar xf ${sdkTarball} -C sdk
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
@@ -82,7 +82,7 @@ endian = '${targetInfo.mesonEndian}'
 needs_exe_wrapper = true
 EOF
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=/ \
       --libdir=lib \
       --buildtype=release \
@@ -117,7 +117,7 @@ EOF
   dontStrip = true;
 
   meta = with lib; {
-    description = "PureDarwin userspace DRM ABI and format definitions";
+    description = "OpenOSX userspace DRM ABI and format definitions";
     license = licenses.mit;
     platforms = platforms.linux;
   };

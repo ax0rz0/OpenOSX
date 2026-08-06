@@ -50,7 +50,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xorg";
+  pname = "openosx-xorg";
   version = "21.1.24";
 
   src = xorg-server.src;
@@ -68,7 +68,7 @@ stdenv.mkDerivation {
     patchShebangs .
     patch -p2 < ${../../../patches/xorg-xvfb-local-sha1.patch}
     patch -p1 < ${../../../patches/xorg-xvfb-present-card32.patch}
-    sed -i "s/    subdir('test')/    # subdir('test') - removed for PureDarwin cross build/" meson.build
+    sed -i "s/    subdir('test')/    # subdir('test') - removed for OpenOSX cross build/" meson.build
 
     # meson's cross cc.sizeof('unsigned long') returns -1 with this cross
     # file, so _XSERVER64 never lands in dix-config.h and XID/Mask/Atom stay
@@ -77,10 +77,10 @@ stdenv.mkDerivation {
     # the server's struct layouts). Target is x86_64-only: force it.
     sed -i "s/if cc.sizeof('unsigned long') == 8/if true/" include/meson.build
 
-    sed -i '/static const ExtensionModule extensionModules\[\] = {/,+1 s|#ifdef XF86VIDMODE|#if 0 /* PureDarwin: VidMode disabled - crashes in init, unused */|' \
+    sed -i '/static const ExtensionModule extensionModules\[\] = {/,+1 s|#ifdef XF86VIDMODE|#if 0 /* OpenOSX: VidMode disabled - crashes in init, unused */|' \
       hw/xfree86/common/xf86Extensions.c
 
-    patch -p1 < ${../../../patches/xorg-mitshm-puredarwin.patch}
+    patch -p1 < ${../../../patches/xorg-mitshm-openosx.patch}
   '';
 
   configurePhase = ''
@@ -90,7 +90,7 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 # -isysroot travels with the compiler, not in c_args: meson runs its
 # cc.has_header_symbol()/has_header() probes without the [built-in options]
@@ -126,7 +126,7 @@ EOF
     # Keep Unix/local transports enabled; MIT-SHM 1.2 passes descriptors over
     # the local socket with SCM_RIGHTS.
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=/usr \
       --bindir=bin \
       --libdir=lib \

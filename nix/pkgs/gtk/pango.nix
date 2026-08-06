@@ -48,7 +48,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-pango";
+  pname = "openosx-pango";
   version = pango.version;
 
   src = pango.src;
@@ -73,7 +73,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_PATH="${lib.makeSearchPath "lib/pkgconfig" depPcPaths}:${lib.makeSearchPath "share/pkgconfig" depPcPaths}"
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -100,7 +100,7 @@ endian = '${targetInfo.mesonEndian}'
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --wrap-mode=nofallback \
       --prefix=$out \
       --libdir=lib \

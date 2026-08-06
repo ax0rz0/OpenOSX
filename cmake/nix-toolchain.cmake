@@ -2,7 +2,7 @@
 # ../toolchain.nix) - an alternative to osxcross/toolchain.cmake that uses
 # nixpkgs' own unwrapped LLVM/clang/lld instead of a from-source osxcross
 # build. Verified to produce byte-for-byte equivalent Mach-O output (modulo
-# a cosmetic LC_SOURCE_VERSION load command) for real PureDarwin targets.
+# a cosmetic LC_SOURCE_VERSION load command) for real OpenOSX targets.
 #
 # Usage:
 #   NIX_DARWIN_TOOLCHAIN=$(nix build --no-link --print-out-paths .#darwin-cross-toolchain)
@@ -67,4 +67,4 @@ set(CMAKE_INSTALL_NAME_TOOL "${NIX_DARWIN_TOOLCHAIN_DIR}/${NIX_DARWIN_HOST}-inst
 # toolchain is a thin wrapper around nixpkgs' vanilla clang, whose resource-
 # dir headers follow ordinary -idirafter semantics (always last) - so code
 # written assuming osxcross's inverted ordering needs a plain -I instead.
-set(PUREDARWIN_NIX_TOOLCHAIN 1 CACHE BOOL "Using darwin-cross-toolchain-nix (nixpkgs LLVM) instead of osxcross")
+set(OPENOSX_NIX_TOOLCHAIN 1 CACHE BOOL "Using darwin-cross-toolchain-nix (nixpkgs LLVM) instead of osxcross")

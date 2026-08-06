@@ -279,7 +279,7 @@ bool PDE1000::start(IOService *provider)
     // controller. IOInterruptEventSource::interruptEventSource() ends up
     // calling fPCIDevice->registerInterrupt(0, ...), which routes there and
     // programs the device's MSI capability registers (enableDeviceMSI()). RX
-    // still gets timer-polled below because early PureDarwin/QEMU interrupt
+    // still gets timer-polled below because early OpenOSX/QEMU interrupt
     // routing is not stable enough to make networking depend on MSI delivery.
     fInterruptSource = IOInterruptEventSource::interruptEventSource(
         this, &PDE1000::interruptOccurredStatic, fPCIDevice, 0);

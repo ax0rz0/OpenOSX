@@ -24,7 +24,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-kc-tools-guest";
+  pname = "openosx-kc-tools-guest";
   version = "0.1";
 
   src = kcToolsSrc;
@@ -145,7 +145,7 @@ PDKCEOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "kc-tools (kc-builder, prelink-builder) built to run on PureDarwin, plus pd-rebuild-kc";
+    description = "kc-tools (kc-builder, prelink-builder) built to run on OpenOSX, plus pd-rebuild-kc";
     platforms = platforms.linux;
   };
 }

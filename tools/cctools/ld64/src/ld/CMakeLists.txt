@@ -2,9 +2,9 @@
 # fTAPIFiles/fPreferTAPIFile members), so it must be defined for EVERY TU
 # that includes Options.h - directory-scoped here so parsers/ and passes/
 # (added below) inherit it too, never per-target.
-if(PUREDARWIN_LIBTAPI_INCLUDE_DIR AND PUREDARWIN_LIBTAPI_LIBRARY)
+if(OPENOSX_LIBTAPI_INCLUDE_DIR AND OPENOSX_LIBTAPI_LIBRARY)
     add_compile_definitions(TAPI_SUPPORT=1)
-    include_directories(${PUREDARWIN_LIBTAPI_INCLUDE_DIR})
+    include_directories(${OPENOSX_LIBTAPI_INCLUDE_DIR})
 endif()
 
 add_subdirectory(parsers)
@@ -42,8 +42,8 @@ target_link_libraries(host_ld PRIVATE
     host_corecrypto_static
     host_corecrypto_headers
 )
-if(PUREDARWIN_LIBTAPI_INCLUDE_DIR AND PUREDARWIN_LIBTAPI_LIBRARY)
-    target_link_libraries(host_ld PRIVATE ${PUREDARWIN_LIBTAPI_LIBRARY})
+if(OPENOSX_LIBTAPI_INCLUDE_DIR AND OPENOSX_LIBTAPI_LIBRARY)
+    target_link_libraries(host_ld PRIVATE ${OPENOSX_LIBTAPI_LIBRARY})
 endif()
 set_property(TARGET host_ld PROPERTY OUTPUT_NAME ld)
 set_property(TARGET host_ld PROPERTY CXX_STANDARD 17)

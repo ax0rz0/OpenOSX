@@ -78,7 +78,7 @@ const char *
 gbm_device_get_backend_name(struct gbm_device *gbm)
 {
     (void)gbm;
-    return "puredarwin";
+    return "openosx";
 }
 
 int

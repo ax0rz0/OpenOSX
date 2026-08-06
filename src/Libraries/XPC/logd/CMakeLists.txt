@@ -20,7 +20,7 @@ set(PD_LOGD_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/pthread/compat-include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../CrashReporterClient/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libc/pd-compat-include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/osfmk
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/bsd
@@ -39,20 +39,20 @@ target_sources(logd PRIVATE
     logd.c
 )
 target_compile_definitions(logd PRIVATE __DARWIN_ONLY_UNIX_CONFORMANCE=1 PRIVATE=1)
-if(PUREDARWIN_ARM64)
+if(OPENOSX_ARM64)
     target_compile_definitions(logd PRIVATE
         __DARWIN_ONLY_VERS_1050=1
         __DARWIN_ONLY_64_BIT_INO_T=1)
 endif()
 target_compile_options(logd PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libplatform/pd_bridgeos_compat.h>
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
-    -I${PUREDARWIN_MACOSX_SDK}/usr/include
+    -isysroot ${OPENOSX_MACOSX_SDK}
+    -I${OPENOSX_MACOSX_SDK}/usr/include
     -ferror-limit=0)
 target_include_directories(logd PRIVATE ${PD_LOGD_INCLUDES})
 target_link_options(logd PRIVATE
     -nostdlib
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
+    -isysroot ${OPENOSX_MACOSX_SDK}
     -Wl,-L,$<TARGET_FILE_DIR:libSystem_B_stub>
     -Wl,-dylinker_install_name,/usr/lib/dyld
     -Wl,-platform_version,macos,11.0,11.5

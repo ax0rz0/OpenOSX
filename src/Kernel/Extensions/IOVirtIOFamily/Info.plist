@@ -9,7 +9,7 @@
     <key>CFBundleGetInfoString</key>
     <string>1.0.0, Copyright (C) 2026 PureDarwin Project. All rights reserved.</string>
     <key>CFBundleIdentifier</key>
-    <string>org.puredarwin.iokit.IOVirtIOFamily</string>
+    <string>org.openosx.iokit.IOVirtIOFamily</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

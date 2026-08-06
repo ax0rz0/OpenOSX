@@ -21,7 +21,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-nano";
+  pname = "openosx-nano";
   inherit (nano) version;
   src = nano.src;
 

@@ -25,7 +25,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-fribidi";
+  pname = "openosx-fribidi";
   version = fribidi.version;
 
   src = fribidi.src;
@@ -39,7 +39,7 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
@@ -61,7 +61,7 @@ endian = '${targetInfo.mesonEndian}'
 EOF
 
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=$out \
       --libdir=lib \
       --buildtype=release \

@@ -22,7 +22,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libjpeg-turbo";
+  pname = "openosx-libjpeg-turbo";
   inherit (libjpeg_turbo) version src;
 
   nativeBuildInputs = [ cmake ninja ];
@@ -69,7 +69,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "libjpeg-turbo, cross-built for PureDarwin (WebKitGTK requires JPEG)";
+    description = "libjpeg-turbo, cross-built for OpenOSX (WebKitGTK requires JPEG)";
     platforms = platforms.linux;
   };
 }

@@ -56,7 +56,7 @@ __FBSDID("$FreeBSD: src/usr.bin/nohup/nohup.c,v 1.10 2003/05/03 19:44:46 obrien 
 #include <string.h>
 #include <unistd.h>
 
-/* PureDarwin: no vproc/launchd-console API - SIGHUP ignore (below) is the
+/* OpenOSX: no vproc/launchd-console API - SIGHUP ignore (below) is the
  * whole point of nohup and works without it. */
 
 static void dofile(void);

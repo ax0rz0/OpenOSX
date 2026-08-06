@@ -70,7 +70,7 @@
 #include <os/log_private.h>
 
 /*
- * PureDarwin: same os_log_shim_enabled() name collision asl.c has
+ * OpenOSX: same os_log_shim_enabled() name collision asl.c has
  */
 #define os_log_shim_enabled(addr) _pd_syslog_os_log_shim_enabled(addr)
 static bool
@@ -181,7 +181,7 @@ _vsyslog(int pri, const char *fmt, va_list ap, void *addr, bool mirror)
  * The OSX branch defines both spellings explicitly, which is what libSystem
  * needs to export.
  */
-#if TARGET_OS_OSX || defined(PUREDARWIN_ASL_SYSLOG_BOTH_SPELLINGS)
+#if TARGET_OS_OSX || defined(OPENOSX_ASL_SYSLOG_BOTH_SPELLINGS)
 
 extern typeof(syslog) syslog_legacy asm("_syslog");
 extern typeof(syslog) syslog_os_log asm("_syslog" __DARWIN_SUF_EXTSN);

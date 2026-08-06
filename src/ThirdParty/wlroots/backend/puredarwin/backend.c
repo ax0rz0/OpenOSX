@@ -18,7 +18,7 @@ static bool backend_start(struct wlr_backend *wlr_backend) {
 	struct wlr_puredarwin_backend *backend =
 		puredarwin_backend_from_backend(wlr_backend);
 	if (backend->output == NULL) {
-		wlr_log(WLR_ERROR, "PureDarwin framebuffer output is unavailable");
+		wlr_log(WLR_ERROR, "OpenOSX framebuffer output is unavailable");
 		return false;
 	}
 	if (!puredarwin_input_init(backend)) {
@@ -82,7 +82,7 @@ struct wlr_backend *wlr_puredarwin_backend_create(struct wl_event_loop *loop) {
 	}
 	backend->gpu = pd_virgl_open();
 	if (backend->gpu == NULL) {
-		wlr_log(WLR_DEBUG, "PureDarwin VirtIO GPU present interface unavailable");
+		wlr_log(WLR_DEBUG, "OpenOSX VirtIO GPU present interface unavailable");
 	}
 
 	backend->output = puredarwin_output_create(backend);
@@ -93,7 +93,7 @@ struct wlr_backend *wlr_puredarwin_backend_create(struct wl_event_loop *loop) {
 		return NULL;
 	}
 
-	wlr_log(WLR_INFO, "PureDarwin IOGOP backend ready (%ux%u)",
+	wlr_log(WLR_INFO, "OpenOSX IOGOP backend ready (%ux%u)",
 		backend->output->framebuffer.width, backend->output->framebuffer.height);
 	return &backend->backend;
 }

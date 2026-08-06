@@ -1,5 +1,5 @@
 /*
- * PureDarwin: real Darwin's flock(2) (BSD advisory whole-file locking) is
+ * OpenOSX: real Darwin's flock(2) (BSD advisory whole-file locking) is
  * implemented as a thin wrapper over fcntl(F_SETLK/F_SETLKW) with a
  * whole-file lock range - the same real fallback shape BSD-derived libc
  * has used since flock() was reimplemented on top of POSIX fcntl locking

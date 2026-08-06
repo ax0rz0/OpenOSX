@@ -80,7 +80,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-xfce4-terminal";
+  pname = "openosx-xfce4-terminal";
   inherit version src;
 
   patches = [ ./xfce4-terminal/no-layer-shell-finalize.patch ];
@@ -105,7 +105,7 @@ stdenv.mkDerivation {
     export PKG_CONFIG_LIBDIR="$PKG_CONFIG_PATH"
     export PATH="${glibNative}/bin:$PATH"
 
-    cat > puredarwin-cross.ini <<EOF
+    cat > openosx-cross.ini <<EOF
 [binaries]
 c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
 cpp = '${darwinCrossToolchain}/bin/${targetTriple}-clang++'
@@ -138,7 +138,7 @@ EOF
     # $out/share/applications/xfce4-terminal.desktop, a path that does not exist
     # in the guest ("Unable to open ..."). DESTDIR=$out keeps the staged layout.
     meson setup build \
-      --cross-file puredarwin-cross.ini \
+      --cross-file openosx-cross.ini \
       --prefix=/ \
       --libdir=lib \
       --buildtype=release \
@@ -196,7 +196,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "xfce4-terminal, cross-built for PureDarwin";
+    description = "xfce4-terminal, cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

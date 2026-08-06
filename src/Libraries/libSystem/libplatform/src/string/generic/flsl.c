@@ -1,5 +1,5 @@
 /*
- * flsl.c (PureDarwin) -- find last set bit in a long.
+ * flsl.c (OpenOSX) -- find last set bit in a long.
  *
  * The open libplatform drop ships ffsll.c/flsll.c but not flsl(). dyld (via the
  * libc sort helpers) references _flsl, so provide it here alongside the rest of

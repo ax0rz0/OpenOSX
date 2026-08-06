@@ -35,7 +35,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/acl.h>
-#if !defined(PUREDARWIN_ASL_NO_ACL)
+#if !defined(OPENOSX_ASL_NO_ACL)
 #include <membership.h>
 #endif
 #include <time.h>
@@ -323,8 +323,8 @@ asl_file_open_write_fd(int fd, asl_file_t **s)
 __private_extern__ int
 asl_file_create(const char *path, uid_t uid, gid_t gid, mode_t mode)
 {
-#if TARGET_OS_IPHONE || defined(PUREDARWIN_ASL_NO_ACL)
-	/* PureDarwin: no acl_* in libc and no opendirectoryd for the mbr_*
+#if TARGET_OS_IPHONE || defined(OPENOSX_ASL_NO_ACL)
+	/* OpenOSX: no acl_* in libc and no opendirectoryd for the mbr_*
 	 * lookups, so take the same plain-open path iOS does. */
 	return open(path, O_RDWR | O_CREAT | O_EXCL, mode);
 #else

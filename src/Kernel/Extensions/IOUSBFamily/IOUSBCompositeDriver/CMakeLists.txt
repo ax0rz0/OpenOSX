@@ -2,7 +2,7 @@
 # interface USB device's config into per-interface IOKit matching (each
 # published IOUSBInterface gets its own class driver attached).
 add_kext_bundle(IOUSBCompositeDriver.kext INFO_PLIST Info.plist KERNEL_PRIVATE
-    BUNDLE_IDENTIFIER org.puredarwin.driver.IOUSBCompositeDriver BUNDLE_VERSION 1.0.0)
+    BUNDLE_IDENTIFIER org.openosx.driver.IOUSBCompositeDriver BUNDLE_VERSION 1.0.0)
 set_property(TARGET IOUSBCompositeDriver.kext PROPERTY OUTPUT_NAME IOUSBCompositeDriver)
 
 target_sources(IOUSBCompositeDriver.kext PRIVATE

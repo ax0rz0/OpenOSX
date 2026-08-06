@@ -326,7 +326,7 @@ arm_init(
 #endif /* defined(HAS_APPLE_PAC) */
 
 	/*
-	 * PureDarwin: PE_init_platform(FALSE, args) below calls phystokv() (via
+	 * OpenOSX: PE_init_platform(FALSE, args) below calls phystokv() (via
 	 * ml_static_ptovirt()) on the device tree pointer before arm_vm_init()
 	 * (called much further down, ~line 490) has set gPhysBase/gVirtBase/
 	 * real_phys_size. Without them, phystokv()'s fallback formula

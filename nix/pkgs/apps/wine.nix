@@ -55,7 +55,7 @@ let
     '';
   };
   # The 11.3 SDK carries AppKit/Metal headers, so Wine's configure would find
-  # them and enable winemac.drv against frameworks PureDarwin does not have.
+  # them and enable winemac.drv against frameworks OpenOSX does not have.
   # Pre-seed the header caches to no so the X11 driver is chosen instead.
   macFrameworkOverrides = lib.concatStringsSep " " [
     "ac_cv_header_AppKit_AppKit_h=no"
@@ -73,12 +73,12 @@ let
   ];
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-wine";
+  pname = "openosx-wine";
   inherit (wine) version;
   src = wine.src;
 
   # mingwGcc builds Wine's PE-format modules. Like winebuild it runs on the
-  # build host and emits Windows binaries, so it never touches PureDarwin.
+  # build host and emits Windows binaries, so it never touches OpenOSX.
   nativeBuildInputs = [ pkg-config gnumake flex bison mingwGcc mingwGcc32 python3 waylandScanner ];
   buildInputs = xDeps ++ waylandDeps ++ [ freetype fontconfig ];
 

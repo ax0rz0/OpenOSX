@@ -2,7 +2,7 @@
 # e1000-82545em device model. Written from scratch against the public 8254x
 # register spec (no Apple e1000 driver source was ever released).
 add_kext_bundle(PDE1000.kext INFO_PLIST Info.plist KERNEL_PRIVATE
-    BUNDLE_IDENTIFIER org.puredarwin.driver.PDE1000 BUNDLE_VERSION 1.0.0)
+    BUNDLE_IDENTIFIER org.openosx.driver.PDE1000 BUNDLE_VERSION 1.0.0)
 set_property(TARGET PDE1000.kext PROPERTY OUTPUT_NAME PDE1000)
 
 target_sources(PDE1000.kext PRIVATE
@@ -12,9 +12,9 @@ target_sources(PDE1000.kext PRIVATE
 # PDE1000.cpp includes <IOKit/network/Foo.h>; mirror the same shim trick
 # IONetworkingFamily's CMakeLists.txt uses so it can see those headers
 # without installing them system-wide.
-set(PUREDARWIN_PDE1000_SHIM_DIR "${CMAKE_CURRENT_BINARY_DIR}/shim-include")
-set(PUREDARWIN_IONF_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../IONetworkingFamily")
-file(MAKE_DIRECTORY "${PUREDARWIN_PDE1000_SHIM_DIR}/IOKit/network")
+set(OPENOSX_PDE1000_SHIM_DIR "${CMAKE_CURRENT_BINARY_DIR}/shim-include")
+set(OPENOSX_IONF_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../IONetworkingFamily")
+file(MAKE_DIRECTORY "${OPENOSX_PDE1000_SHIM_DIR}/IOKit/network")
 foreach(hdr
     IOBasicOutputQueue.h IOEthernetController.h IOEthernetInterface.h
     IOEthernetStats.h IOGatedOutputQueue.h IOKernelDebugger.h
@@ -23,13 +23,13 @@ foreach(hdr
     IONetworkInterface.h IONetworkMedium.h IONetworkStack.h
     IONetworkStats.h IONetworkTypesPrivate.h IONetworkUserClient.h
     IOOutputQueue.h IOPacketQueue.h)
-    file(CREATE_LINK "${PUREDARWIN_IONF_SRC_DIR}/${hdr}"
-        "${PUREDARWIN_PDE1000_SHIM_DIR}/IOKit/network/${hdr}" SYMBOLIC)
+    file(CREATE_LINK "${OPENOSX_IONF_SRC_DIR}/${hdr}"
+        "${OPENOSX_PDE1000_SHIM_DIR}/IOKit/network/${hdr}" SYMBOLIC)
 endforeach()
 
 target_include_directories(PDE1000.kext PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${PUREDARWIN_PDE1000_SHIM_DIR}
+    ${OPENOSX_PDE1000_SHIM_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/../IOPCIFamily/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../xnu/EXTERNAL_HEADERS)
 target_link_libraries(PDE1000.kext PRIVATE xnu_kernel_private_headers)

@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>org.puredarwin.network</string>
+	<string>org.openosx.network</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/libexec/pd-networkd</string>

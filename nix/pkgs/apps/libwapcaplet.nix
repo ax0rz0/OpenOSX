@@ -20,7 +20,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libwapcaplet";
+  pname = "openosx-libwapcaplet";
   inherit (libwapcaplet) version src;
 
   buildPhase = ''
@@ -76,7 +76,7 @@ EOF
   dontFixup = true;
 
   meta = with lib; {
-    description = "libwapcaplet (NetSurf string internment library), cross-built for PureDarwin";
+    description = "libwapcaplet (NetSurf string internment library), cross-built for OpenOSX";
     platforms = platforms.linux;
   };
 }

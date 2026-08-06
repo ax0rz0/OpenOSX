@@ -1,5 +1,5 @@
 /*
- * IOUSBLog.h - PureDarwin reconstruction (real Apple header was 0 bytes).
+ * IOUSBLog.h - OpenOSX reconstruction (real Apple header was 0 bytes).
  * USBLog/USBError/USBTrace* are used pervasively throughout the surviving
  * IOUSBFamily .cpp files. Real logging (kprintf-gated), tracing as no-ops -
  * we don't have a kdebug trace-tag registry to match USBTracepoints.h

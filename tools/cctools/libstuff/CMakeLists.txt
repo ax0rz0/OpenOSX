@@ -56,7 +56,7 @@ target_include_directories(host_libstuff PRIVATE
 
 # Real x86_64-apple-darwin build, for self-hosted cctools (see libmacho's
 # CMakeLists.txt for the rationale).
-if(PUREDARWIN_ENABLE_SELFHOST_CCTOOLS)
+if(OPENOSX_ENABLE_SELFHOST_CCTOOLS)
     add_darwin_static_library(libstuff_static)
     target_sources(libstuff_static PRIVATE
         allocate.c
@@ -112,7 +112,7 @@ if(PUREDARWIN_ENABLE_SELFHOST_CCTOOLS)
         ${CMAKE_CURRENT_SOURCE_DIR}/../include
         ${CMAKE_CURRENT_SOURCE_DIR}/../include/foreign
     )
-    target_compile_options(libstuff_static PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK})
+    target_compile_options(libstuff_static PRIVATE -isysroot ${OPENOSX_MACOSX_SDK})
     # add_darwin_static_library() adds -nostdinc, but several sources here
     # (ofile.c etc.) reach the real SDK headers via the foreign/ shim's
     # #include_next <stdio.h> etc. - strip it so that chain resolves.

@@ -18,7 +18,7 @@ let
   cc = "${darwinCrossToolchain}/bin/${targetTriple}-clang";
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-pdsurface";
+  pname = "openosx-pdsurface";
   version = "1";
   src = ../../../src/Libraries/PDSurface;
 
@@ -58,7 +58,7 @@ stdenv.mkDerivation {
     includedir=$out/usr/include
 
     Name: PDSurface
-    Description: PureDarwin shareable graphics buffers
+    Description: OpenOSX shareable graphics buffers
     Version: 1
     Libs: -L\''${libdir} -lPDSurface
     Cflags: -I\''${includedir}
@@ -71,7 +71,7 @@ stdenv.mkDerivation {
   dontStrip = true;
 
   meta = with lib; {
-    description = "PureDarwin shareable graphics buffers, driver independent";
+    description = "OpenOSX shareable graphics buffers, driver independent";
     license = licenses.bsd3;
     platforms = platforms.linux;
   };

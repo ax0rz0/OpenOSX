@@ -5976,7 +5976,7 @@ mDNSexport void udsserver_info_dump_to_fd(int fd)
     if (!AutoRegistrationDomains) LogToFD(fd, "<None>");
     else for (d=AutoRegistrationDomains; d; d=d->next) LogToFD(fd, "%##s", d->name.c);
 
-    /* PureDarwin: this build's state dump had no DNS-server section, which made
+    /* OpenOSX: this build's state dump had no DNS-server section, which made
      * it impossible to tell an empty server list apart from a question whose
      * validDNSServers bitmap simply did not match any of them. */
     LogToFD(fd, "--------- DNS Servers ----------");

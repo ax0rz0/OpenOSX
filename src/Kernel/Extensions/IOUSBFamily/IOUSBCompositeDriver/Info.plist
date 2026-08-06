@@ -7,9 +7,9 @@
 	<key>CFBundleExecutable</key>
 	<string>IOUSBCompositeDriver</string>
 	<key>CFBundleGetInfoString</key>
-	<string>PureDarwin - real Apple source, unmodified.</string>
+	<string>OpenOSX - real Apple source, unmodified.</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.puredarwin.driver.IOUSBCompositeDriver</string>
+	<string>org.openosx.driver.IOUSBCompositeDriver</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -27,7 +27,7 @@
 		<key>IOUSBCompositeDriver</key>
 		<dict>
 			<key>CFBundleIdentifier</key>
-			<string>org.puredarwin.driver.IOUSBCompositeDriver</string>
+			<string>org.openosx.driver.IOUSBCompositeDriver</string>
 			<key>IOClass</key>
 			<string>IOUSBCompositeDriver</string>
 			<key>IOProviderClass</key>
@@ -44,7 +44,7 @@
 	<string>1.0</string>
 	<key>OSBundleLibraries</key>
 	<dict>
-		<key>org.puredarwin.iokit.IOUSBFamily</key>
+		<key>org.openosx.iokit.IOUSBFamily</key>
 		<string>1.0</string>
 		<key>com.apple.kpi.iokit</key>
 		<string>8.0</string>

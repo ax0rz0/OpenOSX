@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>org.puredarwin.console-login</string>
+	<string>org.openosx.console-login</string>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/usr/libexec/pd-console-login</string>

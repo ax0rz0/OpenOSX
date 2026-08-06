@@ -17,7 +17,7 @@ let
   cc = "${darwinCrossToolchain}/bin/${targetTriple}-clang";
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-libgbm";
+  pname = "openosx-libgbm";
   version = "1";
   src = ../../../src/Libraries/libgbm;
 
@@ -58,7 +58,7 @@ stdenv.mkDerivation {
     includedir=$out/usr/include
 
     Name: gbm
-    Description: Generic Buffer Manager, PureDarwin implementation over PDSurface
+    Description: Generic Buffer Manager, OpenOSX implementation over PDSurface
     Version: 21.3.0
     Libs: -L\''${libdir} -lgbm
     Cflags: -I\''${includedir}

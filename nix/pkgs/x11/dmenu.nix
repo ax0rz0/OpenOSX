@@ -44,7 +44,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-dmenu";
+  pname = "openosx-dmenu";
   version = dmenu.version;
 
   src = dmenu.src;
@@ -53,7 +53,7 @@ stdenv.mkDerivation {
   buildInputs = deps;
 
   postPatch = ''
-    # No Xinerama on PureDarwin yet.
+    # No Xinerama on OpenOSX yet.
     sed -i '/#define XINERAMA/d' config.mk 2>/dev/null || true
   '';
 

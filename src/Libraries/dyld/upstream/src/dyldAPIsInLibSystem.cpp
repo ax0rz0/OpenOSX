@@ -1463,7 +1463,7 @@ struct dlerrorPerThreadData
 	char		message[1];
 };
 
-// PureDarwin: pthread_key_create() only writes *key on success; upstream drops
+// OpenOSX: pthread_key_create() only writes *key on success; upstream drops
 // the return value, so on failure dlerrorPerThreadKey stayed 0. Key 0 is not an
 // unallocated key on Darwin - TSD slot 0 holds the pthread_self pointer - so
 // pthread_getspecific(0) returned pthread_self, sizeAllocated was read out of

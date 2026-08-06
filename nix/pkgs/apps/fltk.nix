@@ -59,7 +59,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-fltk";
+  pname = "openosx-fltk";
   inherit (fltk_1_3) version;
   src = fltk_1_3.src;
 
@@ -80,7 +80,7 @@ stdenv.mkDerivation {
     # configure.ac's own graphics-backend case statement matches against
     # "darwin*" to pick Quartz - force it to fall through to the generic
     # (X11 [+ Xft/Xfixes/Xrender]) branch instead.
-    sed -i 's/^host_os_gui=\$host_os$/host_os_gui=puredarwin-x11/' configure.ac
+    sed -i 's/^host_os_gui=\$host_os$/host_os_gui=openosx-x11/' configure.ac
     # Fl_PostScript.cxx uses LC_NUMERIC without including <locale.h> -
     # relies on it arriving transitively on real macOS.
     sed -i '/^#include <stdio.h>$/a #include <locale.h>' src/Fl_PostScript.cxx
@@ -141,7 +141,7 @@ stdenv.mkDerivation {
   dontFixup = true;
 
   meta = with lib; {
-    description = "FLTK 1.3, cross-built for PureDarwin (X11 backend, no OpenGL)";
+    description = "FLTK 1.3, cross-built for OpenOSX (X11 backend, no OpenGL)";
     platforms = platforms.linux;
   };
 }

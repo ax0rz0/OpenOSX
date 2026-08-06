@@ -1,5 +1,5 @@
 /*
- * pd_dyld_variant_extras.c  (PureDarwin)
+ * pd_dyld_variant_extras.c  (OpenOSX)
  *
  * Two small libpthread internals that live under #if !VARIANT_DYLD in their
  * upstream files (qos.c, pthread_dependency.c) yet are referenced by

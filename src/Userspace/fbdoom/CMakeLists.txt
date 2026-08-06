@@ -1,53 +1,53 @@
-# fbDOOM (https://github.com/maximevince/fbDOOM) for PureDarwin.
+# fbDOOM (https://github.com/maximevince/fbDOOM) for OpenOSX.
 #
 # fbDOOM is GPL-2.0-or-later, unlike the rest of this tree; it is kept fully
-# opt-in (PUREDARWIN_ENABLE_FBDOOM, off by default) and built from an
-# untouched, externally-provided checkout (PUREDARWIN_FBDOOM_SOURCE). We only
+# opt-in (OPENOSX_ENABLE_FBDOOM, off by default) and built from an
+# untouched, externally-provided checkout (OPENOSX_FBDOOM_SOURCE). We only
 # ever compile FROM that tree (target_sources reads its .c files directly),
 # never write into it - treat it as read-only third-party source.
-# PureDarwin-specific changes live only in this directory.
+# OpenOSX-specific changes live only in this directory.
 #
 # fbDOOM's own Linux-specific backends (i_video_fbdev.c: /dev/fb0 + ioctl
 # FBIOGET_VSCREENINFO; i_input_tty.c: KDSKBMODE/K_MEDIUMRAW raw console
 # scancodes; i_sound.c: an external sndserv helper process) have no
-# PureDarwin equivalent, so they are excluded from the build entirely and
-# replaced by PureDarwin-native implementations that live in THIS directory (not
+# OpenOSX equivalent, so they are excluded from the build entirely and
+# replaced by OpenOSX-native implementations that live in THIS directory (not
 # in the copied fbDOOM tree): i_video_pd.c (real framebuffer output via
 # PDGOP, the same userland IOGOPFramebuffer client the puredarwingop Xorg
 # DDX driver uses) and i_input_pd.c (plain termios raw-mode keyboard input).
-if(NOT PUREDARWIN_ENABLE_FBDOOM)
+if(NOT OPENOSX_ENABLE_FBDOOM)
     return()
 endif()
 
-if(NOT PUREDARWIN_FBDOOM_SOURCE AND DEFINED ENV{PUREDARWIN_FBDOOM_SOURCE})
-    set(PUREDARWIN_FBDOOM_SOURCE "$ENV{PUREDARWIN_FBDOOM_SOURCE}")
+if(NOT OPENOSX_FBDOOM_SOURCE AND DEFINED ENV{OPENOSX_FBDOOM_SOURCE})
+    set(OPENOSX_FBDOOM_SOURCE "$ENV{OPENOSX_FBDOOM_SOURCE}")
 endif()
 
-if(NOT PUREDARWIN_FBDOOM_SOURCE)
-    message(FATAL_ERROR "PUREDARWIN_FBDOOM_SOURCE must point to an fbDOOM checkout (the 'fbdoom' subdir with i_main.c etc)")
+if(NOT OPENOSX_FBDOOM_SOURCE)
+    message(FATAL_ERROR "OPENOSX_FBDOOM_SOURCE must point to an fbDOOM checkout (the 'fbdoom' subdir with i_main.c etc)")
 endif()
 
-if(NOT EXISTS "${PUREDARWIN_FBDOOM_SOURCE}/i_main.c")
-    message(FATAL_ERROR "PUREDARWIN_FBDOOM_SOURCE='${PUREDARWIN_FBDOOM_SOURCE}' has no i_main.c")
+if(NOT EXISTS "${OPENOSX_FBDOOM_SOURCE}/i_main.c")
+    message(FATAL_ERROR "OPENOSX_FBDOOM_SOURCE='${OPENOSX_FBDOOM_SOURCE}' has no i_main.c")
 endif()
 
-if(NOT PUREDARWIN_CHOCOLATE_DOOM_SOURCE AND DEFINED ENV{PUREDARWIN_CHOCOLATE_DOOM_SOURCE})
-    set(PUREDARWIN_CHOCOLATE_DOOM_SOURCE "$ENV{PUREDARWIN_CHOCOLATE_DOOM_SOURCE}")
+if(NOT OPENOSX_CHOCOLATE_DOOM_SOURCE AND DEFINED ENV{OPENOSX_CHOCOLATE_DOOM_SOURCE})
+    set(OPENOSX_CHOCOLATE_DOOM_SOURCE "$ENV{OPENOSX_CHOCOLATE_DOOM_SOURCE}")
 endif()
 
-if(NOT PUREDARWIN_CHOCOLATE_DOOM_SOURCE)
-    message(FATAL_ERROR "PUREDARWIN_CHOCOLATE_DOOM_SOURCE must point to the patched chocolate-doom source (midifile.c, mus2mid.c, opl/)")
+if(NOT OPENOSX_CHOCOLATE_DOOM_SOURCE)
+    message(FATAL_ERROR "OPENOSX_CHOCOLATE_DOOM_SOURCE must point to the patched chocolate-doom source (midifile.c, mus2mid.c, opl/)")
 endif()
 
-if(NOT EXISTS "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/midifile.c")
-    message(FATAL_ERROR "PUREDARWIN_CHOCOLATE_DOOM_SOURCE='${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}' has no midifile.c")
+if(NOT EXISTS "${OPENOSX_CHOCOLATE_DOOM_SOURCE}/midifile.c")
+    message(FATAL_ERROR "OPENOSX_CHOCOLATE_DOOM_SOURCE='${OPENOSX_CHOCOLATE_DOOM_SOURCE}' has no midifile.c")
 endif()
 
 # Same file list as fbDOOM's own Makefile SRC_DOOM, minus i_joystick.o (no
 # joystick support glued up) and i_sound.o/i_cdmus.o (replaced by
 # i_sound_pd.c - real fbDOOM's i_sound_dummy.c is, despite the name, a real
 # Linux OSS /dev/dsp driver no longer even prototype-compatible with this
-# revision's i_sound.h. There's a real audio path available on PureDarwin that
+# revision's i_sound.h. There's a real audio path available on OpenOSX that
 # could replace i_sound_pd.c's silence with real sound as a follow-up).
 set(_fbdoom_upstream_srcs
     i_main.c dummy.c am_map.c doomdef.c doomstat.c dstrings.c d_event.c
@@ -67,21 +67,21 @@ set(_fbdoom_upstream_srcs
 add_darwin_executable(fbdoom MACOSX_VERSION_MIN 11.0)
 
 foreach(_src ${_fbdoom_upstream_srcs})
-    target_sources(fbdoom PRIVATE "${PUREDARWIN_FBDOOM_SOURCE}/${_src}")
+    target_sources(fbdoom PRIVATE "${OPENOSX_FBDOOM_SOURCE}/${_src}")
 endforeach()
 target_sources(fbdoom PRIVATE
-    "${PUREDARWIN_FBDOOM_SOURCE}/i_oplmusic.c"
+    "${OPENOSX_FBDOOM_SOURCE}/i_oplmusic.c"
     i_video_pd.c
     i_input_pd.c
     i_sound_pd.c
     i_music_opl_glue.c
     pd_choco_compat.c
     opl/opl_pd.c
-    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/midifile.c"
-    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/mus2mid.c"
-    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/opl/opl.c"
-    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/opl/opl_queue.c"
-    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/opl/opl3.c"
+    "${OPENOSX_CHOCOLATE_DOOM_SOURCE}/midifile.c"
+    "${OPENOSX_CHOCOLATE_DOOM_SOURCE}/mus2mid.c"
+    "${OPENOSX_CHOCOLATE_DOOM_SOURCE}/opl/opl.c"
+    "${OPENOSX_CHOCOLATE_DOOM_SOURCE}/opl/opl_queue.c"
+    "${OPENOSX_CHOCOLATE_DOOM_SOURCE}/opl/opl3.c"
 )
 
 get_target_property(_fbdoom_opts fbdoom COMPILE_OPTIONS)
@@ -93,13 +93,13 @@ endif()
 target_include_directories(fbdoom PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/opl"
-    "${PUREDARWIN_FBDOOM_SOURCE}"
-    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}"
-    "${PUREDARWIN_CHOCOLATE_DOOM_SOURCE}/opl"
+    "${OPENOSX_FBDOOM_SOURCE}"
+    "${OPENOSX_CHOCOLATE_DOOM_SOURCE}"
+    "${OPENOSX_CHOCOLATE_DOOM_SOURCE}/opl"
     "${CMAKE_SOURCE_DIR}/src/Libraries/PDGOP/include"
 )
 target_compile_definitions(fbdoom PRIVATE NORMALUNIX)
-target_compile_options(fbdoom PRIVATE -isysroot ${PUREDARWIN_MACOSX_SDK} -Wno-everything)
+target_compile_options(fbdoom PRIVATE -isysroot ${OPENOSX_MACOSX_SDK} -Wno-everything)
 target_link_options(fbdoom PRIVATE
     -nostdlib
     -Wl,-L,$<TARGET_FILE_DIR:libSystem_B_stub>

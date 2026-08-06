@@ -22,7 +22,7 @@ let
   };
 in
 stdenv.mkDerivation {
-  pname = "puredarwin-toybox";
+  pname = "openosx-toybox";
   inherit (toybox) version;
   src = toybox.src;
 

@@ -36,11 +36,11 @@ target_include_directories(libSystemConfiguration_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/pthread/private
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libsystem_kernel/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../libSystem/libsystem_kernel/private_include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
 )
 
 target_compile_definitions(libSystemConfiguration_static PRIVATE
-    __PUREDARWIN__
+    __OPENOSX__
     __DARWIN_ONLY_UNIX_CONFORMANCE=1
     PRIVATE=1
 )

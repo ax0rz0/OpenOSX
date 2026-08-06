@@ -31,8 +31,8 @@ target_sources(XPC_libinfo_static PRIVATE
 target_compile_definitions(XPC_libinfo_static PRIVATE __DARWIN_ONLY_UNIX_CONFORMANCE=1 PRIVATE=1)
 target_compile_options(XPC_libinfo_static PRIVATE
     $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libplatform/pd_bridgeos_compat.h>
-    -isysroot ${PUREDARWIN_MACOSX_SDK}
-    -I${PUREDARWIN_MACOSX_SDK}/usr/include)
+    -isysroot ${OPENOSX_MACOSX_SDK}
+    -I${OPENOSX_MACOSX_SDK}/usr/include)
 
 target_include_directories(XPC_libinfo_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -55,7 +55,7 @@ target_include_directories(XPC_libinfo_static PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libdispatch/private
     ${CMAKE_CURRENT_SOURCE_DIR}/../../CrashReporterClient/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../libSystem/libc/pd-compat-include
-    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${PUREDARWIN_ARCH}
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libc/include/${OPENOSX_ARCH}
     ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/osfmk
     ${CMAKE_SOURCE_DIR}/src/Kernel/xnu/bsd

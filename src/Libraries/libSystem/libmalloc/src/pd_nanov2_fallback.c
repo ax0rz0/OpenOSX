@@ -1,5 +1,5 @@
 /*
- * PureDarwin: nanov2 (nano allocator v2) fallback.
+ * OpenOSX: nanov2 (nano allocator v2) fallback.
  *
  * nanov2_malloc.c's actual implementation is gated behind OS_VARIANT_RESOLVED/
  * OS_VARIANT_NOTRESOLVED -- Apple's ifunc-based CPU/OS-variant multiversioning

@@ -3,16 +3,16 @@
  *
  * dyld-832 (macOS 11.4) uses bridgeos(x) in __API_AVAILABLE/__API_UNAVAILABLE/
  * __API_DEPRECATED availability lists and tests TARGET_OS_BRIDGE. Neither the
- * MacOSX11.3 SDK nor PureDarwin's bundled AvailabilityInternal.h define the
+ * MacOSX11.3 SDK nor OpenOSX's bundled AvailabilityInternal.h define the
  * bridgeos platform-macro families, so those expansions leave an undefined
  * __API_*_PLATFORM_bridgeos token and clang errors "expected ','".
  *
  * Supply the missing bridgeos macros (clang recognizes the "bridgeos"
  * availability platform) and TARGET_OS_BRIDGE. Scoped to the dyld target so it
- * does not perturb the rest of the PureDarwin build.
+ * does not perturb the rest of the OpenOSX build.
  */
-#ifndef PUREDARWIN_DYLD_SDK_COMPAT_H
-#define PUREDARWIN_DYLD_SDK_COMPAT_H
+#ifndef OPENOSX_DYLD_SDK_COMPAT_H
+#define OPENOSX_DYLD_SDK_COMPAT_H
 
 #include <Availability.h>
 #include <TargetConditionals.h>
@@ -50,7 +50,7 @@ __END_DECLS
  #define TARGET_OS_BRIDGE 0
 #endif
 
-/* PureDarwin's exported <System/sys/reason.h> strips the kernel-private section
+/* OpenOSX's exported <System/sys/reason.h> strips the kernel-private section
  * that defines these (they survive only in comments). dyld uses them in
  * userspace; supply the stable XNU ABI values (from xnu osfmk/kern/kcdata.h). */
 #ifndef EXIT_REASON_USER_DESC_MAX_LEN
@@ -65,4 +65,4 @@ __END_DECLS
  #define ptrauth_auth_and_resign(value, old_key, old_data, new_key, new_data) (value)
 #endif
 
-#endif /* PUREDARWIN_DYLD_SDK_COMPAT_H */
+#endif /* OPENOSX_DYLD_SDK_COMPAT_H */

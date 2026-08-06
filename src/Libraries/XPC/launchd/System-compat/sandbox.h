@@ -18,7 +18,7 @@ int sandbox_init(const char *profile, uint64_t flags, char **errorbuf);
 #define SANDBOX_CHECK_NO_REPORT 0x0001
 /*
  * diskarbitrationd passes this to sandbox_check_by_audit_token(). The numeric
- * value is inert here - the PureDarwin sandbox_check* report "allowed"
+ * value is inert here - the OpenOSX sandbox_check* report "allowed"
  * regardless of flags, because there is no Sandbox.kext policy to consult - so
  * this is a distinct bit rather than a verified copy of Apple's value.
  */

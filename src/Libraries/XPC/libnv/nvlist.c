@@ -81,7 +81,7 @@ __FBSDID("$FreeBSD$");
 	char *reason_string; asprintf(&reason_string, "%s:%u: " msg, __FILE__, __LINE__, __VA_ARGS__); \
 	int fd = open("/dev/console", O_WRONLY | O_NOCTTY);		\
 	if (fd >= 0) {							\
-		dprintf(fd, "PureDarwin libnv: %s\n", reason_string);	\
+		dprintf(fd, "OpenOSX libnv: %s\n", reason_string);	\
 		close(fd);						\
 	}								\
 	abort_with_reason(OS_REASON_LIBXPC, 1, reason_string, OS_REASON_FLAG_GENERATE_CRASH_REPORT); \
