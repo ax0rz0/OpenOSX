@@ -1,7 +1,7 @@
 # OpenOSX
 
-OpenOSX is an open-source operating system built on Darwin — the OS foundation
-underneath macOS — with one uncompromising rule: **everything we ship is built
+OpenOSX is an open-source operating system built on Darwin, the OS foundation
+underneath macOS, with one uncompromising rule: **everything we ship is built
 from open source**. Kernel, drivers, bootloader, userland: no closed Apple
 binaries anywhere in the boot chain.
 
@@ -9,7 +9,7 @@ The goal is an OS image that boots easily in common VMs (QEMU, VirtualBox,
 VMware) from a fully open toolchain: the XNU kernel and kernel extensions in
 this repo, loaded by an open EFI bootloader
 ([xnu-loader](https://github.com/PureDarwin/xnu-loader)), up to a real
-userland — launchd, a shell, X11/Wayland, and a desktop environment.
+userland, launchd, a shell, X11/Wayland, and a desktop environment.
 
 ## Heritage
 
@@ -50,15 +50,15 @@ It should be noted that aarch64 support is an extreme work in progress and may b
 
 ## What's in the tree
 
-- `src/Kernel/xnu` — the XNU kernel (Darwin 20.5 lineage, x86_64 + arm64)
-- `src/Kernel/Extensions` — kernel extensions: ACPI, APIC, PCI, PS/2, HID,
+- `src/Kernel/xnu`, the XNU kernel (Darwin 20.5 lineage, x86_64 + arm64)
+- `src/Kernel/Extensions`, kernel extensions: ACPI, APIC, PCI, PS/2, HID,
   IDE/AHCI/NVMe, USB (UHCI/OHCI/EHCI/xHCI), e1000 + VirtIO net, framebuffers
   (GOP, VirtIO GPU, Intel Gen9), and filesystems (HFS+, ext4, APFS, msdosfs)
-- `src/Libraries` — libSystem, CoreFoundation, dyld, launchd/XPC, objc4, and
+- `src/Libraries`, libSystem, CoreFoundation, dyld, launchd/XPC, objc4, and
   the rest of the userland library stack
-- `src/Userspace` — userland programs (including fbDOOM, optionally)
-- `nix/`, `flake.nix`, `image.nix` — the cross-compilation and image pipeline
-- `tools` — host toolchain (cctools/ld64, mig, xar, kc-tools, xnu-loader)
+- `src/Userspace`, userland programs (including fbDOOM, optionally)
+- `nix/`, `flake.nix`, `image.nix`, the cross-compilation and image pipeline
+- `tools`, host toolchain (cctools/ld64, mig, xar, kc-tools, xnu-loader)
 
 ## End Goal & Author Notes
 OpenOSX is designed to be binary compatible with *macOS* whilst maintaining a pure FOSS design, the end goal of OpenOSX is
