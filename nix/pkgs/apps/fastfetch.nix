@@ -188,11 +188,11 @@ VEREOF
         .names = { "openosx" },
         .lines = FASTFETCH_DATATEXT_LOGO_OPENOSX,
         .colors = {
+            FF_COLOR_FG_YELLOW,
             FF_COLOR_FG_MAGENTA,
-            FF_COLOR_FG_CYAN,
         },
-        .colorKeys = FF_COLOR_FG_CYAN,
-        .colorTitle = FF_COLOR_FG_MAGENTA,
+        .colorKeys = FF_COLOR_FG_MAGENTA,
+        .colorTitle = FF_COLOR_FG_YELLOW,
     },
 LOGOEOF
     # Builtins are bucketed by first letter and looked up as

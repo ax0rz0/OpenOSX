@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/branding/OpenOSX-Crossing.png" alt="OpenOSX" width="160">
+  <img src="docs/branding/OpenOSX-Dawn.png" alt="OpenOSX" width="160">
 </p>
 
 <h1 align="center">OpenOSX</h1>
