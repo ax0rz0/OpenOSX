@@ -278,8 +278,57 @@ export NO_AT_BRIDGE=''${NO_AT_BRIDGE:-1}
 export GDK_PIXBUF_MODULE_FILE=''${GDK_PIXBUF_MODULE_FILE:-/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache}
 export GTK_A11Y=''${GTK_A11Y:-none}
 EOF
+    mkdir -p $staging/etc/openosx
     cat > $staging/etc/zprofile <<'EOF'
 test -r /etc/profile && . /etc/profile
+
+# Start the graphical session automatically on the machine console.
+#
+# Deliberately not exec'd: if X fails or the session exits, this login shell
+# survives and drops the user at the console, rather than exiting and having
+# launchd's KeepAlive respawn console-login into a loop.
+#
+# Skipped for SSH logins (sshd is running), when a session is already up, and
+# when the opt-out marker exists. To boot to a plain console instead:
+#     touch /etc/openosx/no-xsession
+if [ -z "$DISPLAY" ] && [ -z "$SSH_CONNECTION" ] && [ ! -e /etc/openosx/no-xsession ]; then
+  case "$(tty 2>/dev/null)" in
+    /dev/console|/dev/tty*)
+      if command -v startx >/dev/null 2>&1; then
+        echo 'OpenOSX: starting the graphical session...'
+        echo '         (touch /etc/openosx/no-xsession to boot to a console)'
+        # XFCE is the OpenOSX desktop; i3 is the fallback while the XFCE
+        # session is still being brought up, so a failure here still lands
+        # the user in a usable graphical session rather than at a console.
+        # /etc/openosx/session can pin a choice: "xfce", "i3", or a path.
+        session=xfce
+        if [ -r /etc/openosx/session ]; then
+          session=$(cat /etc/openosx/session)
+        fi
+        case "$session" in
+          xfce) client=/bin/xfce4-session ;;
+          i3)   client=/bin/i3 ;;
+          *)    client="$session" ;;
+        esac
+        if [ ! -x "$client" ]; then
+          echo "OpenOSX: $client not found, falling back to i3"
+          client=/bin/i3
+        fi
+        echo "OpenOSX: session = $client"
+        startx "$client" >/tmp/startx.log 2>&1
+        rc=$?
+        if [ $rc -ne 0 ] && [ "$client" != /bin/i3 ] && [ -x /bin/i3 ]; then
+          echo "OpenOSX: $client exited with status $rc, falling back to i3"
+          echo "         (log kept at /tmp/startx-failed.log)"
+          cp /tmp/startx.log /tmp/startx-failed.log 2>/dev/null
+          startx /bin/i3 >/tmp/startx.log 2>&1
+        fi
+        echo 'OpenOSX: graphical session ended - dropping to the console shell.'
+        echo '         X server log: /tmp/startx.log'
+      fi
+      ;;
+  esac
+fi
 EOF
     cat > $staging/etc/zshrc <<'EOF'
 [[ -o interactive ]] || return
