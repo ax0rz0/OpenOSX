@@ -60,6 +60,11 @@ It should be noted that aarch64 support is an extreme work in progress and may b
 - `nix/`, `flake.nix`, `image.nix` — the cross-compilation and image pipeline
 - `tools` — host toolchain (cctools/ld64, mig, xar, kc-tools, xnu-loader)
 
+## End Goal & Author Notes
+OpenOSX is designed to be binary compatible with *macOS* whilst maintaining a pure FOSS design, the end goal of OpenOSX is
+to be able to run most *macOS* apps directly on a FOSS operating system without proprietary hardware (and maybe be superior to linux, or never).
+
+
 ## License
 
 Code inherited from Apple is under the
