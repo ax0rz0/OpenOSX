@@ -74,14 +74,14 @@ It should be noted that aarch64 support is an extreme work in progress and may b
 ## Use cases
 
 OpenOSX is early. It boots, reaches a graphical session, has networking, a
-shell and `sshd`, and builds reproducibly from source — but there is no package
+shell and `sshd`, and builds reproducibly from source, but there is no package
 manager, no installer, and no macOS application compatibility yet. What follows
 is what it is *for*, split into what works today and where it is going.
 
 ### As a desktop OS
 
-The long-term goal is a Darwin desktop that belongs to its users: a system with
-macOS's foundations and none of its restrictions — no signing requirements, no
+The long-term goal is a Darwin desktop that belongs to its users, with
+macOS's foundations and none of its restrictions: no signing requirements, no
 notarisation, no telemetry, no hardware lock-in, and every line of it buildable
 from source on commodity PCs.
 
@@ -111,7 +111,7 @@ follow from the same property:
 - **Reproducible Darwin builds.** The whole OS is a Nix flake, so a build host is
   a pinned, hash-verified artifact rather than a hand-maintained machine.
 - **Kernel and systems research.** A real XNU you can patch, instrument and boot
-  in seconds under QEMU — useful for teaching Mach, IOKit and dyld, and for
+  in seconds under QEMU, which suits teaching Mach, IOKit and dyld, and
   security research that would otherwise require Apple hardware and fighting SIP.
 - **Appliance and embedded-style workloads**, where launchd's supervision model
   and a small, auditable, fully-source-built image matter more than a large
@@ -119,7 +119,7 @@ follow from the same property:
 
 The honest caveat for both roles: OpenOSX has had no security review, no
 hardening pass, and no stability guarantees. Run it in a VM, on a test machine,
-or in a lab — not on anything you care about, and not exposed to the internet.
+or in a lab. Not on anything you care about, and not exposed to the internet.
 
 ## End Goal & Author Notes
 OpenOSX is designed to be binary compatible with *macOS* whilst maintaining a pure FOSS design, the end goal of OpenOSX is
