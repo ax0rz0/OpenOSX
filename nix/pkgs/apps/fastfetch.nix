@@ -178,7 +178,7 @@ VEREOF
       src/detection/os/os_apple.m
 
     # With os->id reported as "openosx", fastfetch's own logo autodetection
-    # picks a builtin of that name - so ship Hexley as one rather than making
+    # picks a builtin of that name - so ship the OpenOSX mark as one rather than making
     # every invocation pass --logo-type/--logo-color flags. Files in
     # src/logo/ascii are globbed into FASTFETCH_DATATEXT_LOGO_<NAME> by CMake.
     cp ${./openosx-logo.txt} src/logo/ascii/openosx.txt
@@ -188,11 +188,11 @@ VEREOF
         .names = { "openosx" },
         .lines = FASTFETCH_DATATEXT_LOGO_OPENOSX,
         .colors = {
-            FF_COLOR_FG_RED,
-            FF_COLOR_FG_DEFAULT,
+            FF_COLOR_FG_YELLOW,
+            FF_COLOR_FG_MAGENTA,
         },
-        .colorKeys = FF_COLOR_FG_RED,
-        .colorTitle = FF_COLOR_FG_RED,
+        .colorKeys = FF_COLOR_FG_MAGENTA,
+        .colorTitle = FF_COLOR_FG_YELLOW,
     },
 LOGOEOF
     # Builtins are bucketed by first letter and looked up as

@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>OpenOSX — Aperture</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0F2038"/><stop offset="1" stop-color="#05070F"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0.1" y1="0" x2="0.9" y2="1">
+      <stop offset="0" stop-color="#6BF2C4"/><stop offset="0.5" stop-color="#35C8E8"/><stop offset="1" stop-color="#4A7CFF"/>
+    </linearGradient>
+    <linearGradient id="w1" x1="0" y1="0" x2="1" y2="0.15">
+      <stop offset="0" stop-color="#4A7CFF"/><stop offset="1" stop-color="#2B4CD8"/>
+    </linearGradient>
+    <linearGradient id="w2" x1="0" y1="0" x2="1" y2="0.15">
+      <stop offset="0" stop-color="#5BF2E0"/><stop offset="1" stop-color="#23C2E8"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.46" r="0.5">
+      <stop offset="0" stop-color="#5BF2E0" stop-opacity="0.34"/>
+      <stop offset="1" stop-color="#5BF2E0" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="sq"><rect x="44" y="44" width="424" height="424" rx="104"/></clipPath>
+    <!-- the wave is cut where it crosses the ring's interior, so the O reads cleanly -->
+    <mask id="behindRing">
+      <rect x="0" y="0" width="512" height="512" fill="#fff"/>
+      <circle cx="256" cy="246" r="96" fill="#000"/>
+    </mask>
+  </defs>
+
+  <rect x="44" y="44" width="424" height="424" rx="104" fill="url(#bg)"/>
+  <g clip-path="url(#sq)">
+    <rect x="44" y="44" width="424" height="424" fill="url(#glow)"/>
+
+    <!-- horizon waves, passing behind the aperture -->
+    <g mask="url(#behindRing)">
+      <path d="M28,318 C120,274 190,274 256,312 C322,350 392,350 484,308 L484,484 L28,484 Z" fill="url(#w1)" opacity="0.9"/>
+      <path d="M28,368 C120,330 190,330 256,362 C322,396 394,396 484,358 L484,484 L28,484 Z" fill="url(#w2)"/>
+      <path d="M28,368 C120,330 190,330 256,362 C322,396 394,396 484,358" fill="none" stroke="#E6FFFB" stroke-opacity="0.5" stroke-width="4" stroke-linecap="round"/>
+    </g>
+
+    <!-- the open aperture: O for Open, a system that lets you see inside -->
+    <circle cx="256" cy="246" r="96" fill="none" stroke="url(#ring)" stroke-width="34" stroke-linecap="round"
+            stroke-dasharray="452 151" transform="rotate(118 256 246)"/>
+    <circle cx="256" cy="246" r="96" fill="none" stroke="#EAFFFA" stroke-opacity="0.28" stroke-width="2"
+            stroke-dasharray="452 151" transform="rotate(118 256 246)"/>
+  </g>
+  <rect x="44.75" y="44.75" width="422.5" height="422.5" rx="103.25" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="1.5"/>
+</svg>
