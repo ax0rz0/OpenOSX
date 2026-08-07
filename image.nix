@@ -306,7 +306,42 @@ if [ -z "$DISPLAY" ] && [ -z "$SSH_CONNECTION" ] && [ ! -e /etc/openosx/no-xsess
           session=$(cat /etc/openosx/session)
         fi
         case "$session" in
-          xfce) client=/bin/xfce4-session ;;
+          xfce)
+            client=/usr/libexec/openosx-xfce-session
+            # XFCE's own xinitrc normally exports these; startx runs the
+            # session binary directly, so do it here. Without XDG_CONFIG_DIRS
+            # pointing at /etc/xdg, xfce4-session cannot find its perchannel
+            # defaults and dies with "Unable to load a failsafe session".
+            XDG_CONFIG_DIRS=/etc/xdg
+            XDG_DATA_DIRS=/share:/usr/share
+            XDG_CONFIG_HOME=/var/root/.config
+            XDG_CACHE_HOME=/var/root/.cache
+            XDG_MENU_PREFIX=xfce-
+            DESKTOP_SESSION=xfce
+            XDG_CURRENT_DESKTOP=XFCE
+            export XDG_CONFIG_DIRS XDG_DATA_DIRS XDG_CONFIG_HOME XDG_CACHE_HOME
+            export XDG_MENU_PREFIX DESKTOP_SESSION XDG_CURRENT_DESKTOP
+            mkdir -p "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" 2>/dev/null
+
+            # xfconfd is D-Bus activated on the *session* bus; OpenOSX only
+            # runs a system bus, so start a session bus for the desktop.
+            if [ -z "$DBUS_SESSION_BUS_ADDRESS" ]; then
+              if command -v dbus-launch >/dev/null 2>&1; then
+                eval "$(dbus-launch --sh-syntax)" 2>/dev/null
+              elif command -v dbus-daemon >/dev/null 2>&1; then
+                DBUS_SESSION_BUS_ADDRESS=$(dbus-daemon --session --fork --print-address 2>/dev/null)
+                export DBUS_SESSION_BUS_ADDRESS
+              fi
+            fi
+            echo "OpenOSX: session bus = ''${DBUS_SESSION_BUS_ADDRESS:-none}"
+
+            # Belt and braces: if activation is not wired up, xfconfd never
+            # starts and every XFCE component fails to read its settings.
+            if [ -x /lib/xfce4/xfconf/xfconfd ]; then
+              /lib/xfce4/xfconf/xfconfd &
+              sleep 2
+            fi
+            ;;
           i3)   client=/bin/i3 ;;
           *)    client="$session" ;;
         esac
@@ -315,7 +350,10 @@ if [ -z "$DISPLAY" ] && [ -z "$SSH_CONNECTION" ] && [ ! -e /etc/openosx/no-xsess
           client=/bin/i3
         fi
         echo "OpenOSX: session = $client"
-        startx "$client" >/tmp/startx.log 2>&1
+        # Tee to the console: the login shell is blocked here for the whole
+        # session, so a log file on disk is unreadable exactly when it is
+        # needed. Serial is the only channel a headless test can watch.
+        startx "$client" 2>&1 | tee /tmp/startx.log > /dev/console
         rc=$?
         if [ $rc -ne 0 ] && [ "$client" != /bin/i3 ] && [ -x /bin/i3 ]; then
           echo "OpenOSX: $client exited with status $rc, falling back to i3"
@@ -350,6 +388,48 @@ EOF
 /dev/console /bin/zsh -l
 EOF
     mkdir -p $staging/System/Library/LaunchDaemons $staging/usr/libexec
+
+    cat > $staging/usr/libexec/openosx-xfce-session <<'EOF'
+#!/bin/sh
+# OpenOSX desktop session. Started by startx via /etc/zprofile.
+#
+# The components are launched here rather than left to xfce4-session: with no
+# saved session and no failsafe definition, the session manager starts an empty
+# session (no window manager, no panel, no desktop).
+#
+# Output is inherited, NOT redirected to /dev/console: /etc/zprofile pipes
+# startx through tee, and writes made directly to the console from inside the
+# X session never reach the serial line.
+echo "openosx-session: starting; DISPLAY=$DISPLAY"
+
+for b in xfsettingsd xfwm4 xfce4-panel xfdesktop; do
+    if command -v "$b" >/dev/null 2>&1; then
+        echo "openosx-session: found $b"
+    else
+        echo "openosx-session: MISSING $b"
+    fi
+done
+
+echo "openosx-session: starting settings daemon"
+xfsettingsd &
+sleep 2
+
+echo "openosx-session: starting panel"
+xfce4-panel &
+echo "openosx-session: starting desktop"
+xfdesktop &
+sleep 2
+
+# The window manager runs in the foreground: when it exits, the session ends.
+if command -v xfwm4 >/dev/null 2>&1; then
+    echo "openosx-session: starting window manager (xfwm4)"
+    exec xfwm4
+fi
+
+echo "openosx-session: xfwm4 unavailable, falling back to i3"
+exec i3
+EOF
+    chmod 755 $staging/usr/libexec/openosx-xfce-session
 
     cat > $staging/usr/libexec/pd-set-hostname <<'EOF'
 #!/bin/sh
@@ -469,6 +549,7 @@ EOF
 ''}
 
     chmod 755 \
+      $staging/usr/libexec/openosx-xfce-session \
       $staging/usr/libexec/pd-set-hostname \
       $staging/usr/libexec/pd-dbus-launch
 ${lib.optionalString (rootFsType == "hfs") ''
