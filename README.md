@@ -46,6 +46,8 @@ nix run .#vm                 # boots result/openosx.img with serial on stdio
 A classic CMake build of individual components on macOS also works; see
 `CMakeLists.txt` and the CI workflows.
 
+It should be noted that aarch64 support is an extreme work in progress and may break often.
+
 ## What's in the tree
 
 - `src/Kernel/xnu` — the XNU kernel (Darwin 20.5 lineage, x86_64 + arm64)
