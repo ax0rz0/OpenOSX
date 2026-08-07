@@ -1,4 +1,10 @@
-# OpenOSX
+<p align="center">
+  <img src="docs/branding/OpenOSX-Crossing.png" alt="OpenOSX" width="160">
+</p>
+
+<h1 align="center">OpenOSX</h1>
+
+<p align="center"><em>An open-source operating system built on Darwin.</em></p>
 
 OpenOSX is an open-source operating system built on Darwin — the OS foundation
 underneath macOS — with one uncompromising rule: **everything we ship is built

@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>OpenOSX — Dawn</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1B1637"/><stop offset="1" stop-color="#07060F"/>
+    </linearGradient>
+    <linearGradient id="violet" x1="0" y1="0" x2="1" y2="0.15">
+      <stop offset="0" stop-color="#A96CFF"/><stop offset="1" stop-color="#5F35DF"/>
+    </linearGradient>
+    <linearGradient id="coral" x1="0" y1="0" x2="1" y2="0.15">
+      <stop offset="0" stop-color="#FF7E6B"/><stop offset="1" stop-color="#E8446E"/>
+    </linearGradient>
+    <linearGradient id="amber" x1="0" y1="0" x2="1" y2="0.15">
+      <stop offset="0" stop-color="#FFD36B"/><stop offset="1" stop-color="#FF9A3C"/>
+    </linearGradient>
+    <linearGradient id="sunfill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE9A8"/><stop offset="1" stop-color="#FFA94D"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.55" r="0.55">
+      <stop offset="0" stop-color="#FFB35C" stop-opacity="0.42"/>
+      <stop offset="1" stop-color="#FFB35C" stop-opacity="0"/>
+    </radialGradient>
+    <clipPath id="sq"><rect x="44" y="44" width="424" height="424" rx="104"/></clipPath>
+  </defs>
+
+  <rect x="44" y="44" width="424" height="424" rx="104" fill="url(#bg)"/>
+  <g clip-path="url(#sq)">
+    <rect x="44" y="44" width="424" height="424" fill="url(#glow)"/>
+
+    <!-- rising sun: a new dawn for Darwin -->
+    <circle cx="256" cy="252" r="76" fill="url(#sunfill)"/>
+    <circle cx="256" cy="252" r="76" fill="none" stroke="#FFF3D6" stroke-opacity="0.35" stroke-width="2"/>
+
+    <!-- layered horizon waves -->
+    <path d="M28,262 C120,214 188,214 256,252 C324,290 392,290 484,246 L484,484 L28,484 Z" fill="url(#violet)" opacity="0.88"/>
+    <path d="M28,312 C120,268 190,268 256,306 C322,344 392,344 484,302 L484,484 L28,484 Z" fill="url(#coral)" opacity="0.94"/>
+    <path d="M28,362 C120,324 190,324 256,356 C322,390 394,390 484,352 L484,484 L28,484 Z" fill="url(#amber)"/>
+    <path d="M28,362 C120,324 190,324 256,356 C322,390 394,390 484,352" fill="none" stroke="#FFF6E2" stroke-opacity="0.55" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <rect x="44.75" y="44.75" width="422.5" height="422.5" rx="103.25" fill="none" stroke="#ffffff" stroke-opacity="0.10" stroke-width="1.5"/>
+</svg>
