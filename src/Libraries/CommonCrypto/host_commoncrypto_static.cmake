@@ -1,6 +1,13 @@
 add_library(host_commoncrypto_static STATIC)
 target_include_directories(host_commoncrypto_static PUBLIC include)
-target_include_directories(host_commoncrypto_static PRIVATE include/Private libcn lib)
+target_include_directories(host_commoncrypto_static PRIVATE include/Private include/Private/CommonCrypto libcn lib)
+# See host_corecrypto_static.cmake for why: keeps this native host build
+# tool target on genuine Darwin SDK headers only, no glibc leakage.
+if(DEFINED ENV{NIX_NATIVE_DARWIN_HEADER_FLAGS})
+    separate_arguments(_nix_darwin_hdr_flags UNIX_COMMAND "$ENV{NIX_NATIVE_DARWIN_HEADER_FLAGS}")
+    target_compile_options(host_commoncrypto_static PRIVATE -nostdlibinc ${_nix_darwin_hdr_flags})
+    target_include_directories(host_commoncrypto_static PRIVATE $ENV{NIX_NATIVE_DARWIN_HEADER_DIRS})
+endif()
 
 add_library(host_commoncrypto_headers INTERFACE)
 target_include_directories(host_commoncrypto_headers INTERFACE include)
@@ -15,6 +22,7 @@ target_link_libraries(host_commoncrypto_static PRIVATE
 )
 
 target_sources(host_commoncrypto_static PRIVATE
+    libcn/pd_cc_digest_bridge.c
     libcn/adler32.c
     libcn/crc8.c
     libcn/crc8-icode.c

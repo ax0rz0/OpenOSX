@@ -208,9 +208,15 @@ bool AppleIntelPIIXPATA::start( IOService * provider )
     
     superStarted = true;
 
+    kprintf("PIIXSTART chan %d: super started, intVector=%d\n",
+            (int)_channel, (int)_provider->getInterruptVector());
+
     // This driver will handle interrupts using a work loop.
     // Create interrupt event source that will signal the
     // work loop (thread) when a device interrupt occurs.
+
+    kprintf("PIIXSTART chan %d: about to create interrupt event source (vector=%d)\n",
+            (int)_channel, (int)_provider->getInterruptVector());
 
     if ( _provider->getInterruptVector() == 14 ||
          _provider->getInterruptVector() == 15 )
@@ -228,12 +234,19 @@ bool AppleIntelPIIXPATA::start( IOService * provider )
                       _provider, 0 );
     }
 
+    kprintf("PIIXSTART chan %d: interrupt event source created (intSrc=%p), about to addEventSource\n",
+            (int)_channel, _intSrc);
+
     if ( !_intSrc || !_workLoop ||
          (_workLoop->addEventSource(_intSrc) != kIOReturnSuccess) )
     {
+        kprintf("PIIXSTART chan %d: INTERRUPT REGISTRATION FAILED (intSrc=%p workLoop=%p)\n",
+                (int)_channel, _intSrc, _workLoop);
         DLOG("%s: interrupt registration error\n", getName());
         goto fail;
     }
+
+    kprintf("PIIXSTART chan %d: interrupt registered OK\n", (int)_channel);
 	
 	// clean up any interrupt glitches left over from powering down the drive. 
 	*_bmStatusReg = kPIIX_IO_BMISX_IDEINTS;
@@ -291,10 +304,14 @@ bool AppleIntelPIIXPATA::start( IOService * provider )
     // create a nub for that device and call registerService() to
     // trigger matching against that device.
 
+    kprintf("PIIXNUB chan %d: reached nub loop, devType[0]=%d devType[1]=%d\n",
+            (int)_channel, (int)_devInfo[0].type, (int)_devInfo[1].type);
+
     for ( UInt32 i = 0; i < kMaxDrives; i++ )
     {
         if ( _devInfo[i].type != kUnknownATADeviceType )
         {
+            kprintf("PIIXNUB chan %d: Registering device %d of type %d\n", (int)_channel, (int)i, (int)_devInfo[i].type);
             DLOG("Registering device %d of type %d\n", i, _devInfo[i].type);
             
             ATADeviceNub * nub;
@@ -732,6 +749,10 @@ UInt32 AppleIntelPIIXPATA::scanForDrives( void )
 #endif
 
     *_tfSDHReg = 0x00;  // Initialize device selection to device 0.
+
+    kprintf("PIIXSCAN chan %d: unitsFound=%u devType[0]=%d devType[1]=%d\n",
+            (int)_channel, (unsigned)unitsFound,
+            (int)_devInfo[0].type, (int)_devInfo[1].type);
 
     return unitsFound;
 }

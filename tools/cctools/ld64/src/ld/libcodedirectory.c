@@ -11,6 +11,13 @@
 
 #include <arpa/inet.h>
 
+#ifndef __APPLE__
+// htonll is a BSD/Darwin extension, not POSIX - glibc's <endian.h> has the
+// equivalent htobe64.
+#include <endian.h>
+#define htonll(x) htobe64(x)
+#endif
+
 #include <sys/mman.h>
 #include <sys/queue.h>
 

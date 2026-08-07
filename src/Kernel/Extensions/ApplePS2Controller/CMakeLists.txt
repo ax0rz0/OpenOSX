@@ -3,7 +3,14 @@ target_sources(ApplePS2Controller PRIVATE
     ApplePS2Controller.cpp
     ApplePS2KeyboardDevice.cpp
     ApplePS2MouseDevice.cpp
+    ApplePS2Keyboard.cpp
 )
+
+# ApplePS2Keyboard subclasses IOHIKeyboard (IOKit/hidsystem headers + class
+# from the IOHIDFamily kext).
+target_include_directories(ApplePS2Controller PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../IOHIDFamily/IOHIDSystem
+    ${CMAKE_CURRENT_SOURCE_DIR}/../IOHIDFamily/include)
 
 set_property(TARGET ApplePS2Controller PROPERTY CXX_STANDARD 11)
 target_compile_options(ApplePS2Controller PRIVATE -Wno-implicit-int-conversion)

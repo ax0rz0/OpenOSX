@@ -249,6 +249,11 @@ i386_lbr_init(i386_cpu_info_t *info_p, bool is_master)
 			cpu_lbr_setp = &skl_cpu_lbrs;
 			break;
 
+		case CPUFAMILY_INTEL_GOLDMONTPLUS:
+			last_branch_support_enabled = false;
+			i386_lbr_disable();
+			return;
+
 		default:
 			panic("Unknown CPU family");
 		}

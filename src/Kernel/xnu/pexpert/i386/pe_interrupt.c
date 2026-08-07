@@ -34,9 +34,11 @@
 #endif
 
 void PE_incoming_interrupt(int);
+extern void lapic_end_of_interrupt(void);
 
 
 struct i386_interrupt_handler {
+	int                     source;
 	IOInterruptHandler      handler;
 	void                    *nub;
 	void                    *target;
@@ -56,6 +58,11 @@ PE_incoming_interrupt(int interrupt)
 
 	vector = &PE_interrupt_handler;
 
+	if (vector->handler == NULL) {
+		lapic_end_of_interrupt();
+		return;
+	}
+
 #if CONFIG_DTRACE && DEVELOPMENT
 	DTRACE_INT5(interrupt_start, void *, vector->nub, int, 0,
 	    void *, vector->target, IOInterruptHandler, vector->handler,
@@ -73,7 +80,7 @@ PE_incoming_interrupt(int interrupt)
 
 void
 PE_install_interrupt_handler(void *nub,
-    __unused int source,
+    int source,
     void *target,
     IOInterruptHandler handler,
     void *refCon)
@@ -82,7 +89,7 @@ PE_install_interrupt_handler(void *nub,
 
 	vector = &PE_interrupt_handler;
 
-	/*vector->source = source; IGNORED */
+	vector->source = source;
 	vector->handler = handler;
 	vector->nub = nub;
 	vector->target = target;

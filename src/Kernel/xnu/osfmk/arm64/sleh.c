@@ -111,8 +111,6 @@ void panic_with_thread_kernel_state(const char *msg, arm_saved_state_t *ss) __ab
 void sleh_synchronous_sp1(arm_context_t *, uint32_t, vm_offset_t) __abortlike;
 void sleh_synchronous(arm_context_t *, uint32_t, vm_offset_t);
 
-
-
 void sleh_irq(arm_saved_state_t *);
 void sleh_fiq(arm_saved_state_t *);
 void sleh_serror(arm_context_t *context, uint32_t esr, vm_offset_t far);
@@ -474,7 +472,7 @@ panic_with_thread_kernel_state(const char *msg, arm_saved_state_t *ss)
 	ss_valid = is_saved_state64(ss);
 	arm_saved_state64_t *state = saved_state64(ss);
 
-	os_atomic_cmpxchg(&original_faulting_state, NULL, state, seq_cst);
+	os_atomic_cmpxchg(&original_faulting_state, NULL, state, seq_cst);\
 
 	panic_plain("%s at pc 0x%016llx, lr 0x%016llx (saved state: %p%s)\n"
 	    "\t  x0: 0x%016llx  x1:  0x%016llx  x2:  0x%016llx  x3:  0x%016llx\n"
@@ -1568,7 +1566,6 @@ handle_kernel_abort(arm_saved_state_t *state, uint32_t esr, vm_offset_t fault_ad
 			    /* change_wiring */ FALSE, VM_KERN_MEMORY_NONE, interruptible,
 			    /* caller_pmap */ NULL, /* caller_pmap_addr */ 0);
 		}
-
 		if (result == KERN_SUCCESS) {
 			return;
 		}
@@ -1761,6 +1758,33 @@ sleh_irq(arm_saved_state_t *state)
 
 #if USE_APPLEARMSMP
 	PE_handle_ext_interrupt();
+#elif defined(QEMUVIRT)
+	/*
+	 * QEMU virt runs XNU at Non-secure EL1, where Group 0 (Secure -> FIQ) is
+	 * inaccessible; the ARM generic timer and device interrupts are delivered as
+	 * Group 1 IRQs through the GICv3 system-register CPU interface. Acknowledge
+	 * via ICC_IAR1_EL1, dispatch the virtual-timer PPI to the RTC tick and every
+	 * other INTID to the registered CPU interrupt handler, then EOI.
+	 */
+	{
+		uint64_t iar = __builtin_arm_rsr64("ICC_IAR1_EL1");
+		uint32_t intid = (uint32_t)(iar & 0xffffff);
+
+		if (intid == 27 /* CNTV virtual-timer PPI */) {
+			cdp->cpu_decrementer = -1; /* Large */
+			rtclock_intr(TRUE);
+		} else if (intid < 1020) {
+			cdp->interrupt_handler(cdp->interrupt_target,
+			    cdp->interrupt_refCon,
+			    cdp->interrupt_nub,
+			    cdp->interrupt_source);
+		}
+
+		if (intid < 1020) {
+			__builtin_arm_wsr64("ICC_EOIR1_EL1", iar);
+			__builtin_arm_isb(ISB_SY);
+		}
+	}
 #else
 	/* Run the registered interrupt handler. */
 	cdp->interrupt_handler(cdp->interrupt_target,
@@ -1989,4 +2013,3 @@ sleh_invalid_stack(arm_context_t *context, uint32_t esr __unused, vm_offset_t fa
 
 	panic_with_thread_kernel_state("Invalid kernel stack pointer (probable corruption).", &context->ss);
 }
-

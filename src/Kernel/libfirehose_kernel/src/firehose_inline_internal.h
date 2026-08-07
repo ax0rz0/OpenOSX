@@ -278,7 +278,9 @@ firehose_buffer_tracepoint_reserve(firehose_buffer_t fb, uint64_t stamp,
 			if (likely(result > 0)) {
 				uint64_t thread;
 #if KERNEL
-				thread = thread_tid(current_thread());
+				extern void *fh_current_thread(void) __asm__("_current_thread");
+				extern uint64_t fh_thread_tid(void *thr) __asm__("_thread_tid");
+				thread = fh_thread_tid(fh_current_thread());
 #else
 				thread = _pthread_threadid_self_np_direct();
 #endif

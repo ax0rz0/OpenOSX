@@ -55,7 +55,20 @@ atm_init(void)
 
 	if (!PE_parse_boot_argn("atm_diagnostic_config", &atm_diagnostic_config, sizeof(atm_diagnostic_config))) {
 		if (!PE_get_default("kern.atm_diagnostic_config", &atm_diagnostic_config, sizeof(atm_diagnostic_config))) {
-			atm_diagnostic_config = 0;
+			/* PD: no logd/userspace log consumer exists in this OS, so the
+			 * kernel-side firehose tracepoint path (os_log_with_args, called
+			 * unconditionally from every kprintf() when interrupts are
+			 * enabled) is dead weight - and it isn't reliably safe: it
+			 * crashed (page fault inside __firehose_buffer_tracepoint_reserve/
+			 * _firehose_trace) the first time a kprintf() ran from a
+			 * freshly-spawned kernel thread's PM workqueue context
+			 * (RavynXHCIPort -> handleRegisterPowerDriver -> PMLog).
+			 * ATM_TRACE_DISABLE ("do not initialize the new logging") makes
+			 * os_log_turned_off() true, so _os_log_to_log_internal (the
+			 * firehose emission path) is skipped entirely; the dmesg
+			 * ring-buffer path (_os_log_to_msgbuf_internal) is unconditional
+			 * and unaffected, so kprintf/dmesg still work normally. */
+			atm_diagnostic_config = ATM_TRACE_DISABLE;
 		}
 	}
 

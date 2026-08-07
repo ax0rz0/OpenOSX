@@ -102,7 +102,7 @@ int ccrsa_verify_pkcs1v15(ccrsa_pub_ctx_t key, const uint8_t* oid, size_t digest
 
 	cc_size mod_size = ccrsa_ctx_n(key);
 	cczp_t zp = ccrsa_ctx_zm(key);
-	const cc_unit* modulus = cczp_prime((cczp_const_short_t)zp);
+	const cc_unit* modulus = cczp_prime((cczp_const_t)zp);
 	const cc_unit* reciprocal = cczp_recip(zp);
 	cc_unit* exponent = ccrsa_ctx_e(key);
 

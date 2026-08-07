@@ -1,7 +1,7 @@
-/* iig(DriverKit-187 Aug  3 2021 18:40:13) generated from IODispatchSource.iig */
+/* iig-lite generated from IODispatchSource.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-#undef	IIG_IMPLEMENTATION
-#define	IIG_IMPLEMENTATION 	IODispatchSource.iig
+#undef IIG_IMPLEMENTATION
+#define IIG_IMPLEMENTATION 	IODispatchSource.iig
 
 #if KERNEL
 #include <libkern/c++/OSString.h>
@@ -11,13 +11,15 @@
 #include <DriverKit/IOReturn.h>
 #include <DriverKit/IODispatchSource.h>
 
-
 #if __has_builtin(__builtin_load_member_function_pointer)
 #define SimpleMemberFunctionCast(cfnty, self, func) (cfnty)__builtin_load_member_function_pointer(self, func)
 #else
 #define SimpleMemberFunctionCast(cfnty, self, func) ({ union { typeof(func) memfun; cfnty cfun; } pair; pair.memfun = func; pair.cfun; })
 #endif
 
+#if KERNEL
+OSDefineMetaClassAndAbstractStructors(IODispatchSource, OSObject)
+#endif /* KERNEL */
 
 struct IODispatchSource_Cancel_Msg_Content
 {
@@ -47,7 +49,6 @@ struct IODispatchSource_Cancel_Rpl
 };
 #pragma pack()
 #define IODispatchSource_Cancel_Rpl_ObjRefs (0)
-
 
 typedef union
 {
@@ -91,7 +92,6 @@ struct IODispatchSource_SetEnableWithCompletion_Rpl
 #pragma pack()
 #define IODispatchSource_SetEnableWithCompletion_Rpl_ObjRefs (0)
 
-
 typedef union
 {
     const IORPC rpc;
@@ -123,7 +123,6 @@ struct IODispatchSource_CheckForWork_Msg
 struct IODispatchSource_CheckForWork_Rpl_Content
 {
     IORPCMessage __hdr;
-    uint64_t __replyBuffer[8];
 };
 #pragma pack(4)
 struct IODispatchSource_CheckForWork_Rpl
@@ -133,7 +132,6 @@ struct IODispatchSource_CheckForWork_Rpl
 };
 #pragma pack()
 #define IODispatchSource_CheckForWork_Rpl_ObjRefs (0)
-
 
 typedef union
 {
@@ -176,7 +174,6 @@ struct IODispatchSource_SetEnable_Rpl
 #pragma pack()
 #define IODispatchSource_SetEnable_Rpl_ObjRefs (0)
 
-
 typedef union
 {
     const IORPC rpc;
@@ -189,109 +186,6 @@ typedef union
     };
 }
 IODispatchSource_SetEnable_Invocation;
-#if !KERNEL
-extern OSMetaClass * gOSContainerMetaClass;
-extern OSMetaClass * gOSDataMetaClass;
-extern OSMetaClass * gOSNumberMetaClass;
-extern OSMetaClass * gOSStringMetaClass;
-extern OSMetaClass * gOSBooleanMetaClass;
-extern OSMetaClass * gOSDictionaryMetaClass;
-extern OSMetaClass * gOSArrayMetaClass;
-extern OSMetaClass * gIODispatchQueueMetaClass;
-#endif /* !KERNEL */
-
-#if KERNEL
-OSDefineMetaClassAndStructors(IODispatchSource, OSObject);
-#endif /* KERNEL */
-
-#if !KERNEL
-
-#define IODispatchSource_QueueNames  ""
-
-#define IODispatchSource_MethodNames  ""
-
-#define IODispatchSourceMetaClass_MethodNames  ""
-
-struct OSClassDescription_IODispatchSource_t
-{
-    OSClassDescription base;
-    uint64_t           methodOptions[2 * 0];
-    uint64_t           metaMethodOptions[2 * 0];
-    char               queueNames[sizeof(IODispatchSource_QueueNames)];
-    char               methodNames[sizeof(IODispatchSource_MethodNames)];
-    char               metaMethodNames[sizeof(IODispatchSourceMetaClass_MethodNames)];
-};
-
-const struct OSClassDescription_IODispatchSource_t
-OSClassDescription_IODispatchSource =
-{
-    .base =
-    {
-        .descriptionSize         = sizeof(OSClassDescription_IODispatchSource_t),
-        .name                    = "IODispatchSource",
-        .superName               = "OSObject",
-        .methodOptionsSize       = 2 * sizeof(uint64_t) * 0,
-        .methodOptionsOffset     = __builtin_offsetof(struct OSClassDescription_IODispatchSource_t, methodOptions),
-        .metaMethodOptionsSize   = 2 * sizeof(uint64_t) * 0,
-        .metaMethodOptionsOffset = __builtin_offsetof(struct OSClassDescription_IODispatchSource_t, metaMethodOptions),
-        .queueNamesSize       = sizeof(IODispatchSource_QueueNames),
-        .queueNamesOffset     = __builtin_offsetof(struct OSClassDescription_IODispatchSource_t, queueNames),
-        .methodNamesSize         = sizeof(IODispatchSource_MethodNames),
-        .methodNamesOffset       = __builtin_offsetof(struct OSClassDescription_IODispatchSource_t, methodNames),
-        .metaMethodNamesSize     = sizeof(IODispatchSourceMetaClass_MethodNames),
-        .metaMethodNamesOffset   = __builtin_offsetof(struct OSClassDescription_IODispatchSource_t, metaMethodNames),
-        .flags                   = 1*kOSClassCanRemote,
-    },
-    .methodOptions =
-    {
-    },
-    .metaMethodOptions =
-    {
-    },
-    .queueNames      = IODispatchSource_QueueNames,
-    .methodNames     = IODispatchSource_MethodNames,
-    .metaMethodNames = IODispatchSourceMetaClass_MethodNames,
-};
-
-OSMetaClass * gIODispatchSourceMetaClass;
-
-static kern_return_t
-IODispatchSource_New(OSMetaClass * instance);
-
-const OSClassLoadInformation
-IODispatchSource_Class = 
-{
-    .description       = &OSClassDescription_IODispatchSource.base,
-    .metaPointer       = &gIODispatchSourceMetaClass,
-    .version           = 1,
-    .instanceSize      = sizeof(IODispatchSource),
-
-    .New               = &IODispatchSource_New,
-};
-
-extern const void * const
-gIODispatchSource_Declaration;
-const void * const
-gIODispatchSource_Declaration
-__attribute__((visibility("hidden"),section("__DATA_CONST,__osclassinfo,regular,no_dead_strip")))
-    = &IODispatchSource_Class;
-
-static kern_return_t
-IODispatchSource_New(OSMetaClass * instance)
-{
-    if (!new(instance) IODispatchSourceMetaClass) return (kIOReturnNoMemory);
-    return (kIOReturnSuccess);
-}
-
-kern_return_t
-IODispatchSourceMetaClass::New(OSObject * instance)
-{
-    if (!new(instance) IODispatchSource) return (kIOReturnNoMemory);
-    return (kIOReturnSuccess);
-}
-
-#endif /* !KERNEL */
-
 kern_return_t
 IODispatchSource::Dispatch(const IORPC rpc)
 {
@@ -306,11 +200,13 @@ IODispatchSource::_Dispatch(IODispatchSource * self, const IORPC rpc)
 
     switch (msg->msgid)
     {
+#if KERNEL
         case IODispatchSource_SetEnable_ID:
         {
             ret = IODispatchSource::SetEnable_Invoke(rpc, self, SimpleMemberFunctionCast(IODispatchSource::SetEnable_Handler, *self, &IODispatchSource::SetEnable_Impl));
             break;
         }
+#endif /* !KERNEL */
 
         default:
             ret = OSObject::_Dispatch(self, rpc);
@@ -324,12 +220,6 @@ IODispatchSource::_Dispatch(IODispatchSource * self, const IORPC rpc)
 kern_return_t
 IODispatchSource::MetaClass::Dispatch(const IORPC rpc)
 {
-#else /* KERNEL */
-kern_return_t
-IODispatchSourceMetaClass::Dispatch(const IORPC rpc)
-{
-#endif /* !KERNEL */
-
     kern_return_t ret = kIOReturnUnsupported;
     IORPCMessage * msg = IORPCMessageFromMach(rpc.message, false);
 
@@ -343,6 +233,7 @@ IODispatchSourceMetaClass::Dispatch(const IORPC rpc)
 
     return (ret);
 }
+#endif /* KERNEL */
 
 kern_return_t
 IODispatchSource::Cancel(
@@ -378,9 +269,9 @@ IODispatchSource::Cancel(
 
     msg->content.handler = handler;
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    if (supermethod) ret = supermethod((OSObject *)this, rpc);
-    else             ret = ((OSObject *)this)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    if (supermethod) ret = supermethod((OSObject *)this, _rpc);
+    else             ret = ((OSObject *)this)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -396,6 +287,30 @@ IODispatchSource::Cancel(
     {
     }
 
+    return (ret);
+}
+
+kern_return_t
+IODispatchSource::Cancel_Invoke(const IORPC _rpc,
+        OSMetaClassBase * target,
+        Cancel_Handler func)
+{
+    IODispatchSource_Cancel_Invocation rpc = { _rpc };
+    kern_return_t ret;
+
+    if (IODispatchSource_Cancel_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
+
+    ret = (*func)(target,
+        rpc.message->content.handler);
+
+    if (kIOReturnSuccess != ret) return (ret);
+
+    rpc.reply->content.__hdr.msgid = IODispatchSource_Cancel_ID;
+    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
+    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
+    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
+    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
+    rpc.reply->content.__hdr.objectRefs = IODispatchSource_Cancel_Rpl_ObjRefs;
 
     return (ret);
 }
@@ -437,9 +352,9 @@ IODispatchSource::SetEnableWithCompletion(
 
     msg->content.handler = handler;
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    if (supermethod) ret = supermethod((OSObject *)this, rpc);
-    else             ret = ((OSObject *)this)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    if (supermethod) ret = supermethod((OSObject *)this, _rpc);
+    else             ret = ((OSObject *)this)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -455,6 +370,31 @@ IODispatchSource::SetEnableWithCompletion(
     {
     }
 
+    return (ret);
+}
+
+kern_return_t
+IODispatchSource::SetEnableWithCompletion_Invoke(const IORPC _rpc,
+        OSMetaClassBase * target,
+        SetEnableWithCompletion_Handler func)
+{
+    IODispatchSource_SetEnableWithCompletion_Invocation rpc = { _rpc };
+    kern_return_t ret;
+
+    if (IODispatchSource_SetEnableWithCompletion_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
+
+    ret = (*func)(target,
+        rpc.message->content.enable,
+        rpc.message->content.handler);
+
+    if (kIOReturnSuccess != ret) return (ret);
+
+    rpc.reply->content.__hdr.msgid = IODispatchSource_SetEnableWithCompletion_ID;
+    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
+    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
+    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
+    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
+    rpc.reply->content.__hdr.objectRefs = IODispatchSource_SetEnableWithCompletion_Rpl_ObjRefs;
 
     return (ret);
 }
@@ -493,18 +433,12 @@ IODispatchSource::CheckForWork(
 
     msg->content.synchronous = synchronous;
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    if (supermethod) ret = supermethod((OSObject *)this, rpc);
-    else             ret = ((OSObject *)this)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    if (supermethod) ret = supermethod((OSObject *)this, _rpc);
+    else             ret = ((OSObject *)this)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
-        if (rpl->mach.msgh.msgh_size < (sizeof(IORPCMessageMach) + sizeof(IORPCMessage))) { ret = kIOReturnIPCError; break; };
-        if (rpl->mach.msgh_body.msgh_descriptor_count >= 1)
-        {
-            if (rpl->mach.msgh.msgh_size < (sizeof(IORPCMessageMach) + sizeof(mach_msg_port_descriptor_t) + sizeof(IORPCMessage))) { ret = kIOReturnIPCError; break; };
-        }
-        else
         {
             if (rpl->mach.msgh.msgh_size                  != sizeof(*rpl)) { ret = kIOReturnIPCError; break; };
             if (rpl->content.__hdr.msgid                  != IODispatchSource_CheckForWork_ID) { ret = kIOReturnIPCError; break; };
@@ -515,28 +449,33 @@ IODispatchSource::CheckForWork(
     while (false);
     if (kIOReturnSuccess == ret)
     {
-        if (ret == kIOReturnSuccess) {
-            IORPCMessage * message;
-            OSObject     * object;
-
-            message = IORPCMessageFromMach(rpc.reply, false);
-            if ((rpc.reply->msgh_body.msgh_descriptor_count < 1) || !(kIORPCMessageOneway & message->flags)) {
-               ret = kIOReturnIPCError;
-            } else {
-              object  = (typeof(object)) message->objects[0];
-              if (!object) ret = kIOReturnIPCError;
-              else
-              {
-                  rpc.sendSize  = rpc.replySize;
-                  rpc.replySize = 0;
-                  rpc.reply     = NULL;
-
-                  ret = object->Invoke(rpc);
-              }
-          }
-        }
     }
 
+    return (ret);
+}
+
+kern_return_t
+IODispatchSource::CheckForWork_Invoke(const IORPC _rpc,
+        OSMetaClassBase * target,
+        CheckForWork_Handler func)
+{
+    IODispatchSource_CheckForWork_Invocation rpc = { _rpc };
+    kern_return_t ret;
+
+    if (IODispatchSource_CheckForWork_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
+
+    ret = (*func)(target,
+        rpc.rpc,
+        rpc.message->content.synchronous);
+
+    if (kIOReturnSuccess != ret) return (ret);
+
+    rpc.reply->content.__hdr.msgid = IODispatchSource_CheckForWork_ID;
+    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
+    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
+    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
+    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
+    rpc.reply->content.__hdr.objectRefs = IODispatchSource_CheckForWork_Rpl_ObjRefs;
 
     return (ret);
 }
@@ -575,9 +514,9 @@ IODispatchSource::SetEnable(
 
     msg->content.enable = enable;
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    if (supermethod) ret = supermethod((OSObject *)this, rpc);
-    else             ret = ((OSObject *)this)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    if (supermethod) ret = supermethod((OSObject *)this, _rpc);
+    else             ret = ((OSObject *)this)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -592,82 +531,6 @@ IODispatchSource::SetEnable(
     if (kIOReturnSuccess == ret)
     {
     }
-
-
-    return (ret);
-}
-
-kern_return_t
-IODispatchSource::Cancel_Invoke(const IORPC _rpc,
-        OSMetaClassBase * target,
-        Cancel_Handler func)
-{
-    IODispatchSource_Cancel_Invocation rpc = { _rpc };
-    kern_return_t ret;
-
-    if (IODispatchSource_Cancel_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
-
-    ret = (*func)(target,
-        rpc.message->content.handler);
-
-    if (kIOReturnSuccess != ret) return (ret);
-
-    rpc.reply->content.__hdr.msgid = IODispatchSource_Cancel_ID;
-    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
-    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
-    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
-    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
-    rpc.reply->content.__hdr.objectRefs = IODispatchSource_Cancel_Rpl_ObjRefs;
-
-    return (ret);
-}
-
-kern_return_t
-IODispatchSource::SetEnableWithCompletion_Invoke(const IORPC _rpc,
-        OSMetaClassBase * target,
-        SetEnableWithCompletion_Handler func)
-{
-    IODispatchSource_SetEnableWithCompletion_Invocation rpc = { _rpc };
-    kern_return_t ret;
-
-    if (IODispatchSource_SetEnableWithCompletion_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
-
-    ret = (*func)(target,
-        rpc.message->content.enable,
-        rpc.message->content.handler);
-
-    if (kIOReturnSuccess != ret) return (ret);
-
-    rpc.reply->content.__hdr.msgid = IODispatchSource_SetEnableWithCompletion_ID;
-    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
-    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
-    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
-    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
-    rpc.reply->content.__hdr.objectRefs = IODispatchSource_SetEnableWithCompletion_Rpl_ObjRefs;
-
-    return (ret);
-}
-
-kern_return_t
-IODispatchSource::CheckForWork_Invoke(const IORPC _rpc,
-        OSMetaClassBase * target,
-        CheckForWork_Handler func)
-{
-    IODispatchSource_CheckForWork_Invocation rpc = { _rpc };
-    kern_return_t ret;
-
-    if (IODispatchSource_CheckForWork_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
-
-    ret = (*func)(target,
-        rpc.rpc,
-        rpc.message->content.synchronous);
-
-    if (kIOReturnSuccess != ret) return (ret);
-
-    IORPCMessage * message;
-
-    message = IORPCMessageFromMach(rpc.rpc.reply, false);
-    if ((rpc.rpc.reply->msgh_body.msgh_descriptor_count < 1)  || !(kIORPCMessageOneway & message->flags)) ret = kIOReturnIPCError;
 
     return (ret);
 }
@@ -696,6 +559,4 @@ IODispatchSource::SetEnable_Invoke(const IORPC _rpc,
 
     return (ret);
 }
-
-
 

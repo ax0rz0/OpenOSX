@@ -38,6 +38,8 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/wait3.c,v 1.4 2007/01/09 00:27:56 imp Exp $
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <sys/resource.h>
+#include <string.h>
+#include <errno.h>
 #include "un-namespace.h"
 
 pid_t
@@ -46,5 +48,15 @@ wait3(istat, options, rup)
 	int options;
 	struct rusage *rup;
 {
-	return (_wait4(WAIT_ANY, istat, options, rup));
+	pid_t pid;
+
+	if ((options & (WCONTINUED | WNOHANG | WUNTRACED)) != options) {
+		errno = EINVAL;
+		return (-1);
+	}
+
+	pid = waitpid(WAIT_ANY, istat, options);
+	if (pid > 0 && rup != NULL)
+		memset(rup, 0, sizeof(*rup));
+	return (pid);
 }

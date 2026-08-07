@@ -27,7 +27,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/mman.h>
+#ifdef __APPLE__
 #include <sys/sysctl.h>
+#endif
 #include <sys/param.h>
 #include <sys/mount.h>
 #include <signal.h> // ld64-port

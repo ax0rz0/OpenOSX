@@ -36,6 +36,7 @@
 #include <IOKit/IOMapper.h>
 #include <IOKit/IODMACommand.h>
 #include <IOKit/IOKitKeysPrivate.h>
+#include <pexpert/pexpert.h>
 
 #include <IOKit/IOSubMemoryDescriptor.h>
 #include <IOKit/IOMultiMemoryDescriptor.h>
@@ -5570,8 +5571,18 @@ IOMemoryDescriptor::createMappingInTask(
 
 #if DEBUG
 	if (!result) {
-		IOLog("createMappingInTask failed desc %p, addr %qx, options %x, offset %qx, length %llx\n",
-		    this, atAddress, (uint32_t) options, offset, length);
+		static bool iomap_debug_checked;
+		static bool iomap_debug;
+
+		if (!iomap_debug_checked) {
+			PE_parse_boot_argn("iomap_debug", &iomap_debug, sizeof(iomap_debug));
+			iomap_debug_checked = true;
+		}
+
+		if (iomap_debug) {
+			IOLog("createMappingInTask failed desc %p, addr %qx, options %x, offset %qx, length %llx\n",
+			    this, atAddress, (uint32_t) options, offset, length);
+		}
 	}
 #endif
 

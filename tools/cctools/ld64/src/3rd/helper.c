@@ -35,13 +35,28 @@ const char ldVersionString[] = "@(#)PROGRAM:ld  PROJECT:ld64-" STRINGIFY(LD64_VE
 
 #include "helper.h"
 
+#if defined(__GLIBC__)
+// glibc's <assert.h> only declares this when NDEBUG is undefined (it's
+// what assert() itself expands to); this build compiles with -DNDEBUG
+// (CMAKE_BUILD_TYPE=Release), so declare it ourselves - it's always
+// present in libc regardless of NDEBUG, only the macro/prototype is
+// conditional.
+extern void __assert_fail(const char *assertion, const char *file, unsigned int line, const char *function) __attribute__((noreturn));
+#endif
+
 void __assert_rtn(const char *func, const char *file, int line, const char *msg)
 {
 #if defined(__FreeBSD__) || defined(__DragonFly__)
     __assert(msg, file, line, func);
 #elif defined(__NetBSD__) || defined(__OpenBSD__) || defined(__CYGWIN__)
     __assert(msg, line, file);
-#elif defined(__GLIBC__) || defined(__MINGW32__)
+#elif defined(__GLIBC__)
+    // Modern glibc no longer declares the old BSD-style __assert(msg, file,
+    // line) in <assert.h> (it was always an undocumented compat symbol);
+    // __assert_fail is the real, always-present glibc internal used by the
+    // standard assert() macro itself.
+    __assert_fail(msg, file, line, func);
+#elif defined(__MINGW32__)
     __assert(msg, file, line);
 #else
     fprintf(stderr, "Assertion failed: %s (%s: %s: %d)\n", msg, file, func, line);

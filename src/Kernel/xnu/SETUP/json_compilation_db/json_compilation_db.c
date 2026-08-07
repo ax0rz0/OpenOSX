@@ -165,7 +165,7 @@ main(int argc, char * argv[])
 void
 usage(void)
 {
-	fprintf(stderr, "Usage: %s <json_output> <cwd> <input_file> <compiler> [<invocation> ...]\n", getprogname());
+	fprintf(stderr, "Usage: %s <json_output> <cwd> <input_file> <compiler> [<invocation> ...]\n", "json_compilation_db");
 	exit(EX_USAGE);
 }
 

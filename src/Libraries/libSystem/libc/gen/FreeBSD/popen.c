@@ -57,6 +57,7 @@ __FBSDID("$FreeBSD: src/lib/libc/gen/popen.c,v 1.21 2009/05/27 19:28:04 ed Exp $
 #include <spawn.h>
 #include "un-namespace.h"
 #include "libc_private.h"
+#include "fbsdcompat/_fbsd_compat_.h"
 
 #include <crt_externs.h>
 #define environ (*_NSGetEnviron())

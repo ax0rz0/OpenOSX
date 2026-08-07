@@ -45,8 +45,7 @@ LEAF(___ptrace, 0)
 
 LEAF(___ptrace, 0)
 	xorq	%rax,%rax
-	PUSH_EXTERN(_errno)
-	movl	%eax,(%r11)
+	movl	%eax,_errno(%rip)
 	UNIX_SYSCALL_NONAME(ptrace, 4, cerror)
 	ret
 

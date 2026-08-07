@@ -116,6 +116,10 @@ typedef struct console_buf {
 
 extern int serial_getc(void);
 extern void serial_putc(char);
+extern void vc_serial_putc(char);
+extern boolean_t PE_parse_boot_argn(const char *arg_string, void *arg_ptr, int max_arg);
+
+static bool mirror_serial_to_video = false;
 
 #if DEBUG || DEVELOPMENT
 TUNABLE(bool, allow_printf_from_interrupts_disabled_context, "nointr_consio", false);
@@ -180,12 +184,16 @@ console_init(void)
 {
 	int ret, i;
 	uint32_t * p;
+	bool boot_arg = false;
 
 	if (!OSCompareAndSwap(0, KERN_CONSOLE_RING_SIZE, (UInt32 *)&console_ring.len)) {
 		return;
 	}
 
 	assert(console_ring.len > 0);
+	if (PE_parse_boot_argn("serial_video_mirror", &boot_arg, sizeof(boot_arg))) {
+		mirror_serial_to_video = boot_arg;
+	}
 
 	ret = kmem_alloc_flags(kernel_map, (vm_offset_t *)&console_ring.buffer,
 	    KERN_CONSOLE_BUF_SIZE + 2 * PAGE_SIZE, VM_KERN_MEMORY_OSFMK,
@@ -327,6 +335,19 @@ _cnputs(char * c, int size)
 
 	const uint32_t idx = get_cons_ops_index();
 
+#if defined(QEMUVIRT)
+	/* QEMU virt has no video backend. Avoid the early KC callback table until
+	 * its function pointers have been fixed up by the VM runtime. */
+	(void)idx;
+	while (size-- > 0) {
+		if (*c == '\n') {
+			_serial_putc(0, 0, '\r');
+		}
+		_serial_putc(0, 0, *c++);
+	}
+	return;
+#endif
+
 	while (size-- > 0) {
 		if (*c == '\n') {
 			cons_ops[idx].putc(0, 0, '\r');
@@ -409,6 +430,9 @@ console_ring_try_empty(void)
 		if (nchars_out > 0) {
 			total_chars_out += nchars_out;
 			_cnputs(flush_buf, nchars_out);
+			/* Serial mirroring of video-console output happens in vcputc()
+			 * (osfmk/console/video_console.c), the single sink for the
+			 * VC_CONS_OPS console, so it catches the userland tty path too. */
 		}
 
 		if (__probable(!in_debugger)) {
@@ -486,13 +510,32 @@ cnputc(char c)
 {
 	console_buf_t * cbp;
 	cpu_data_t * cpu_data_p;
+#if defined(__arm64__) || defined(__aarch64__)
+	thread_t thread;
+#endif
 	boolean_t needs_print = TRUE;
 	char * write_ptr;
 	char * cp;
 
 restart:
 	mp_disable_preemption();
+#if defined(__arm64__) || defined(__aarch64__)
+	/*
+	 * Early in boot the current thread may not have per-CPU data assigned yet;
+	 * fall back to direct serial output. thread->machine.CpuDatap is
+	 * arm64-specific (x86's machine_thread has no such member), so x86 keeps
+	 * using current_cpu_datap() as before.
+	 */
+	thread = current_thread_fast();
+	if (thread == THREAD_NULL || thread->machine.CpuDatap == NULL) {
+		mp_enable_preemption();
+		_cnputs(&c, 1);
+		return;
+	}
+	cpu_data_p = thread->machine.CpuDatap;
+#else
 	cpu_data_p = current_cpu_datap();
+#endif
 	cbp = (console_buf_t *)cpu_data_p->cpu_console_buf;
 	if (console_suspended || cbp == NULL) {
 		mp_enable_preemption();
@@ -592,10 +635,23 @@ _serial_getc(__unused int a, __unused int b, boolean_t wait, __unused boolean_t 
 	return c;
 }
 
+/*
+ * video_console.c needs this to decide whether to replay the pre-graphics
+ * serial backlog once the console comes up; the flag itself stays private.
+ */
+bool
+console_serial_video_mirror(void)
+{
+	return mirror_serial_to_video;
+}
+
 static void
 _serial_putc(__unused int a, __unused int b, int c)
 {
 	serial_putc((char)c);
+	if (mirror_serial_to_video) {
+		vc_serial_putc((char)c);
+	}
 }
 
 int

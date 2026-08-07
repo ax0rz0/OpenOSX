@@ -1,5 +1,5 @@
 add_kext_bundle(corecrypto.kext INFO_PLIST kext/Info.plist KERNEL_PRIVATE
-    BUNDLE_IDENTIFIER org.puredarwin.kec.corecrypto BUNDLE_VERSION 1.0d1
+    BUNDLE_IDENTIFIER com.apple.kec.corecrypto BUNDLE_VERSION 1.0d1
     MAIN_FUNCTION cc_kext_start ANTIMAIN_FUNCTION cc_kext_stop
 )
 set_property(TARGET corecrypto.kext PROPERTY OUTPUT_NAME corecrypto)
@@ -10,6 +10,7 @@ target_sources(corecrypto.kext PRIVATE
     cc_debug.c
     cc_digest.c
 
+    algorithms/aes128.c
     algorithms/aes_cbc.c
     algorithms/aes_ecb.c
     algorithms/cckprng.c
@@ -19,6 +20,7 @@ target_sources(corecrypto.kext PRIVATE
     algorithms/pdcrypto_digest_init.c
     algorithms/pdcrypto_digest_update.c
     algorithms/pdcrypto_dummy.c
+    algorithms/sha1.c
     algorithms/sha1_impl.cc
     algorithms/sha256.cc
     algorithms/sha512.cc
@@ -26,6 +28,7 @@ target_sources(corecrypto.kext PRIVATE
     algorithms/yarrow/prng.c
     algorithms/yarrow/sha1mod.c
     algorithms/yarrow/smf.c
+    algorithms/yarrow/yarrowUtils.c
 
     kext/cc_functions.c
     kext/cc_kext_main.c

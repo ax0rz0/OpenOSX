@@ -40,6 +40,7 @@ Temporary Items
 
 ## Build generated
 build/
+build*/
 DerivedData/
 
 ## Various settings
@@ -116,3 +117,27 @@ fastlane/test_output
 iOSInjectionProject/
 
 # End of https://www.gitignore.io/api/macos,swift
+
+# CMake files
+src/Kernel/Extensions/**/kmod_info.c
+CMakeFiles
+CMakeCache.txt
+
+# Filesystem
+*.img
+*.iso
+*.ext4
+*.hfs
+*.fd
+
+# Local test media
+*.pcm
+*.mp3
+*.wav
+
+# Nix files
+/result
+/result-*
+*/output.txt
+output.txt
+.openosx-*

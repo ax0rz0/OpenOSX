@@ -17,7 +17,7 @@
  * Please see the License for the specific language governing rights and
  * limitations under the License.
  *
- * This file was modified by William Kent in 2017 to support the PureDarwin
+ * This file was modified by William Kent in 2017 to support the OpenOSX
  * project. This notice is included in support of clause 2.2(b) of the License.
  */
 
@@ -43,6 +43,18 @@ public:
 	virtual bool init(OSDictionary *properties) APPLE_KEXT_OVERRIDE;
 	virtual IOService *probe(IOService *provider, SInt32 *score) APPLE_KEXT_OVERRIDE;
 	virtual bool start(IOService *provider) APPLE_KEXT_OVERRIDE;
+	void publishPlatformUUIDFromDeviceTree(void);
+	void cacheACPIPowerOffFromDeviceTree(void);
+
+	/* PM1a/PM1b control ports for ACPI soft-off, found by walking the FADT at
+	 * start(). PEHaltRestart can be reached from panic context, where mapping
+	 * memory and taking IORegistry locks is not safe, so the lookup happens
+	 * once up front and the halt path only does an outw(). */
+	static UInt16 sPM1aControlPort;
+	static UInt16 sPM1bControlPort;
+	static UInt8  sS5SleepTypeA;
+	static UInt8  sS5SleepTypeB;
+	static bool   sACPIPowerOffReady;
 	virtual bool configure(IOService *provider) APPLE_KEXT_OVERRIDE;
 	virtual bool matchNubWithPropertyTable(IOService *nub, OSDictionary *table);
 	virtual IOService *createNub(OSDictionary *from) APPLE_KEXT_OVERRIDE;
@@ -53,6 +65,8 @@ public:
 	virtual IOReturn callPlatformFunction(const OSSymbol *functionName, bool waitForFunction, void *param1, void *param2, void *param3, void *param4) APPLE_KEXT_OVERRIDE;
 	virtual bool getModelName(char *name, int maxLengh) APPLE_KEXT_OVERRIDE;
 	virtual bool getMachineName(char *name, int maxLength) APPLE_KEXT_OVERRIDE;
+	virtual long getGMTTimeOfDay(void) APPLE_KEXT_OVERRIDE;
+	virtual void setGMTTimeOfDay(long secs) APPLE_KEXT_OVERRIDE;
 };
 
 #endif /* ! _IOKIT_APPLEI386PLATFORM_H */

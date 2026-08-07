@@ -53,12 +53,16 @@ set(HEADERS
     IOStorageProtocolCharacteristics.h
 )
 foreach(file IN LISTS HEADERS)
-    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/user_include/IOKit/storage/${file}
-        COMMAND $<TARGET_FILE:unifdef> -UKERNEL -o ${CMAKE_CURRENT_BINARY_DIR}/user_include/IOKit/storage/${file} ${CMAKE_CURRENT_SOURCE_DIR}/include/IOKit/storage/${file}
-        DEPENDS unifdef ${CMAKE_CURRENT_SOURCE_DIR}/include/IOKit/storage/${file}
-        COMMENT "unifdef ${file}" VERBATIM
+    set(OUTPUT_FILE ${CMAKE_CURRENT_BINARY_DIR}/user_include/IOKit/storage/${file})
+    add_custom_command(OUTPUT ${OUTPUT_FILE}
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/user_include/IOKit/storage
+        COMMAND xcrun unifdef -UKERNEL -o ${OUTPUT_FILE}.tmp ${CMAKE_CURRENT_SOURCE_DIR}/include/IOKit/storage/${file} || cp ${CMAKE_CURRENT_SOURCE_DIR}/include/IOKit/storage/${file} ${OUTPUT_FILE}.tmp
+        COMMAND mv ${OUTPUT_FILE}.tmp ${OUTPUT_FILE}
+        DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/include/IOKit/storage/${file}
+        COMMENT "unifdef ${file} (fallback to copy if needed)"
+        VERBATIM
     )
-    target_sources(IOStorageFamilyUserHeaders PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/user_include/IOKit/storage/${file})
+    target_sources(IOStorageFamilyUserHeaders PRIVATE ${OUTPUT_FILE})
 endforeach()
 
 install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/user_include/IOKit/storage DESTINATION System/Library/Frameworks/IOKit.framework/Versions/A/Headers/IOKit COMPONENT DeveloperTools)

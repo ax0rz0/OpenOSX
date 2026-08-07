@@ -1,7 +1,7 @@
-/* iig(DriverKit-187 Aug  3 2021 18:40:13) generated from OSObject.iig */
+/* iig-lite generated from OSObject.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-#undef	IIG_IMPLEMENTATION
-#define	IIG_IMPLEMENTATION 	OSObject.iig
+#undef IIG_IMPLEMENTATION
+#define IIG_IMPLEMENTATION 	OSObject.iig
 
 #if KERNEL
 #include <libkern/c++/OSString.h>
@@ -15,13 +15,11 @@
 #include <DriverKit/IODispatchQueue.h>
 /* @iig end */
 
-
 #if __has_builtin(__builtin_load_member_function_pointer)
 #define SimpleMemberFunctionCast(cfnty, self, func) (cfnty)__builtin_load_member_function_pointer(self, func)
 #else
 #define SimpleMemberFunctionCast(cfnty, self, func) ({ union { typeof(func) memfun; cfnty cfun; } pair; pair.memfun = func; pair.cfun; })
 #endif
-
 
 struct OSObject_SetDispatchQueue_Msg_Content
 {
@@ -57,7 +55,6 @@ struct OSObject_SetDispatchQueue_Rpl
 };
 #pragma pack()
 #define OSObject_SetDispatchQueue_Rpl_ObjRefs (0)
-
 
 typedef union
 {
@@ -106,7 +103,6 @@ struct OSObject_CopyDispatchQueue_Rpl
 #pragma pack()
 #define OSObject_CopyDispatchQueue_Rpl_ObjRefs (1)
 
-
 typedef union
 {
     const IORPC rpc;
@@ -119,105 +115,6 @@ typedef union
     };
 }
 OSObject_CopyDispatchQueue_Invocation;
-#if !KERNEL
-extern OSMetaClass * gOSContainerMetaClass;
-extern OSMetaClass * gOSDataMetaClass;
-extern OSMetaClass * gOSNumberMetaClass;
-extern OSMetaClass * gOSStringMetaClass;
-extern OSMetaClass * gOSBooleanMetaClass;
-extern OSMetaClass * gOSDictionaryMetaClass;
-extern OSMetaClass * gOSArrayMetaClass;
-extern OSMetaClass * gIODispatchQueueMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
-
-#define OSObject_QueueNames  ""
-
-#define OSObject_MethodNames  ""
-
-#define OSObjectMetaClass_MethodNames  ""
-
-struct OSClassDescription_OSObject_t
-{
-    OSClassDescription base;
-    uint64_t           methodOptions[2 * 0];
-    uint64_t           metaMethodOptions[2 * 0];
-    char               queueNames[sizeof(OSObject_QueueNames)];
-    char               methodNames[sizeof(OSObject_MethodNames)];
-    char               metaMethodNames[sizeof(OSObjectMetaClass_MethodNames)];
-};
-
-const struct OSClassDescription_OSObject_t
-OSClassDescription_OSObject =
-{
-    .base =
-    {
-        .descriptionSize         = sizeof(OSClassDescription_OSObject_t),
-        .name                    = "OSObject",
-        .superName               = "OSMetaClassBase",
-        .methodOptionsSize       = 2 * sizeof(uint64_t) * 0,
-        .methodOptionsOffset     = __builtin_offsetof(struct OSClassDescription_OSObject_t, methodOptions),
-        .metaMethodOptionsSize   = 2 * sizeof(uint64_t) * 0,
-        .metaMethodOptionsOffset = __builtin_offsetof(struct OSClassDescription_OSObject_t, metaMethodOptions),
-        .queueNamesSize       = sizeof(OSObject_QueueNames),
-        .queueNamesOffset     = __builtin_offsetof(struct OSClassDescription_OSObject_t, queueNames),
-        .methodNamesSize         = sizeof(OSObject_MethodNames),
-        .methodNamesOffset       = __builtin_offsetof(struct OSClassDescription_OSObject_t, methodNames),
-        .metaMethodNamesSize     = sizeof(OSObjectMetaClass_MethodNames),
-        .metaMethodNamesOffset   = __builtin_offsetof(struct OSClassDescription_OSObject_t, metaMethodNames),
-        .flags                   = 0*kOSClassCanRemote,
-    },
-    .methodOptions =
-    {
-    },
-    .metaMethodOptions =
-    {
-    },
-    .queueNames      = OSObject_QueueNames,
-    .methodNames     = OSObject_MethodNames,
-    .metaMethodNames = OSObjectMetaClass_MethodNames,
-};
-
-OSMetaClass * gOSObjectMetaClass;
-
-static kern_return_t
-OSObject_New(OSMetaClass * instance);
-
-const OSClassLoadInformation
-OSObject_Class = 
-{
-    .description       = &OSClassDescription_OSObject.base,
-    .metaPointer       = &gOSObjectMetaClass,
-    .version           = 1,
-    .instanceSize      = sizeof(OSObject),
-
-    .New               = &OSObject_New,
-};
-
-extern const void * const
-gOSObject_Declaration;
-const void * const
-gOSObject_Declaration
-__attribute__((visibility("hidden"),section("__DATA_CONST,__osclassinfo,regular,no_dead_strip")))
-    = &OSObject_Class;
-
-static kern_return_t
-OSObject_New(OSMetaClass * instance)
-{
-    if (!new(instance) OSObjectMetaClass) return (kIOReturnNoMemory);
-    return (kIOReturnSuccess);
-}
-
-kern_return_t
-OSObjectMetaClass::New(OSObject * instance)
-{
-    if (!new(instance) OSObject) return (kIOReturnNoMemory);
-    return (kIOReturnSuccess);
-}
-
-#endif /* !KERNEL */
-
 kern_return_t
 OSObject::Dispatch(const IORPC rpc)
 {
@@ -245,12 +142,6 @@ OSObject::_Dispatch(OSObject * self, const IORPC rpc)
 kern_return_t
 OSObject::MetaClass::Dispatch(const IORPC rpc)
 {
-#else /* KERNEL */
-kern_return_t
-OSObjectMetaClass::Dispatch(const IORPC rpc)
-{
-#endif /* !KERNEL */
-
     kern_return_t ret = kIOReturnUnsupported;
     IORPCMessage * msg = IORPCMessageFromMach(rpc.message, false);
 
@@ -264,6 +155,7 @@ OSObjectMetaClass::Dispatch(const IORPC rpc)
 
     return (ret);
 }
+#endif /* KERNEL */
 
 kern_return_t
 OSObject::SetDispatchQueue(
@@ -298,16 +190,16 @@ OSObject::SetDispatchQueue(
 
     msg->__object__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
 
+    msg->queue__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
+    msg->content.queue = (OSObjectRef) queue;
+
     msg->content.name = NULL;
 
     strlcpy(&msg->content.__name[0], name, sizeof(msg->content.__name));
 
-    msg->queue__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
-    msg->content.queue = (OSObjectRef) queue;
-
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    if (supermethod) ret = supermethod((OSObject *)this, rpc);
-    else             ret = ((OSObject *)this)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    if (supermethod) ret = supermethod((OSObject *)this, _rpc);
+    else             ret = ((OSObject *)this)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -323,6 +215,35 @@ OSObject::SetDispatchQueue(
     {
     }
 
+    return (ret);
+}
+
+kern_return_t
+OSObject::SetDispatchQueue_Invoke(const IORPC _rpc,
+        OSMetaClassBase * target,
+        SetDispatchQueue_Handler func)
+{
+    OSObject_SetDispatchQueue_Invocation rpc = { _rpc };
+    kern_return_t ret;
+    IODispatchQueue * queue;
+
+    if (OSObject_SetDispatchQueue_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
+    queue = OSDynamicCast(IODispatchQueue, (OSObject *) rpc.message->content.queue);
+    if (!queue && rpc.message->content.queue) return (kIOReturnBadArgument);
+    if (strnlen(&rpc.message->content.__name[0], sizeof(rpc.message->content.__name)) >= sizeof(rpc.message->content.__name)) return kIOReturnBadArgument;
+
+    ret = (*func)(target,
+        &rpc.message->content.__name[0],
+        queue);
+
+    if (kIOReturnSuccess != ret) return (ret);
+
+    rpc.reply->content.__hdr.msgid = OSObject_SetDispatchQueue_ID;
+    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
+    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
+    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
+    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
+    rpc.reply->content.__hdr.objectRefs = OSObject_SetDispatchQueue_Rpl_ObjRefs;
 
     return (ret);
 }
@@ -364,9 +285,9 @@ OSObject::CopyDispatchQueue(
 
     strlcpy(&msg->content.__name[0], name, sizeof(msg->content.__name));
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    if (supermethod) ret = supermethod((OSObject *)this, rpc);
-    else             ret = ((OSObject *)this)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    if (supermethod) ret = supermethod((OSObject *)this, _rpc);
+    else             ret = ((OSObject *)this)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -383,37 +304,6 @@ OSObject::CopyDispatchQueue(
         *queue = OSDynamicCast(IODispatchQueue, (OSObject *) rpl->content.queue);
         if (rpl->content.queue && !*queue) ret = kIOReturnBadArgument;
     }
-
-
-    return (ret);
-}
-
-kern_return_t
-OSObject::SetDispatchQueue_Invoke(const IORPC _rpc,
-        OSMetaClassBase * target,
-        SetDispatchQueue_Handler func)
-{
-    OSObject_SetDispatchQueue_Invocation rpc = { _rpc };
-    kern_return_t ret;
-    IODispatchQueue * queue;
-
-    if (OSObject_SetDispatchQueue_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
-    queue = OSDynamicCast(IODispatchQueue, (OSObject *) rpc.message->content.queue);
-    if (!queue && rpc.message->content.queue) return (kIOReturnBadArgument);
-    if (strnlen(&rpc.message->content.__name[0], sizeof(rpc.message->content.__name)) >= sizeof(rpc.message->content.__name)) return kIOReturnBadArgument;
-
-    ret = (*func)(target,
-        &rpc.message->content.__name[0],
-        queue);
-
-    if (kIOReturnSuccess != ret) return (ret);
-
-    rpc.reply->content.__hdr.msgid = OSObject_SetDispatchQueue_ID;
-    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
-    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
-    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
-    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
-    rpc.reply->content.__hdr.objectRefs = OSObject_SetDispatchQueue_Rpl_ObjRefs;
 
     return (ret);
 }
@@ -445,6 +335,4 @@ OSObject::CopyDispatchQueue_Invoke(const IORPC _rpc,
 
     return (ret);
 }
-
-
 

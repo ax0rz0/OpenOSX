@@ -58,16 +58,34 @@ function(mig filename)
     endif()
 
     if(NOT MIG_ARCH)
-        set(MIG_ARCH i386)
+        set(MIG_ARCH x86_64)
     endif()
 
     get_filename_component(basename ${filename} NAME_WE)
     get_filename_component(filename_abs ${filename} ABSOLUTE)
+
+    set(MIGCOM_ENV_PREFIX)
+    if(TARGET migcom)
+        set(MIGCOM_ENV_PREFIX ${CMAKE_COMMAND} -E env "MIGCOM=$<TARGET_FILE:migcom>")
+        set(MIGCOM_DEPENDS migcom)
+    elseif(DEFINED ENV{NIX_MIGCOM_PATH})
+        set(MIGCOM_ENV_PREFIX ${CMAKE_COMMAND} -E env "MIGCOM=$ENV{NIX_MIGCOM_PATH}")
+        set(MIGCOM_DEPENDS)
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin" AND OPENOSX_ENABLE_TOOLS)
+        set(MIGCOM_ENV_PREFIX ${CMAKE_COMMAND} -E env "MIGCOM=$<TARGET_FILE:migcom>")
+        set(MIGCOM_DEPENDS migcom)
+    elseif(CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+        set(MIGCOM_DEPENDS)
+    else()
+        message(SEND_ERROR "mig() requires the migcom target or NIX_MIGCOM_PATH")
+        return()
+    endif()
+
     add_custom_command(OUTPUT ${MIG_DEPS}
-        COMMAND ${CMAKE_COMMAND} -E env MIGCOM=$<TARGET_FILE:migcom> ${PUREDARWIN_SOURCE_DIR}/tools/mig/mig.sh -arch ${MIG_ARCH}
+        COMMAND ${MIGCOM_ENV_PREFIX} ${OPENOSX_SOURCE_DIR}/tools/mig/mig.sh -arch ${MIG_ARCH}
             -user ${MIG_USER_SOURCE} -header ${MIG_USER_HEADER} -server ${MIG_SERVER_SOURCE}
             -sheader ${MIG_SERVER_HEADER} ${MIG_FLAGS} ${filename_abs}
-        DEPENDS migcom
+        DEPENDS ${MIGCOM_DEPENDS}
         COMMENT "MiG ${filename}" VERBATIM COMMAND_EXPAND_LISTS
     )
 endfunction()

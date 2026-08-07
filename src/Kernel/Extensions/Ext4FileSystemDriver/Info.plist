@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>Ext4FileSystemDriver</string>
+	<key>CFBundleName</key>
+	<string>Ext4FileSystemDriver</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.ravynos.driver.Ext4FileSystemDriver</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundlePackageType</key>
+	<string>KEXT</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>1.0.0</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.0</string>
+	<key>IOKitPersonalities</key>
+	<dict>
+		<key>Ext4FileSystemDriver</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>com.ravynos.driver.Ext4FileSystemDriver</string>
+			<key>IOClass</key>
+			<string>Ext4FileSystemDriver</string>
+			<key>IOMatchCategory</key>
+			<string>Ext4FileSystemDriver</string>
+			<key>IOProviderClass</key>
+			<string>IOResources</string>
+			<key>IOResourceMatch</key>
+			<string>boot-uuid</string>
+			<key>media-match</key>
+			<dict>
+				<key>IOPropertyMatch</key>
+				<array>
+					<dict>
+						<key>Content Hint</key>
+						<string>0FC63DAF-8483-4772-8E79-3D69D8477DE4</string>
+						<key>Leaf</key>
+						<true/>
+					</dict>
+					<dict>
+						<key>Content Hint</key>
+						<string>Linux</string>
+						<key>Leaf</key>
+						<true/>
+					</dict>
+				</array>
+			</dict>
+		</dict>
+	</dict>
+	<key>OSBundleRequired</key>
+	<string>Local-Root</string>
+	<key>OSBundleLibraries</key>
+	<dict>
+		<key>com.apple.kpi.libkern</key>
+		<string>8.0.0</string>
+		<key>com.apple.kpi.iokit</key>
+		<string>8.0.0</string>
+		<key>com.apple.iokit.IOStorageFamily</key>
+		<string>1.6</string>
+	</dict>
+</dict>
+</plist>

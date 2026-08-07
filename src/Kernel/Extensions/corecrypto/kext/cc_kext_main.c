@@ -12,7 +12,8 @@ static const struct cckprng_funcs cc_kprng_fns = {
 	.initgen = cckprng_initgen,
 	.reseed = cckprng_reseed,
 	.refresh = cckprng_refresh,
-	.generate = cckprng_generate
+	.generate = cckprng_generate,
+	.init_with_getentropy = cckprng_init_with_getentropy
 };
 
 static struct cckprng_ctx cc_kprng_ctx = {
@@ -27,11 +28,6 @@ kern_return_t cc_kext_start(kmod_info_t * ki, void *d)
 	if (ret == -1) {
 		printf("warning: corecrypto could not be registered. Did another crypto handler beat us to it?\n");
 	} else {
-		prng_error_status error = prngInitialize(&cc_kprng_ctx.prng);
-		if (error != PRNG_SUCCESS) {
-			panic("prngInitialize() failed with code %d", error);
-		}
-
 		register_and_init_prng(&cc_kprng_ctx, &cc_kprng_fns);
 		printf("corecrypto loaded\n");
 	}

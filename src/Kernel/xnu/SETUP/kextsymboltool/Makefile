@@ -14,9 +14,15 @@ WARNFLAGS = -Wall
 
 LDFLAGS = -isysroot $(HOST_SDKROOT) -mmacosx-version-min=$(HOST_OS_VERSION) -lstdc++
 
+# If we are a Linux host, append luuid
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    LDFLAGS += -luuid
+endif
+
 kextsymboltool: $(OBJS)
 	@$(LOG_HOST_LD) "$@"
-	$(_v)$(HOST_CC) $(LDFLAGS) -o $@ $^
+	$(_v)$(HOST_CC) -o $@ $^ $(LDFLAGS)
 
 %.o: %.c
 	@$(LOG_HOST_CC) "$@"

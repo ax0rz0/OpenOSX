@@ -24,6 +24,7 @@
 #include <sys/types.h>                       // (miscfs/devfs/devfs.h, ...)
 
 #include <miscfs/devfs/devfs.h>              // (devfs_make_node, ...)
+#include <kern/clock.h>
 #include <sys/buf.h>                         // (buf_t, ...)
 #include <sys/fcntl.h>                       // (FWRITE, ...)
 #include <sys/ioccom.h>                      // (IOCGROUP, ...)
@@ -221,6 +222,7 @@ public:
                         char *             slicePath );
 
     UInt32      locate(IOMedia * media);
+    bool        publishDevNodes(UInt32 minorID);
     void        obsolete(UInt32 minorID);
     void        remove(UInt32 minorID);
 
@@ -308,6 +310,11 @@ bool IOMediaBSDClient::init(OSDictionary * properties)
 
     _anchors = gIOMediaBSDClientGlobals.getAnchors();
     _minors  = gIOMediaBSDClientGlobals.getMinors();
+    _retryCall = 0;
+    _retryCount = 0;
+    _bsdNotifier = 0;
+    _nodesCreated = false;
+    _devNodesPublished = false;
 
     return true;
 }
@@ -318,7 +325,121 @@ void IOMediaBSDClient::free()
     // Free all of this object's outstanding resources.
     //
 
+    if ( _bsdNotifier )
+    {
+        _bsdNotifier->remove();
+        _bsdNotifier = 0;
+    }
+
+    if ( _retryCall )
+    {
+        thread_call_cancel_wait(_retryCall);
+        thread_call_free(_retryCall);
+        _retryCall = 0;
+    }
+
     super::free();
+}
+
+void IOMediaBSDClient::scheduleCreateNodesRetry()
+{
+    AbsoluteTime deadline;
+
+    if ( _devNodesPublished ) return;
+
+    // Ticks spent waiting for devfs to come up are unbounded: under TCG the
+    // wall-clock gap between media probe and devfs_sinit() can be arbitrarily
+    // large, and the IOBSD notification is only a backstop.  Only genuine
+    // publish failures after devfs is ready count against the retry budget.
+    if ( devfs_is_ready() )
+    {
+        if ( _retryCount >= 300 )
+        {
+            IOLog("IOMediaBSDClient: giving up on devfs node publish "
+                  "after %u retries\n", (unsigned) _retryCount);
+            return;
+        }
+        _retryCount++;
+    }
+
+    if ( _retryCall == 0 )
+    {
+        _retryCall = thread_call_allocate(createNodesRetry, this);
+        if ( _retryCall == 0 )
+        {
+            IOLog("IOMediaBSDClient: failed to allocate retry call\n");
+            return;
+        }
+    }
+
+    clock_interval_to_deadline(1, kSecondScale, &deadline);
+    thread_call_enter_delayed(_retryCall, deadline);
+}
+
+void IOMediaBSDClient::createNodesRetry(thread_call_param_t param0,
+                                        __unused thread_call_param_t param1)
+{
+    IOMediaBSDClient * client = (IOMediaBSDClient *) param0;
+    IOMedia * media;
+    UInt32 minorID;
+
+    if ( client == 0 || client->_devNodesPublished ) return;
+
+    media = client->getProvider();
+    if ( media == 0 ) return;
+
+    if ( devfs_is_ready() == 0 )
+    {
+        client->scheduleCreateNodesRetry();
+        return;
+    }
+
+    gIOMediaBSDClientGlobals.lockState();
+    if ( client->_nodesCreated == false )
+    {
+        client->_nodesCreated = client->createNodes(media);
+    }
+    minorID = client->_minors->locate(media);
+    if ( minorID != kInvalidMinorID )
+    {
+        client->_devNodesPublished = client->_minors->publishDevNodes(minorID);
+    }
+    gIOMediaBSDClientGlobals.unlockState();
+
+    if ( client->_nodesCreated == false || client->_devNodesPublished == false )
+    {
+        IOLog("IOMediaBSDClient: retry createNodes failed for media=%s\n",
+              media->getName() ? media->getName() : "(null)");
+        client->scheduleCreateNodesRetry();
+    }
+}
+
+bool IOMediaBSDClient::bsdResourcePublished(void * target,
+                                            __unused void * refCon,
+                                            __unused IOService * newService,
+                                            IONotifier * notifier)
+{
+    //
+    // The "IOBSD" resource is published from bsd_autoconf(), after vfsinit()
+    // has brought devfs up.  This event-driven path guarantees the dev nodes
+    // get published even if the timed retry chain was exhausted while devfs
+    // was still down (which routinely happens under TCG, where bsd_init can
+    // lag device probing by minutes of wall-clock time).
+    //
+
+    IOMediaBSDClient * client = (IOMediaBSDClient *) target;
+
+    if ( client == 0 ) return true;
+
+    createNodesRetry(client, 0);
+
+    if ( client->_devNodesPublished && notifier )
+    {
+        notifier->remove();
+        if ( client->_bsdNotifier == notifier )  client->_bsdNotifier = 0;
+    }
+
+    return true;
 }
 
 bool IOMediaBSDClient::start(IOService * provider)
@@ -333,6 +454,9 @@ bool IOMediaBSDClient::start(IOService * provider)
     // validate provider is IOMedia
     //
     if ( media == NULL ) return false;
+    IOLog("IOMediaBSDClient: start media=%s whole=%u size=%llu block=%llu\n",
+          media->getName() ? media->getName() : "(null)",
+          media->isWhole(), media->getSize(), media->getPreferredBlockSize());
 
     // Ask our superclass' opinion.
 
@@ -344,7 +468,39 @@ bool IOMediaBSDClient::start(IOService * provider)
 
     // Create bdevsw and cdevsw nodes for the new media object.
 
-    createNodes(media);
+    _nodesCreated = createNodes(media);
+    if (_nodesCreated == false) {
+        IOLog("IOMediaBSDClient: createNodes failed for media=%s\n",
+              media->getName() ? media->getName() : "(null)");
+    }
+    if ( _nodesCreated && devfs_is_ready() )
+    {
+        UInt32 minorID = _minors->locate(media);
+        if ( minorID != kInvalidMinorID )
+        {
+            _devNodesPublished = _minors->publishDevNodes(minorID);
+        }
+    }
+
+    if ( devfs_is_ready() == 0 || _devNodesPublished == false )
+    {
+        IOLog("IOMediaBSDClient: devfs not ready, scheduling node retry for media=%s\n",
+              media->getName() ? media->getName() : "(null)");
+
+        if ( _bsdNotifier == 0 )
+        {
+            OSDictionary * matching = IOService::resourceMatching("IOBSD");
+            if ( matching )
+            {
+                _bsdNotifier = IOService::addMatchingNotification(
+                                   gIOPublishNotification, matching,
+                                   bsdResourcePublished, this, 0);
+                matching->release();
+            }
+        }
+
+        scheduleCreateNodesRetry();
+    }
 
     // Enable access to tables.
 
@@ -518,6 +674,13 @@ bool IOMediaBSDClient::createNodes(IOMedia * media)
     UInt32        slicePathSize;
     IOMedia *     whole;
 
+    minorID = minors->locate(media);
+    if ( minorID != kInvalidMinorID )
+    {
+        if ( devfs_is_ready() )  minors->publishDevNodes(minorID);
+        return true;
+    }
+
     //
     // Find the anchor that roots this media tree.  The anchor is defined as the
     // parent of the whole media that roots this media tree.  It is an important
@@ -529,10 +692,19 @@ bool IOMediaBSDClient::createNodes(IOMedia * media)
     //
 
     whole = getWholeMedia(media, &slicePathSize);
-    if ( whole == 0 )  return false;
+    if ( whole == 0 ) {
+        IOLog("IOMediaBSDClient: no whole media for %s\n",
+              media->getName() ? media->getName() : "(null)");
+        return false;
+    }
 
     anchor = whole->getProvider();
-    if ( anchor == 0 )  return false;
+    if ( anchor == 0 ) {
+        IOLog("IOMediaBSDClient: no anchor for media=%s whole=%s\n",
+              media->getName() ? media->getName() : "(null)",
+              whole->getName() ? whole->getName() : "(null)");
+        return false;
+    }
 
     //
     // Determine whether the anchor already exists in the anchor table (obsolete
@@ -584,6 +756,10 @@ bool IOMediaBSDClient::createNodes(IOMedia * media)
         if ( minorID == kInvalidMinorID )  goto createNodesErr;
     }
 
+    IOLog("IOMediaBSDClient: media=%s -> disk%d%s major=%u minor=%u\n",
+          media->getName() ? media->getName() : "(null)",
+          anchorID, slicePath, majorID, minorID);
+
     //
     // Create the required properties on the media.
     //
@@ -603,6 +779,9 @@ bool IOMediaBSDClient::createNodes(IOMedia * media)
 
 createNodesErr:
 
+    IOLog("IOMediaBSDClient: createNodes error media=%s anchorNew=%u slicePath=%s\n",
+          media->getName() ? media->getName() : "(null)",
+          anchorNew, slicePath ? slicePath : "(null)");
     if (anchorNew)  anchors->remove(anchorID);
     if (slicePath)  IOFree(slicePath, slicePathSize);
 
@@ -3507,8 +3686,6 @@ UInt32 MinorTable::insert( IOMedia *          media,
     // for an anchorID of 2 and slicePath of "s3s1".
     //
 
-    void *         bdevNode;
-    void *         cdevNode;
     UInt32         majorID = gIOMediaBSDClientGlobals.getMajorID();
     UInt32         minorID;
     char *         minorName;
@@ -3549,42 +3726,8 @@ UInt32 MinorTable::insert( IOMedia *          media,
     minorNameSize += 1;
     minorName = IONew(char, minorNameSize);
 
-    // Create a block and character device node in BSD for this media.
-
-    const char *owner_keys[3] = {"owner-uid", "owner-gid", "owner-mode"};
-    int owner_id_mode[3] = {UID_ROOT, GID_OPERATOR, 0640};
-    int i;
-
-    for (i=0; i<3; i++)
+    if ( minorName == 0 )
     {
-        OSNumber *_num = OSDynamicCast(OSNumber, media->getProperty(owner_keys[i], gIOServicePlane));
-        if (_num) owner_id_mode[i]  = _num->unsigned32BitValue();
-    }
-
-    bdevNode = devfs_make_node( /* dev        */ makedev(majorID, minorID),
-                                /* type       */ DEVFS_BLOCK, 
-                                /* owner      */ owner_id_mode[0],
-                                /* group      */ owner_id_mode[1],
-                                /* permission */ owner_id_mode[2],
-                                /* name (fmt) */ "disk%d%s",
-                                /* name (arg) */ anchorID,
-                                /* name (arg) */ slicePath );
-
-    cdevNode = devfs_make_node( /* dev        */ makedev(majorID, minorID),
-                                /* type       */ DEVFS_CHAR, 
-                                /* owner      */ owner_id_mode[0],
-                                /* group      */ owner_id_mode[1],
-                                /* permission */ owner_id_mode[2],
-                                /* name (fmt) */ "rdisk%d%s",
-                                /* name (arg) */ anchorID,
-                                /* name (arg) */ slicePath );
-
-    if ( minorName == 0 || bdevNode == 0 || cdevNode == 0 )
-    {
-        if ( cdevNode )   devfs_remove(cdevNode);
-        if ( bdevNode )   devfs_remove(bdevNode);
-        if ( minorName )  IODelete(minorName, char, minorNameSize);
-
         return kInvalidMinorID;
     }
 
@@ -3605,10 +3748,10 @@ UInt32 MinorTable::insert( IOMedia *          media,
     _table[minorID].media         = media;
     _table[minorID].name          = minorName;
     _table[minorID].bdevBlockSize = media->getPreferredBlockSize();
-    _table[minorID].bdevNode      = bdevNode;
+    _table[minorID].bdevNode      = 0;
     _table[minorID].bdevOpen      = 0;
     _table[minorID].bdevOpenLevel = kIOStorageAccessNone;
-    _table[minorID].cdevNode      = cdevNode;
+    _table[minorID].cdevNode      = 0;
     _table[minorID].cdevOpen      = 0;
     _table[minorID].cdevOpenLevel = kIOStorageAccessNone;
 #if !TARGET_OS_OSX
@@ -3639,7 +3782,65 @@ UInt32 MinorTable::insert( IOMedia *          media,
         }
     }
 
+    if ( devfs_is_ready() && publishDevNodes(minorID) == false )
+    {
+        IOLog("IOMediaBSDClient: devfs node publish failed for %s\n", minorName);
+    }
+
     return minorID;
+}
+
+bool MinorTable::publishDevNodes(UInt32 minorID)
+{
+    MinorSlot * minor;
+    const char * owner_keys[3] = {"owner-uid", "owner-gid", "owner-mode"};
+    int owner_id_mode[3] = {UID_ROOT, GID_OPERATOR, 0640};
+    UInt32 majorID = gIOMediaBSDClientGlobals.getMajorID();
+    int i;
+
+    if ( devfs_is_ready() == 0 ) return false;
+    if ( minorID >= _tableCount ) return false;
+
+    minor = &_table[minorID];
+    if ( minor->isAssigned == false || minor->isObsolete != false ) return false;
+    if ( minor->bdevNode && minor->cdevNode ) return true;
+
+    for (i=0; i<3; i++)
+    {
+        OSNumber *_num = OSDynamicCast(OSNumber, minor->media->getProperty(owner_keys[i], gIOServicePlane));
+        if (_num) owner_id_mode[i]  = _num->unsigned32BitValue();
+    }
+
+    if ( minor->bdevNode == 0 )
+    {
+        minor->bdevNode = devfs_make_node( /* dev        */ makedev(majorID, minorID),
+                                           /* type       */ DEVFS_BLOCK,
+                                           /* owner      */ owner_id_mode[0],
+                                           /* group      */ owner_id_mode[1],
+                                           /* permission */ owner_id_mode[2],
+                                           /* name (fmt) */ "%s",
+                                           /* name (arg) */ minor->name );
+    }
+
+    if ( minor->cdevNode == 0 )
+    {
+        minor->cdevNode = devfs_make_node( /* dev        */ makedev(majorID, minorID),
+                                           /* type       */ DEVFS_CHAR,
+                                           /* owner      */ owner_id_mode[0],
+                                           /* group      */ owner_id_mode[1],
+                                           /* permission */ owner_id_mode[2],
+                                           /* name (fmt) */ "r%s",
+                                           /* name (arg) */ minor->name );
+    }
+
+    if ( minor->bdevNode && minor->cdevNode )
+    {
+        IOLog("IOMediaBSDClient: published /dev/%s and /dev/r%s\n",
+              minor->name, minor->name);
+        return true;
+    }
+
+    return false;
 }
 
 void MinorTable::remove(UInt32 minorID)
@@ -3661,8 +3862,8 @@ void MinorTable::remove(UInt32 minorID)
 
     // Release the resources retained in the minor slot and zero it.
 
-    devfs_remove(_table[minorID].cdevNode);
-    devfs_remove(_table[minorID].bdevNode);
+    if ( _table[minorID].cdevNode )  devfs_remove(_table[minorID].cdevNode);
+    if ( _table[minorID].bdevNode )  devfs_remove(_table[minorID].bdevNode);
     IODelete(_table[minorID].name, char, strlen(_table[minorID].name) + 1);
     _table[minorID].client->release();             // (release client)
     _table[minorID].media->release();              // (release media)
@@ -3907,6 +4108,7 @@ IOMediaBSDClientGlobals::IOMediaBSDClientGlobals()
     _minors    = new MinorTable();
 
     _majorID   = devsw_add(-1, &bdevswFunctions, &cdevswFunctions);
+    IOLog("IOMediaBSDClient: devsw major=%u\n", _majorID);
 
     _openLock  = IOLockAlloc();
     _stateLock = IOLockAlloc();

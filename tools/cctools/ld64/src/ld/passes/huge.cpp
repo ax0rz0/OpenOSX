@@ -132,6 +132,12 @@ void doPass(const Options& opts, ld::Internal& state)
 		ld::Internal::FinalSection* sect = *sit;
 		if ( sect == hugeSection )
 			continue;
+		// Leave alone anything the user placed in its own segment (-segaddr):
+		// moving those atoms to __DATA silently empties the named segment, so
+		// its vmsize is written as 0 and dyld maps none of it. Wine's preloader
+		// reserves the low 8GB exactly this way.
+		if ( strcmp(sect->segmentName(), "__DATA") != 0 )
+			continue;
 		if ( sect->type() == ld::Section::typeZeroFill ) {
 			bool movedSome = false;
 			for (std::vector<const ld::Atom*>::iterator ait=sect->atoms.begin(); ait != sect->atoms.end(); ++ait) {

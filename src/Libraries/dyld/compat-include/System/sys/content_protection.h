@@ -1,0 +1,6 @@
+#ifndef OPENOSX_DYLD_COMPAT_SYSTEM_SYS_CONTENT_PROTECTION_H
+#define OPENOSX_DYLD_COMPAT_SYSTEM_SYS_CONTENT_PROTECTION_H
+
+#include "../../../../../Kernel/xnu/bsd/sys/content_protection.h"
+
+#endif /* OPENOSX_DYLD_COMPAT_SYSTEM_SYS_CONTENT_PROTECTION_H */

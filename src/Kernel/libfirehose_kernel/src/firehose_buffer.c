@@ -900,7 +900,17 @@ firehose_buffer_stream_chunk_install(firehose_buffer_t fb,
 		}
 
 #if KERNEL
-		thread = thread_tid(current_thread());
+		/*
+		 * This TU is built without MACH_KERNEL_PRIVATE, so <mach/mach_types.h>
+		 * typedefs thread_t as the 32-bit userspace mach_port_t rather than the
+		 * kernel's "struct thread *".  With that mistyped prototype the compiler
+		 * truncates the 64-bit kernel thread pointer to 32 bits (mov edi, eax)
+		 * before thread_tid() dereferences it -> #PF on an unmapped low address
+		 * during early boot (sched_init) -> vm_fault(map=NULL) -> panic.
+		 */
+		extern void *fh_current_thread(void) __asm__("_current_thread");
+		extern uint64_t fh_thread_tid(void *thr) __asm__("_thread_tid");
+		thread = fh_thread_tid(fh_current_thread());
 #else
 		thread = _pthread_threadid_self_np_direct();
 #endif

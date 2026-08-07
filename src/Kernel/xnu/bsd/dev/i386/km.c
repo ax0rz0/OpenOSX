@@ -410,6 +410,16 @@ cons_cinput(char ch)
 {
 	struct tty *tp = km_tty[0];     /* XXX */
 
+	/*
+	 * The console tty is allocated in kminit(); until then km_tty[0] is
+	 * NULL. IOHIDSystem forwards keystrokes here as soon as a keyboard is
+	 * enumerated, which on this platform can happen before the console is
+	 * set up (press a key during boot). Drop the character rather than
+	 * dereferencing a NULL tty in tty_lock().
+	 */
+	if (tp == NULL)
+		return;
+
 	tty_lock(tp);
 	(*linesw[tp->t_line].l_rint)(ch, tp);
 	tty_unlock(tp);

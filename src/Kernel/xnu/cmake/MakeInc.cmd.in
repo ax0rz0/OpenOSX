@@ -90,16 +90,27 @@ LOG_CTFINSERT = $(call _LOG_HOST_LINK,CTFINSERT)
 LOG_DSYMUTIL = $(call _LOG_HOST_LINK,DSYMUTIL)
 LOG_SUPPORTED_KPI = $(call _LOG_HOST_LINK,SUPPORTED_KPI)
 
+# Host OS type
+UNAME_S := $(shell uname -s)
+
 ifeq ($(VERBOSE),YES)
 	_v =
 	_vstdout =
 	_vstderr =
-	XCRUN = /usr/bin/xcrun -verbose
+	ifeq ($(UNAME_S),Darwin)
+		XCRUN = /usr/bin/xcrun -verbose
+	else
+		XCRUN = /usr/local/osxcross/bin/xcrun -verbose
+	endif
 else
 	_v = @
 	_vstdout = > /dev/null
 	_vstderr = 2&> /dev/null
-	XCRUN = /usr/bin/xcrun
+	ifeq ($(UNAME_S),Darwin)
+		XCRUN = /usr/bin/xcrun
+	else
+		XCRUN = /usr/local/osxcross/bin/xcrun
+	endif
 endif
 
 VERBOSE_GENERATED_MAKE_FRAGMENTS = NO
@@ -123,85 +134,151 @@ endif
 override SDKROOT = $(SDKROOT_RESOLVED)
 
 ifeq ($(HOST_SDKROOT_RESOLVED),)
+ifeq ($(UNAME_S),Linux)
+export HOST_SDKROOT_RESOLVED := /
+else
 export HOST_SDKROOT_RESOLVED := $(shell $(XCRUN) -sdk $(HOST_SDKROOT) -show-sdk-path)
 ifeq ($(strip $(HOST_SDKROOT_RESOLVED)),)
 export HOST_SDKROOT_RESOLVED := /
 endif
 endif
+endif
 override HOST_SDKROOT = $(HOST_SDKROOT_RESOLVED)
 
-ifeq ($(PLATFORM),)
-	export PLATFORMPATH := $(shell $(XCRUN) -sdk $(SDKROOT) -show-sdk-platform-path)
-	export PLATFORM := $(shell echo $(PLATFORMPATH) | sed 's,^.*/\([^/]*\)\.platform$$,\1,')
+ifeq ($(UNAME_S),Darwin)
 	ifeq ($(PLATFORM),)
+		export PLATFORMPATH := $(shell $(XCRUN) -sdk $(SDKROOT) -show-sdk-platform-path)
+		export PLATFORM := $(shell echo $(PLATFORMPATH) | sed 's,^.*/\([^/]*\)\.platform$$,\1,')
+		ifeq ($(PLATFORM),)
+			export PLATFORM := MacOSX
+		else ifeq ($(shell echo $(PLATFORM) | tr A-Z a-z),watchos)
+			export PLATFORM := WatchOS
+		endif
+	endif
+
+	ifeq ($(SDKVERSION),)
+		export SDKVERSION := 11.0
+	endif
+
+	# CC/CXX get defined by make(1) by default, so we can't check them
+	# against the empty string to see if they haven't been set
+	ifeq ($(origin CC),default)
+		export CC := clang
+	endif
+	ifeq ($(origin CXX),default)
+		export CXX := clang++
+	endif
+	ifeq ($(MIG),)
+		export MIG := @MIG_PATH@
+	endif
+	ifeq ($(MIGCOM),)
+		export MIGCOM := @MIGCOM_PATH@
+	endif
+	ifeq ($(MIGCC),)
+		export MIGCC := $(CC)
+	endif
+	ifeq ($(IIG),)
+		export IIG := false
+	endif
+	ifeq ($(STRIP),)
+		export STRIP := @STRIP_PATH@
+	endif
+	ifeq ($(LIPO),)
+		export LIPO := @LIPO_PATH@
+	endif
+	ifeq ($(LIBTOOL),)
+		export LIBTOOL := @LIBTOOL_PATH@
+	endif
+	ifeq ($(NM),)
+		export NM := @NM_PATH@
+	endif
+	ifeq ($(UNIFDEF),)
+		export UNIFDEF := @UNIFDEF_PATH@
+	endif
+	ifeq ($(DSYMUTIL),)
+		export DSYMUTIL := @DSYMUTIL_PATH@
+	endif
+	ifeq ($(CTFCONVERT),)
+		export CTFCONVERT := @CTFCONVERT_PATH@
+	endif
+	ifeq ($(CTFMERGE),)
+		export CTFMERGE :=  @CTFMERGE_PATH@
+	endif
+	ifeq ($(CTFINSERT),)
+		export CTFINSERT := @CTFINSERT_PATH@
+	endif
+	ifeq ($(NMEDIT),)
+		export NMEDIT := @NMEDIT_PATH@
+	endif
+else ifeq ($(UNAME_S),Linux)
+
+	ifeq ($(PLATFORM),)
+		export PLATFORMPATH := $(shell $(XCRUN) -sdk $(SDKROOT) -show-sdk-platform-path)
+		# Just assume a MacOSX target
 		export PLATFORM := MacOSX
-	else ifeq ($(shell echo $(PLATFORM) | tr A-Z a-z),watchos)
-		export PLATFORM := WatchOS
 	endif
-endif
 
-ifeq ($(PLATFORM),MacOSX)
-	ifeq (DriverKit,$(shell echo $(SDKROOT_RESOLVED) | sed 's,^.*/\([^/1-9]*\)[1-9][^/]*\.sdk$$,\1,'))
-		export PLATFORM := DriverKit
-		export DRIVERKIT ?= 1
-		export DRIVERKITROOT ?= /System/DriverKit
-		export DRIVERKITRUNTIMEROOT = $(DRIVERKITROOT)/Runtime
+	ifeq ($(SDKVERSION),)
+		export SDKVERSION := $(shell $(XCRUN) -sdk $(SDKROOT) -show-sdk-version)
 	endif
-endif
 
-ifeq ($(SDKVERSION),)
-     export SDKVERSION := 11.0
-endif
+	# CC/CXX get defined by make(1) by default, so we can't check them
+	# against the empty string to see if they haven't been set
+	ifeq ($(origin CC),default)
+		export CC := $(shell $(XCRUN) -sdk $(SDKROOT) -find clang)
+	endif
+	ifeq ($(origin CXX),default)
+		export CXX := $(shell $(XCRUN) -sdk $(SDKROOT) -find clang++)
+	endif
+	ifeq ($(MIG),)
+		export MIG := $(shell $(XCRUN) -sdk $(SDKROOT) -find mig)
+	endif
+	ifeq ($(MIGCOM),)
+		export MIGCOM := $(shell $(XCRUN) -sdk $(SDKROOT) -find migcom)
+	endif
+	ifeq ($(MIGCC),)
+		export MIGCC := $(CC)
+	endif
+	ifeq ($(STRIP),)
+		export STRIP := $(shell $(XCRUN) -sdk $(SDKROOT) -find strip)
+	endif
+	ifeq ($(LIPO),)
+		export LIPO := $(shell $(XCRUN) -sdk $(SDKROOT) -find lipo)
+	endif
+	ifeq ($(LIBTOOL),)
+		export LIBTOOL := $(shell $(XCRUN) -sdk $(SDKROOT) -find libtool)
+	endif
+	ifeq ($(NM),)
+		export NM := $(shell $(XCRUN) -sdk $(SDKROOT) -find nm)
+	endif
+	ifeq ($(UNIFDEF),)
+		export UNIFDEF := $(shell $(XCRUN) -sdk $(SDKROOT) -find unifdef)
+	endif
+	ifeq ($(DSYMUTIL),)
+		export DSYMUTIL := $(shell $(XCRUN) -sdk $(SDKROOT) -find dsymutil)
+	endif
+	ifeq ($(CTFCONVERT),)
+		export CTFCONVERT := $(shell $(XCRUN) -sdk $(SDKROOT) -find ctfconvert 2> /dev/null)
+		ifeq (,$(wildcard $(CTFCONVERT)))
+			export DO_CTFCONVERT := 0
+		endif
+	endif
+	ifeq ($(CTFMERGE),)
+		export CTFMERGE := $(shell $(XCRUN) -sdk $(SDKROOT) -find ctfmerge 2> /dev/null)
+		ifeq (,$(wildcard $(CTFMERGE)))
+			export DO_CTFMERGE := 0
+		endif
+	endif
+	ifeq ($(CTFINSERT),)
+		export CTFINSERT := $(shell $(XCRUN) -sdk $(SDKROOT) -find ctf_insert 2> /dev/null)
+	endif
+	ifeq ($(NMEDIT),)
+		export NMEDIT := $(shell $(XCRUN) -sdk $(SDKROOT) -find nmedit)
+	endif
 
-# CC/CXX get defined by make(1) by default, so we can't check them
-# against the empty string to see if they haven't been set
-ifeq ($(origin CC),default)
-	export CC := clang
-endif
-ifeq ($(origin CXX),default)
-	export CXX := clang++
-endif
-ifeq ($(MIG),)
-	export MIG := @MIG_PATH@
-endif
-ifeq ($(MIGCOM),)
-	export MIGCOM := @MIGCOM_PATH@
-endif
-ifeq ($(MIGCC),)
-	export MIGCC := $(CC)
-endif
-ifeq ($(IIG),)
-	export IIG := false
-endif
-ifeq ($(STRIP),)
-	export STRIP := @STRIP_PATH@
-endif
-ifeq ($(LIPO),)
-	export LIPO := @LIPO_PATH@
-endif
-ifeq ($(LIBTOOL),)
-	export LIBTOOL := @LIBTOOL_PATH@
-endif
-ifeq ($(NM),)
-	export NM := @NM_PATH@
-endif
-ifeq ($(UNIFDEF),)
-	export UNIFDEF := @UNIFDEF_PATH@
-endif
-ifeq ($(DSYMUTIL),)
-	export DSYMUTIL := @DSYMUTIL_PATH@
-endif
-ifeq ($(CTFCONVERT),)
-	export CTFCONVERT := @CTFCONVERT_PATH@
-endif
-ifeq ($(CTFMERGE),)
-	export CTFMERGE :=  @CTFMERGE_PATH@
-endif
-ifeq ($(CTFINSERT),)
-	export CTFINSERT := @CTFINSERT_PATH@
-endif
-ifeq ($(NMEDIT),)
-	export NMEDIT := @NMEDIT_PATH@
+else
+	echo "Error: Unsupported build host: $(UNAME_S)"
+	exit 1
 endif
 
 #
@@ -269,8 +346,15 @@ endif
 ifeq ($(HOST_BISON),)
 	export HOST_BISON	:= bison
 endif
-ifeq ($(HOST_GM4),)
-	export HOST_GM4		:= gm4
+
+ifeq ($(UNAME_S),Darwin)
+	ifeq ($(HOST_GM4),)
+		export HOST_GM4		:= gm4
+	endif
+else
+	ifeq ($(HOST_GM4),)
+		export HOST_GM4		:= m4
+	endif
 endif
 
 #

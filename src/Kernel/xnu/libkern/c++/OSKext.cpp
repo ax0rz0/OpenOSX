@@ -191,6 +191,10 @@ static void OSKextLogKextInfo(OSKext *aKext, uint64_t address, uint64_t size, fi
 
 /**********
  * Strings and substrings used in dependency resolution.
+ *
+ * The com.apple.kpi.private copyright/prefix enforcement is removed: private KPI
+ * is used here by OpenOSX, Apple and ravynOS kexts alike, none of which can
+ * claim a com.apple. identifier or Apple copyright.
  */
 #define KERNEL_LIB                   "com.apple.kernel"
 
@@ -9981,6 +9985,7 @@ OSKext::consumeDeferredKextCollection(kc_kind_t type)
 #pragma mark Profile-Guided-Optimization Support
 #endif
 
+#ifdef PROFILE
 // #include <InstrProfiling.h>
 extern "C" {
 uint64_t __llvm_profile_get_size_for_buffer_internal(const char *DataBegin,
@@ -9997,6 +10002,7 @@ int __llvm_profile_write_buffer_internal(char *Buffer,
     const char *NamesBegin,
     const char *NamesEnd);
 }
+#endif
 
 
 static
@@ -10129,10 +10135,12 @@ OSKextGrabPgoDataLocked(OSKext *kext,
 		goto out;
 	}
 
+#ifdef PROFILE
 	size = __llvm_profile_get_size_for_buffer_internal(
 		(const char*) sect_prf_data->addr, (const char*) sect_prf_data->addr + sect_prf_data->size,
 		(const char*) sect_prf_cnts->addr, (const char*) sect_prf_cnts->addr + sect_prf_cnts->size,
 		(const char*) sect_prf_name->addr, (const char*) sect_prf_name->addr + sect_prf_name->size);
+#endif
 
 	if (metadata) {
 		metadata_size = OSKextPgoMetadataSize(kext);
@@ -10151,11 +10159,15 @@ OSKextGrabPgoDataLocked(OSKext *kext,
 			goto out;
 		}
 
+#ifdef PROFILE
 		err = __llvm_profile_write_buffer_internal(
 			pBuffer,
 			(const char*) sect_prf_data->addr, (const char*) sect_prf_data->addr + sect_prf_data->size,
 			(const char*) sect_prf_cnts->addr, (const char*) sect_prf_cnts->addr + sect_prf_cnts->size,
 			(const char*) sect_prf_name->addr, (const char*) sect_prf_name->addr + sect_prf_name->size);
+#else
+		err = 0;
+#endif
 
 		if (err) {
 			err = EIO;

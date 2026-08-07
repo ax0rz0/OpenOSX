@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IOInterruptDispatchSource.iig */
+/* iig-lite generated from IOInterruptDispatchSource.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IOInterruptDispatchSource.iig:1-44 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -45,11 +44,6 @@ enum {
 	kIOInterruptDispatchSourceTypeLevel = 0x00000001
 };
 
-/* source class IOInterruptDispatchSource IOInterruptDispatchSource.iig:45-136 */
-
-#if __DOCUMENTATION__
-#define KERNEL IIG_KERNEL
-
 /*!
  * @class IOInterruptDispatchSource
  *
@@ -62,6 +56,11 @@ enum {
  * the primary interrupt fired. For IOPCIDevices, only MSI interrupt sources are supported.
  */
  
+/* source class IOInterruptDispatchSource IOInterruptDispatchSource.iig:57-137 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
+
 class NATIVE KERNEL IOInterruptDispatchSource : public IODispatchSource
 {
 public:
@@ -147,12 +146,12 @@ private:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IOInterruptDispatchSource IOInterruptDispatchSource.iig:45-136 */
+/* generated class IOInterruptDispatchSource IOInterruptDispatchSource.iig:57-137 */
 
-#define IOInterruptDispatchSource_Create_ID            0xb6a948b1585fc259ULL
-#define IOInterruptDispatchSource_GetInterruptType_ID            0x846d2df6b6bef33bULL
-#define IOInterruptDispatchSource_SetHandler_ID            0xfcc79b0928501bb1ULL
-#define IOInterruptDispatchSource_InterruptOccurred_ID            0xce0513291cfa1ee1ULL
+#define IOInterruptDispatchSource_Create_ID            0x244c8d0e39b5b6f2ULL
+#define IOInterruptDispatchSource_GetInterruptType_ID            0xb0cb449b522e02bbULL
+#define IOInterruptDispatchSource_SetHandler_ID            0x2a6d3966a0ed32c0ULL
+#define IOInterruptDispatchSource_InterruptOccurred_ID            0x66a5e7ded72316d8ULL
 
 #define IOInterruptDispatchSource_Create_Args \
         IOService * provider, \
@@ -176,7 +175,6 @@ private:
         IODispatchSourceCancelHandler handler
 
 #define IOInterruptDispatchSource_CheckForWork_Args \
-        const IORPC rpc, \
         bool synchronous
 
 #define IOInterruptDispatchSource_InterruptOccurred_Args \
@@ -225,7 +223,7 @@ protected:\
     /* _Impl methods */\
 \
     static kern_return_t\
-    Create_Call(IOInterruptDispatchSource_Create_Args);\
+    Create_Impl(IOInterruptDispatchSource_Create_Args);\
 \
     kern_return_t\
     SetHandler_Impl(IOInterruptDispatchSource_SetHandler_Args);\
@@ -266,13 +264,13 @@ public:\
     static kern_return_t\
     InterruptOccurred_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
-        InterruptOccurred_Handler func,\
-        const OSMetaClass * targetActionClass);\
+        InterruptOccurred_Handler func);\
 \
     static kern_return_t\
     InterruptOccurred_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
-        InterruptOccurred_Handler func);\
+        InterruptOccurred_Handler func,\
+        const OSMetaClass * targetActionClass);\
 \
 
 
@@ -280,9 +278,6 @@ public:\
 \
 protected:\
     /* _Impl methods */\
-\
-    static kern_return_t\
-    Create_Impl(IOInterruptDispatchSource_Create_Args);\
 \
     static kern_return_t\
     GetInterruptType_Impl(IOInterruptDispatchSource_GetInterruptType_Args);\
@@ -363,8 +358,9 @@ IOInterruptDispatchSource_DECLARE_IVARS
     IOInterruptDispatchSource_VirtualMethods
 };
 
+
 #endif /* !__DOCUMENTATION__ */
 
-/* IOInterruptDispatchSource.iig:138- */
+
 
 #endif /* ! _IOKIT_UIOINTERRUPTDISPATCHSOURCE_H */

@@ -1,0 +1,208 @@
+diff -ruN orig/xorg-server-21.1.24/meson.build new/meson.build
+--- orig/xorg-server-21.1.24/meson.build	2026-07-07 21:35:09.000000000 -0400
++++ new/meson.build	2026-07-12 23:51:55.343258003 -0400
+@@ -325,7 +325,10 @@
+ sha1_found = false
+ foreach t : test_sha1
+     if t == 'libc'
+-        if cc.has_function('SHA1Init')
++        if host_machine.system() == 'darwin'
++            sha1_found = true
++            sha1_dep = dependency('', required: false)
++        elif cc.has_function('SHA1Init')
+             sha1_found = true
+             sha1_dep = dependency('', required: false)
+         endif
+diff -ruN orig/xorg-server-21.1.24/os/xsha1.c new/os/xsha1.c
+--- orig/xorg-server-21.1.24/os/xsha1.c	2026-07-07 21:35:09.000000000 -0400
++++ new/os/xsha1.c	2026-07-12 23:51:55.343203703 -0400
+@@ -36,43 +36,173 @@
+ #if defined(HAVE_SHA1_IN_LIBMD)  /* Use libmd for SHA1 */ \
+ 	|| defined(HAVE_SHA1_IN_LIBC)   /* Use libc for SHA1 */
+ 
+-#if defined(__DragonFly__) || defined(__FreeBSD__)
+-#include <sha.h>
+-#define	SHA1End		SHA1_End
+-#define	SHA1File	SHA1_File
+-#define	SHA1Final	SHA1_Final
+-#define	SHA1Init	SHA1_Init
+-#define	SHA1Update	SHA1_Update
+-#else
+-#include <sha1.h>
+-#endif
++typedef struct {
++    uint32_t state[5];
++    uint64_t count;
++    unsigned char buffer[64];
++} X_SHA1_CTX;
++
++static uint32_t
++sha1_rol(uint32_t value, unsigned int bits)
++{
++    return (value << bits) | (value >> (32 - bits));
++}
++
++static uint32_t
++sha1_load_be32(const unsigned char *p)
++{
++    return ((uint32_t) p[0] << 24) |
++           ((uint32_t) p[1] << 16) |
++           ((uint32_t) p[2] << 8) |
++           (uint32_t) p[3];
++}
++
++static void
++sha1_store_be32(unsigned char *p, uint32_t v)
++{
++    p[0] = (unsigned char) (v >> 24);
++    p[1] = (unsigned char) (v >> 16);
++    p[2] = (unsigned char) (v >> 8);
++    p[3] = (unsigned char) v;
++}
++
++static void
++sha1_transform(X_SHA1_CTX *ctx, const unsigned char block[64])
++{
++    uint32_t w[80];
++    uint32_t a, b, c, d, e;
++    unsigned int i;
++
++    for (i = 0; i < 16; i++)
++        w[i] = sha1_load_be32(block + (i * 4));
++    for (i = 16; i < 80; i++)
++        w[i] = sha1_rol(w[i - 3] ^ w[i - 8] ^ w[i - 14] ^ w[i - 16], 1);
++
++    a = ctx->state[0];
++    b = ctx->state[1];
++    c = ctx->state[2];
++    d = ctx->state[3];
++    e = ctx->state[4];
++
++    for (i = 0; i < 80; i++) {
++        uint32_t f, k, temp;
++
++        if (i < 20) {
++            f = (b & c) | ((~b) & d);
++            k = 0x5a827999;
++        } else if (i < 40) {
++            f = b ^ c ^ d;
++            k = 0x6ed9eba1;
++        } else if (i < 60) {
++            f = (b & c) | (b & d) | (c & d);
++            k = 0x8f1bbcdc;
++        } else {
++            f = b ^ c ^ d;
++            k = 0xca62c1d6;
++        }
++
++        temp = sha1_rol(a, 5) + f + e + k + w[i];
++        e = d;
++        d = c;
++        c = sha1_rol(b, 30);
++        b = a;
++        a = temp;
++    }
++
++    ctx->state[0] += a;
++    ctx->state[1] += b;
++    ctx->state[2] += c;
++    ctx->state[3] += d;
++    ctx->state[4] += e;
++}
++
++static void
++sha1_init(X_SHA1_CTX *ctx)
++{
++    ctx->state[0] = 0x67452301;
++    ctx->state[1] = 0xefcdab89;
++    ctx->state[2] = 0x98badcfe;
++    ctx->state[3] = 0x10325476;
++    ctx->state[4] = 0xc3d2e1f0;
++    ctx->count = 0;
++}
++
++static void
++sha1_update(X_SHA1_CTX *ctx, const void *data, size_t len)
++{
++    const unsigned char *bytes = data;
++    size_t used = (size_t) (ctx->count & 63);
++
++    ctx->count += len;
++
++    if (used) {
++        size_t free_bytes = 64 - used;
++        if (len < free_bytes) {
++            memcpy(ctx->buffer + used, bytes, len);
++            return;
++        }
++        memcpy(ctx->buffer + used, bytes, free_bytes);
++        sha1_transform(ctx, ctx->buffer);
++        bytes += free_bytes;
++        len -= free_bytes;
++    }
++
++    while (len >= 64) {
++        sha1_transform(ctx, bytes);
++        bytes += 64;
++        len -= 64;
++    }
++
++    if (len)
++        memcpy(ctx->buffer, bytes, len);
++}
++
++static void
++sha1_final(unsigned char result[20], X_SHA1_CTX *ctx)
++{
++    uint64_t bit_count = ctx->count * 8;
++    unsigned char length[8];
++    unsigned char pad[64] = { 0x80 };
++    size_t used = (size_t) (ctx->count & 63);
++    size_t pad_len = (used < 56) ? (56 - used) : (120 - used);
++    unsigned int i;
++
++    for (i = 0; i < 8; i++)
++        length[7 - i] = (unsigned char) (bit_count >> (i * 8));
++
++    sha1_update(ctx, pad, pad_len);
++    sha1_update(ctx, length, sizeof(length));
++
++    for (i = 0; i < 5; i++)
++        sha1_store_be32(result + (i * 4), ctx->state[i]);
++}
+ 
+ void *
+ x_sha1_init(void)
+ {
+-    SHA1_CTX *ctx = malloc(sizeof(*ctx));
++    X_SHA1_CTX *ctx = malloc(sizeof(*ctx));
+ 
+     if (!ctx)
+         return NULL;
+-    SHA1Init(ctx);
++    sha1_init(ctx);
+     return ctx;
+ }
+ 
+ int
+ x_sha1_update(void *ctx, void *data, int size)
+ {
+-    SHA1_CTX *sha1_ctx = ctx;
++    X_SHA1_CTX *sha1_ctx = ctx;
+ 
+-    SHA1Update(sha1_ctx, data, size);
++    sha1_update(sha1_ctx, data, size);
+     return 1;
+ }
+ 
+ int
+ x_sha1_final(void *ctx, unsigned char result[20])
+ {
+-    SHA1_CTX *sha1_ctx = ctx;
++    X_SHA1_CTX *sha1_ctx = ctx;
+ 
+-    SHA1Final(result, sha1_ctx);
++    sha1_final(result, sha1_ctx);
+     free(sha1_ctx);
+     return 1;
+ }

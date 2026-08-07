@@ -46,6 +46,7 @@
 #include <kern/misc_protos.h>
 #include <kern/spl.h>
 #include <kern/assert.h>
+#include <kern/timer_call.h>
 #include <mach/vm_prot.h>
 #include <vm/pmap.h>
 #include <vm/vm_kern.h>         /* for kernel_map */
@@ -90,6 +91,103 @@ uint64_t        tsc_at_boot = 0;
 
 #define CPU_FAMILY_PENTIUM_M    (0x6)
 
+static void
+tsc_stamp(void *tscptr)
+{
+	wrmsr64(MSR_P5_TSC, *(uint64_t *)tscptr);
+}
+
+/* AMDs TSC is different per core, causing weird things */
+/* AMD at somepoint made a piece of software called 'Dual-Core Optimiser' */
+/* Anyways, this is mostly just fixing hardware in software. */
+/* Sync it in kernel so we don't need any external kernel extenions */
+uint64_t tsc_sync_interval_msecs = 5000; /* 5 seconds */
+uint64_t tsc_sync_interval_abs;
+uint64_t tsc_sync_next_deadline;
+static timer_call_data_t sync_tsc_timer;
+
+static void
+tsc_sync(thread_call_param_t param0 __unused, thread_call_param_t param1 __unused)
+{
+	uint64_t tsc;
+
+	tsc = rdmsr64(MSR_P5_TSC);
+	/* Run on all cores */
+	mp_rendezvous_no_intrs(tsc_stamp, (void*)&tsc);
+
+	clock_deadline_for_periodic_event(tsc_sync_interval_abs, mach_absolute_time(), &tsc_sync_next_deadline);
+	timer_call_enter_with_leeway(&sync_tsc_timer, NULL, tsc_sync_next_deadline, 0, TIMER_CALL_SYS_NORMAL, FALSE);
+}
+
+static boolean_t
+amd_is_divisor_reserved_zen(uint64_t field)
+{
+	switch (field) {
+		case 0x1B:
+		case 0x1D:
+		case 0x1F:
+		case 0x21:
+		case 0x23:
+		case 0x25:
+		case 0x27:
+		case 0x29:
+		case 0x2B:
+		case 0x2D ... 0x3F:
+			return TRUE;
+		default:
+			return FALSE;
+	}
+}
+
+/* Returns the P-state divisor multiplied by 8. */
+static uint64_t
+amd_get_pstate_divisor_x8(uint64_t field)
+{
+	i386_cpu_info_t *infop = cpuid_info();
+
+	switch (field) {
+		case 0x00:
+			if (infop->cpuid_family >= 0x17) {
+				panic("Invalid TSC divisor field! 0x%llx", field);
+			} else {
+				return 8;
+			}
+		case 0x01:
+			if (infop->cpuid_family >= 0x17) {
+				panic("Invalid TSC divisor field! 0x%llx", field);
+			} else {
+				return 16;
+			}
+		case 0x02:
+			if (infop->cpuid_family >= 0x17) {
+				panic("Invalid TSC divisor field! 0x%llx", field);
+			} else {
+				return 32;
+			}
+		case 0x03:
+			if (infop->cpuid_family >= 0x17) {
+				panic("Invalid TSC divisor field! 0x%llx", field);
+			} else {
+				return 64;
+			}
+		case 0x04:
+			if (infop->cpuid_family >= 0x17) {
+				panic("Invalid TSC divisor field! 0x%llx", field);
+			} else {
+				return 128;
+			}
+		default:
+			if (infop->cpuid_family <= 0x16) {
+				panic("Invalid TSC divisor field! 0x%llx", field);
+			} else {
+				if (amd_is_divisor_reserved_zen(field)) {
+					panic("P0 divisor is reserved!");
+				}
+				return field;
+			}
+	}
+}
+
 /*
  * This routine extracts a frequency property in Hz from the device tree.
  * Also reads any initial TSC value at boot from the device tree.
@@ -132,6 +230,57 @@ EFI_get_frequency(const char *prop)
 }
 
 /*
+* QEMU TCG (software CPU emulation, no KVM acceleration) exposes neither
+* the VMM CPUID leaf 0x40000010 frequency fields nor a real CPUID leaf
+* 0x15 TSC/ART ratio, and there's no EFI device tree to publish a measured
+* TSCFrequency either - every path above falls back to
+* BASE_NHM_CLOCK_SOURCE (~133MHz, a real Nehalem FSB constant) for both
+* busFreq and, via tscGranularity=1, tscFreq. TCG's TSC actually free-runs
+* at whatever rate the host CPU (or -icount setting) provides, typically
+* multiple GHz, so treating it as ~133MHz makes every mach_absolute_time()
+* conversion off by ~20-30x - the visible symptom being wildly wrong
+* uptime. Since there is no other source of truth here, measure it for
+* real against the legacy 8254 PIT (channel 2, gated via port 0x61),
+* whose 1.193182MHz tick rate is fixed in hardware and QEMU always
+* emulates faithfully.
+*/
+#define PIT_TICK_RATE   1193182UL
+#define PIT_CAL_MS      50UL
+#define PIT_CAL_LATCH   ((PIT_TICK_RATE * PIT_CAL_MS) / 1000UL)
+
+static uint64_t
+pit_measure_tsc_freq(void)
+{
+		uint8_t  saved_61;
+		uint64_t tsc_start, tsc_end;
+		uint16_t count = (uint16_t)PIT_CAL_LATCH;
+
+		saved_61 = inb(0x61);
+		outb(0x61, (saved_61 & 0xFC) | 0x01);   /* gate on, speaker off */
+
+		outb(0x43, 0xB0);   /* channel 2, LSB/MSB, mode 0, binary */
+		outb(0x42, (uint8_t)(count & 0xFF));
+		outb(0x42, (uint8_t)(count >> 8));
+
+		tsc_start = rdtsc64();
+
+		/* Port 0x61 bit 5 (OUT2 status) goes high once the count reaches 0. */
+		while ((inb(0x61) & 0x20) == 0) {
+				continue;
+		}
+
+		tsc_end = rdtsc64();
+
+		outb(0x61, saved_61);
+
+		if (tsc_end <= tsc_start) {
+				return 0;
+		}
+
+		return (tsc_end - tsc_start) * 1000UL / PIT_CAL_MS;
+}
+
+/*
  * Initialize the various conversion factors needed by code referencing
  * the TSC.
  */
@@ -139,6 +288,7 @@ void
 tsc_init(void)
 {
 	boolean_t       N_by_2_bus_ratio = FALSE;
+		boolean_t       sync_amd_tsc = FALSE;
 
 	if (cpuid_vmm_present()) {
 		kprintf("VMM vendor %s TSC frequency %u KHz bus frequency %u KHz\n",
@@ -165,6 +315,23 @@ tsc_init(void)
 	}
 
 	switch (cpuid_cpufamily()) {
+		case CPUFAMILY_INTEL_GOLDMONTPLUS: {
+				busFreq = EFI_get_frequency("FSBFrequency");
+				if (busFreq == 0) {
+						busFreq = BASE_NHM_CLOCK_SOURCE;
+				}
+
+				tscFreq = EFI_get_frequency("TSCFrequency");
+				if (tscFreq == 0) {
+						tscFreq = busFreq;
+				}
+
+				tscGranularity = (uint32_t)(tscFreq / busFreq);
+				if (tscGranularity == 0) {
+						tscGranularity = 1;
+				}
+				break;
+		}
 	case CPUFAMILY_INTEL_KABYLAKE:
 	case CPUFAMILY_INTEL_ICELAKE:
 	case CPUFAMILY_INTEL_SKYLAKE: {
@@ -201,8 +368,17 @@ tsc_init(void)
 			}
 		}
 
-		assert(N != 0);
-		assert(M != 1);
+				/*
+				* CPUID leaf 0x15 (TSC/ART ratio) isn't populated under QEMU TCG
+				* (software CPU emulation, no real hardware leaf 0x15 support) -
+				* N and M come back 0 here, and the division below is a real
+				* divide-by-zero trap regardless of whether assert() is compiled
+				* in. Fall back to N/M = 1/1 (TSC == ART) rather than crashing.
+				*/
+				if (N == 0 || M == 0) {
+						N = 1;
+						M = 1;
+				}
 		tscFreq = refFreq * N / M;
 		busFreq = tscFreq;              /* bus is APIC frequency */
 
@@ -213,7 +389,92 @@ tsc_init(void)
 
 		break;
 	}
+		case CPUFAMILY_AMD_BULLDOZER:
+		case CPUFAMILY_AMD_PILEDRIVER:
+		case CPUFAMILY_AMD_STEAMROLLER:
+		case CPUFAMILY_AMD_EXCAVATOR:
+		case CPUFAMILY_AMD_JAGUAR:
+		case CPUFAMILY_AMD_PUMA:
+		case CPUFAMILY_AMD_ZEN:
+		case CPUFAMILY_AMD_ZENX:
+		case CPUFAMILY_AMD_ZEN2:
+		case CPUFAMILY_AMD_ZEN3:
+		case CPUFAMILY_AMD_ZEN4:
+		case CPUFAMILY_AMD_ZEN5: {
+				uint64_t msr;
+				uint64_t did;
+				uint64_t fid;
+				i386_cpu_info_t *infop = cpuid_info();
+
+				busFreq = EFI_get_frequency("FSBFrequency");
+				if (busFreq == 0) {
+						busFreq = BASE_NHM_CLOCK_SOURCE;
+				}
+
+				tscFreq = EFI_get_frequency("TSCFrequency");
+				if (tscFreq == 0) {
+						msr = rdmsr64(MSR_AMD_PSTATE_P0);
+						if (infop->cpuid_family == 0x15 || infop->cpuid_family == 0x16) {
+								did = bitfield(msr, 8, 6);
+								fid = bitfield(msr, 5, 0);
+								tscFreq = (100 * Mega * (fid + 0x10) * 8) /
+									amd_get_pstate_divisor_x8(did);
+						} else if (infop->cpuid_family == 0x17 || infop->cpuid_family == 0x19) {
+								did = bitfield(msr, 13, 8);
+								fid = bitfield(msr, 7, 0);
+								tscFreq = (200 * Mega * fid * 8) /
+									amd_get_pstate_divisor_x8(did);
+						} else if (infop->cpuid_family >= 0x1A) {
+								fid = bitfield(msr, 11, 0);
+								if (fid == 0) {
+										panic("Invalid AMD P0 frequency ID");
+								}
+								tscFreq = (fid > 0xF) ? (fid * 5 * Mega) : (fid * Mega);
+						} else {
+								panic("Unsupported AMD CPU family 0x%x\n", infop->cpuid_family);
+						}
+				}
+
+				if (infop->cpuid_family >= 0x17 && !cpuid_vmm_present()) {
+						msr = rdmsr64(MSR_AMD_HARDWARE_CFG);
+						msr |= MSR_AMD_HARDWARE_CFG_TSC_LOCK_AT_P0;
+						wrmsr64(MSR_AMD_HARDWARE_CFG, msr);
+				}
+
+				tscGranularity = tscFreq / busFreq;
+				if (tscGranularity == 0) {
+						tscGranularity = 1;
+				}
+
+				sync_amd_tsc = !cpuid_vmm_present();
+				break;
+		}
 	default: {
+				busFreq = EFI_get_frequency("FSBFrequency");
+				if (busFreq == 0) {
+						busFreq = BASE_NHM_CLOCK_SOURCE;
+				}
+
+				uint64_t tsc_freq = EFI_get_frequency("TSCFrequency");
+				if (tsc_freq != 0) {
+						/*
+						* The bootloader may publish a measured TSC frequency for
+						* CPUs/firmware where the legacy ratio MSRs below are not
+						* available.  Trust it before touching MSR_PLATFORM_INFO or
+						* MSR_FLEX_RATIO; on Gemini Lake under KVM those MSR reads
+						* #GP during early boot.
+						*/
+						tscGranularity = (uint32_t)(tsc_freq / busFreq);
+						if (tscGranularity == 0) {
+								tscGranularity = 1;
+						}
+				} else if (cpuid_vmm_family() == CPUID_VMM_FAMILY_QEMU_TCG) {
+						uint64_t measured = pit_measure_tsc_freq();
+						if (measured != 0) {
+								busFreq = measured;
+						}
+						tscGranularity = 1;
+				} else {
 		uint64_t msr_flex_ratio;
 		uint64_t msr_platform_info;
 
@@ -222,7 +483,7 @@ tsc_init(void)
 		msr_platform_info = rdmsr64(MSR_PLATFORM_INFO);
 		flex_ratio_min = (uint32_t)bitfield(msr_platform_info, 47, 40);
 		flex_ratio_max = (uint32_t)bitfield(msr_platform_info, 15, 8);
-		/* No BIOS-programed flex ratio. Use hardware max as default */
+		/* No BIOS-programmed flex ratio. Use hardware max as default */
 		tscGranularity = flex_ratio_max;
 		if (msr_flex_ratio & bit(16)) {
 			/* Flex Enabled: Use this MSR if less than max */
@@ -231,13 +492,6 @@ tsc_init(void)
 				tscGranularity = flex_ratio;
 			}
 		}
-
-		busFreq = EFI_get_frequency("FSBFrequency");
-		/* If EFI isn't configured correctly, use a constant
-		 * value. See 6036811.
-		 */
-		if (busFreq == 0) {
-			busFreq = BASE_NHM_CLOCK_SOURCE;
 		}
 
 		break;
@@ -304,6 +558,15 @@ tsc_init(void)
 	    (uint32_t)(tscFCvtt2n >> 32), (uint32_t)tscFCvtt2n,
 	    (uint32_t)(tscFCvtn2t >> 32), (uint32_t)tscFCvtn2t,
 	    tscGranularity, N_by_2_bus_ratio ? " (N/2)" : "");
+
+		if (sync_amd_tsc) {
+				clock_interval_to_absolutetime_interval(tsc_sync_interval_msecs,
+					NSEC_PER_MSEC, &tsc_sync_interval_abs);
+				timer_call_setup(&sync_tsc_timer, tsc_sync, NULL);
+				tsc_sync_next_deadline = mach_absolute_time() + tsc_sync_interval_abs;
+				timer_call_enter_with_leeway(&sync_tsc_timer, NULL,
+					tsc_sync_next_deadline, 0, TIMER_CALL_SYS_NORMAL, FALSE);
+		}
 }
 
 void

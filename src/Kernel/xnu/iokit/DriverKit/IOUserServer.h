@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IOUserServer.iig */
+/* iig-lite generated from IOUserServer.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IOUserServer.iig:1-36 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -37,13 +36,16 @@
 #include <DriverKit/IOService.h>  /* .iig include */
 
 
-/* source class IOUserServer IOUserServer.iig:37-63 */
+/*!
+                   
+                               
+        
+*/
+
+/* source class IOUserServer IOUserServer.iig:43-64 */
 
 #if __DOCUMENTATION__
 #define KERNEL IIG_KERNEL
-
-/*!
-*/
 
 class KERNEL IOUserServer : public IOService
 {
@@ -71,11 +73,11 @@ public:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IOUserServer IOUserServer.iig:37-63 */
+/* generated class IOUserServer IOUserServer.iig:43-64 */
 
-#define IOUserServer_Create_ID            0xc1dbaee5e75e22b9ULL
-#define IOUserServer_Exit_ID            0xe949d58832ebe980ULL
-#define IOUserServer_LoadModule_ID            0xd96f074a91a53982ULL
+#define IOUserServer_Create_ID            0x6753b49ad1ed53e9ULL
+#define IOUserServer_Exit_ID            0xcf69d54dd97a4817ULL
+#define IOUserServer_LoadModule_ID            0x50bdabda4bac3143ULL
 
 #define IOUserServer_Create_Args \
         const char * name, \
@@ -175,22 +177,6 @@ public:\
 
 #if !KERNEL
 
-extern OSMetaClass          * gIOUserServerMetaClass;
-extern const OSClassLoadInformation IOUserServer_Class;
-
-class IOUserServerMetaClass : public OSMetaClass
-{
-public:
-    virtual kern_return_t
-    New(OSObject * instance) override;
-    virtual kern_return_t
-    Dispatch(const IORPC rpc) override;
-};
-
-#endif /* !KERNEL */
-
-#if !KERNEL
-
 class IOUserServerInterface : public OSInterface
 {
 public:
@@ -201,41 +187,22 @@ struct IOUserServer_LocalIVars;
 
 class IOUserServer : public IOService, public IOUserServerInterface
 {
-#if !KERNEL
-    friend class IOUserServerMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
 public:
-#ifdef IOUserServer_DECLARE_IVARS
-IOUserServer_DECLARE_IVARS
-#else /* IOUserServer_DECLARE_IVARS */
     union
     {
         IOUserServer_IVars * ivars;
         IOUserServer_LocalIVars * lvars;
     };
-#endif /* IOUserServer_DECLARE_IVARS */
-#endif /* !KERNEL */
-
-#if !KERNEL
-    static OSMetaClass *
-    sGetMetaClass() { return gIOUserServerMetaClass; };
-#endif /* KERNEL */
-
     using super = IOService;
 
-#if !KERNEL
     IOUserServer_Methods
     IOUserServer_VirtualMethods
-#endif /* !KERNEL */
-
 };
-#endif /* !KERNEL */
 
+#endif /* !KERNEL */
 
 #endif /* !__DOCUMENTATION__ */
 
-/* IOUserServer.iig:65- */
+
 
 #endif /* ! _IOKIT_UIOUSERSERVER_H */

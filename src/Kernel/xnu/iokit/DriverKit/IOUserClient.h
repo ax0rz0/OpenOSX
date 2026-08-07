@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IOUserClient.iig */
+/* iig-lite generated from IOUserClient.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IOUserClient.iig:1-154 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -155,11 +154,6 @@ struct IOUserClientMethodDispatch {
 	uint32_t			       checkStructureOutputSize;
 };
 
-/* source class IOUserClient IOUserClient.iig:155-287 */
-
-#if __DOCUMENTATION__
-#define KERNEL IIG_KERNEL
-
 /*!
  * @class IOUserClient
  *
@@ -173,7 +167,15 @@ struct IOUserClientMethodDispatch {
  * As an IOService subclass, IOUserClient receives the normal Start()/Stop() lifecyle calls.
  *
 
+                   
+                                               
+        
 */
+
+/* source class IOUserClient IOUserClient.iig:173-288 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
 
 class KERNEL IOUserClient : public IOService
 {
@@ -295,18 +297,18 @@ private:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IOUserClient IOUserClient.iig:155-287 */
+/* generated class IOUserClient IOUserClient.iig:173-288 */
 
-#define IOUserClient_AsyncCompletion_ID            0xdbc5b2e5d2b446f4ULL
-#define IOUserClient_CopyClientMemoryForType_ID            0x8399bdb3d0b4f474ULL
-#define IOUserClient_CreateMemoryDescriptorFromClient_ID            0xf2fa2faa5cc11191ULL
-#define IOUserClient__ExternalMethod_ID            0xcfe0c99e739d92f9ULL
-#define IOUserClient_KernelCompletion_ID            0xf609f134c9046444ULL
+#define IOUserClient_AsyncCompletion_ID            0x728fcc2c879c4ca4ULL
+#define IOUserClient_CopyClientMemoryForType_ID            0xcc81607b851a64ceULL
+#define IOUserClient_CreateMemoryDescriptorFromClient_ID            0x4db5062124fecf48ULL
+#define IOUserClient__ExternalMethod_ID            0x25cb76ca08158b14ULL
+#define IOUserClient_KernelCompletion_ID            0xc9160ea7b9501339ULL
 
 #define IOUserClient_AsyncCompletion_Args \
         OSAction * action, \
         IOReturn status, \
-        const unsigned long long * asyncData, \
+        const IOUserClientAsyncArgumentsArray asyncData, \
         uint32_t asyncDataCount
 
 #define IOUserClient_CopyClientMemoryForType_Args \
@@ -322,11 +324,11 @@ private:
 
 #define IOUserClient__ExternalMethod_Args \
         uint64_t selector, \
-        const unsigned long long * scalarInput, \
+        const IOUserClientScalarArray scalarInput, \
         uint32_t scalarInputCount, \
         OSData * structureInput, \
         IOMemoryDescriptor * structureInputDescriptor, \
-        unsigned long long * scalarOutput, \
+        IOUserClientScalarArray scalarOutput, \
         uint32_t * scalarOutputCount, \
         uint64_t structureOutputMaximumSize, \
         OSData ** structureOutput, \
@@ -336,7 +338,7 @@ private:
 #define IOUserClient_KernelCompletion_Args \
         OSAction * action, \
         IOReturn status, \
-        const unsigned long long * asyncData, \
+        const IOUserClientAsyncArgumentsArray asyncData, \
         uint32_t asyncDataCount
 
 #define IOUserClient_Methods \
@@ -370,7 +372,7 @@ public:\
         uint32_t segmentsCount,\
         const IOAddressSegment * segments,\
         IOMemoryDescriptor ** memory,\
-        OSDispatchMethod supermethod = NULL) __attribute__((availability(driverkit,introduced=20.0)));\
+        OSDispatchMethod supermethod = NULL);\
 \
     kern_return_t\
     _ExternalMethod(\
@@ -405,13 +407,13 @@ public:\
     static kern_return_t\
     AsyncCompletion_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
-        AsyncCompletion_Handler func,\
-        const OSMetaClass * targetActionClass);\
+        AsyncCompletion_Handler func);\
 \
     static kern_return_t\
     AsyncCompletion_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
-        AsyncCompletion_Handler func);\
+        AsyncCompletion_Handler func,\
+        const OSMetaClass * targetActionClass);\
 \
     typedef kern_return_t (*CopyClientMemoryForType_Handler)(OSMetaClassBase * target, IOUserClient_CopyClientMemoryForType_Args);\
     static kern_return_t\
@@ -437,6 +439,12 @@ public:\
 \
 protected:\
     /* _Impl methods */\
+\
+    void\
+    AsyncCompletion_Impl(IOUserClient_AsyncCompletion_Args);\
+\
+    kern_return_t\
+    CopyClientMemoryForType_Impl(IOUserClient_CopyClientMemoryForType_Args);\
 \
     kern_return_t\
     CreateMemoryDescriptorFromClient_Impl(IOUserClient_CreateMemoryDescriptorFromClient_Args);\
@@ -470,32 +478,9 @@ public:\
 
 #if !KERNEL
 
-extern OSMetaClass          * gIOUserClientMetaClass;
-extern const OSClassLoadInformation IOUserClient_Class;
-
-class IOUserClientMetaClass : public OSMetaClass
-{
-public:
-    virtual kern_return_t
-    New(OSObject * instance) override;
-    virtual kern_return_t
-    Dispatch(const IORPC rpc) override;
-};
-
-#endif /* !KERNEL */
-
-#if !KERNEL
-
 class IOUserClientInterface : public OSInterface
 {
 public:
-    virtual kern_return_t
-    ExternalMethod(uint64_t selector,
-        IOUserClientMethodArguments * arguments,
-        const IOUserClientMethodDispatch * dispatch,
-        OSObject * target,
-        void * reference) = 0;
-
 };
 
 struct IOUserClient_IVars;
@@ -503,134 +488,22 @@ struct IOUserClient_LocalIVars;
 
 class IOUserClient : public IOService, public IOUserClientInterface
 {
-#if !KERNEL
-    friend class IOUserClientMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
 public:
-#ifdef IOUserClient_DECLARE_IVARS
-IOUserClient_DECLARE_IVARS
-#else /* IOUserClient_DECLARE_IVARS */
     union
     {
         IOUserClient_IVars * ivars;
         IOUserClient_LocalIVars * lvars;
     };
-#endif /* IOUserClient_DECLARE_IVARS */
-#endif /* !KERNEL */
-
-#if !KERNEL
-    static OSMetaClass *
-    sGetMetaClass() { return gIOUserClientMetaClass; };
-#endif /* KERNEL */
-
     using super = IOService;
 
-#if !KERNEL
     IOUserClient_Methods
     IOUserClient_VirtualMethods
-#endif /* !KERNEL */
-
-};
-#endif /* !KERNEL */
-
-
-#define OSAction_IOUserClient_KernelCompletion_Methods \
-\
-public:\
-\
-    virtual kern_return_t\
-    Dispatch(const IORPC rpc) APPLE_KEXT_OVERRIDE;\
-\
-    static kern_return_t\
-    _Dispatch(OSAction_IOUserClient_KernelCompletion * self, const IORPC rpc);\
-\
-\
-protected:\
-    /* _Impl methods */\
-\
-\
-public:\
-    /* _Invoke methods */\
-\
-
-
-#define OSAction_IOUserClient_KernelCompletion_KernelMethods \
-\
-protected:\
-    /* _Impl methods */\
-\
-
-
-#define OSAction_IOUserClient_KernelCompletion_VirtualMethods \
-\
-public:\
-\
-
-
-#if !KERNEL
-
-extern OSMetaClass          * gOSAction_IOUserClient_KernelCompletionMetaClass;
-extern const OSClassLoadInformation OSAction_IOUserClient_KernelCompletion_Class;
-
-class OSAction_IOUserClient_KernelCompletionMetaClass : public OSMetaClass
-{
-public:
-    virtual kern_return_t
-    New(OSObject * instance) override;
-    virtual kern_return_t
-    Dispatch(const IORPC rpc) override;
 };
 
 #endif /* !KERNEL */
-
-class OSAction_IOUserClient_KernelCompletionInterface : public OSInterface
-{
-public:
-};
-
-struct OSAction_IOUserClient_KernelCompletion_IVars;
-struct OSAction_IOUserClient_KernelCompletion_LocalIVars;
-
-class __attribute__((availability(driverkit,introduced=20,message="Type-safe OSAction factory methods are available in DriverKit 20 and newer"))) OSAction_IOUserClient_KernelCompletion : public OSAction, public OSAction_IOUserClient_KernelCompletionInterface
-{
-#if KERNEL
-    OSDeclareDefaultStructorsWithDispatch(OSAction_IOUserClient_KernelCompletion);
-#endif /* KERNEL */
-
-#if !KERNEL
-    friend class OSAction_IOUserClient_KernelCompletionMetaClass;
-#endif /* !KERNEL */
-
-public:
-#ifdef OSAction_IOUserClient_KernelCompletion_DECLARE_IVARS
-OSAction_IOUserClient_KernelCompletion_DECLARE_IVARS
-#else /* OSAction_IOUserClient_KernelCompletion_DECLARE_IVARS */
-    union
-    {
-        OSAction_IOUserClient_KernelCompletion_IVars * ivars;
-        OSAction_IOUserClient_KernelCompletion_LocalIVars * lvars;
-    };
-#endif /* OSAction_IOUserClient_KernelCompletion_DECLARE_IVARS */
-#if !KERNEL
-    static OSMetaClass *
-    sGetMetaClass() { return gOSAction_IOUserClient_KernelCompletionMetaClass; };
-    virtual const OSMetaClass *
-    getMetaClass() const APPLE_KEXT_OVERRIDE { return gOSAction_IOUserClient_KernelCompletionMetaClass; };
-#endif /* KERNEL */
-
-    using super = OSAction;
-
-#if !KERNEL
-    OSAction_IOUserClient_KernelCompletion_Methods
-#endif /* !KERNEL */
-
-    OSAction_IOUserClient_KernelCompletion_VirtualMethods
-};
 
 #endif /* !__DOCUMENTATION__ */
 
-/* IOUserClient.iig:289- */
+
 
 #endif /* ! _IOKIT_UIOUSERCLIENT_H */

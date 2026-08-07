@@ -30,7 +30,14 @@
 
 #include <stdio.h>
 #include <ctype.h>      /* for isspace */
+#ifdef __APPLE__
 #include <libc.h>
+#else
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
+#endif
 
 /*
  * State of input scanner.

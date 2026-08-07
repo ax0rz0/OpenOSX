@@ -27,21 +27,22 @@
 
 add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/syscalls.a
     COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/sys
-    COMMAND ${CMAKE_COMMAND} -E env ARCHS=x86_64
+    COMMAND ${CMAKE_COMMAND} -E env ARCHS=${OPENOSX_ARCH}
         ${CMAKE_CURRENT_SOURCE_DIR}/scripts/create-syscalls.pl
-        ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/bsd/kern/syscalls.master
+        ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/bsd/kern/syscalls.master
         ${CMAKE_CURRENT_SOURCE_DIR}/custom ${CMAKE_CURRENT_SOURCE_DIR}/Platforms
         MacOSX ${CMAKE_CURRENT_BINARY_DIR}/sys
-    COMMAND ${CMAKE_COMMAND} -E env ARCHS=x86_64
+    COMMAND ${CMAKE_COMMAND} -E env ARCHS=${OPENOSX_ARCH}
         ${CMAKE_CURRENT_SOURCE_DIR}/scripts/compile-syscalls.pl
         ${CMAKE_CURRENT_BINARY_DIR}/sys/stubs.list ${CMAKE_CURRENT_BINARY_DIR}/syscalls.a
-        -I${PUREDARWIN_BINARY_DIR}/src/Kernel/xnu/xnu_header_install/usr/include
-        -I${PUREDARWIN_BINARY_DIR}/src/Kernel/xnu/xnu_header_install/System/Library/Frameworks/System.framework/Versions/B/PrivateHeaders
-        -I${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/EXTERNAL_HEADERS
+        -I${OPENOSX_BINARY_DIR}/src/Kernel/xnu/xnu_header_install/usr/include
+        -I${OPENOSX_BINARY_DIR}/src/Kernel/xnu/xnu_header_install/System/Library/Frameworks/System.framework/Versions/B/PrivateHeaders
+        -I${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/osfmk
+        -I${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/EXTERNAL_HEADERS
     DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/scripts/create-syscalls.pl
         ${CMAKE_CURRENT_SOURCE_DIR}/scripts/compile-syscalls.pl
-        ${PUREDARWIN_SOURCE_DIR}/src/Kernel/xnu/bsd/kern/syscalls.master
+        ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/bsd/kern/syscalls.master
     COMMENT "Compile syscall stubs" VERBATIM
 )
 
@@ -118,6 +119,7 @@ target_sources(libsystem_kernel_static PRIVATE
     wrappers/mach_continuous_time.c
     wrappers/mach_get_times.c
     wrappers/mach_timebase_info.c
+    wrappers/mremap_encrypted.c
     wrappers/open-base.c
     wrappers/open_dprotected_np.c
     wrappers/persona.c
@@ -158,6 +160,7 @@ target_sources(libsystem_kernel_static PRIVATE
     wrappers/legacy/connect.c
     wrappers/legacy/getattrlist.c
     wrappers/legacy/getaudit.c
+    wrappers/legacy/audit_token.c
     wrappers/legacy/getpeername.c
     wrappers/legacy/getsockname.c
     wrappers/legacy/kill.c
@@ -205,13 +208,27 @@ target_link_libraries(libsystem_kernel_static PRIVATE clang_bootstrap_headers)
 target_link_libraries(libsystem_kernel_static PUBLIC architecture_headers)
 
 target_include_directories(libsystem_kernel_static PUBLIC include ${CMAKE_CURRENT_BINARY_DIR}/public_include)
-target_include_directories(libsystem_kernel_static PRIVATE mach mach/mach mach/servers custom wrappers)
+target_include_directories(libsystem_kernel_static PRIVATE
+    mach mach/mach mach/servers custom wrappers
+    ${OPENOSX_SOURCE_DIR}/src/Kernel/xnu/osfmk
+)
 target_include_directories(libsystem_kernel_static PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/internal_include)
 
 target_compile_options(libsystem_kernel_static PRIVATE -fdollars-in-identifiers -no-cpp-precomp -fno-common -fno-stack-protector -fno-stack-check -momit-leaf-frame-pointer -Wno-nullability-completeness -Wno-implicit-function-declaration)
 
 # We define LIBSYSCALL_INTERFACE to pass to the MIG compiler below. This will indicate we don't want 'internal' versions of the given MIG files.
-target_compile_definitions(libsystem_kernel_static PRIVATE _FORTIFY_SOURCE=0 __DARWIN_VERS_1050=1 NO_SYSCALL_LEGACY SYSCALL_PRE1050 LIBSYSCALL_INTERFACE)
+# __DARWIN_ONLY_UNIX_CONFORMANCE=1 matches libc_static's own setting (see
+# libc/CMakeLists.txt) - on real Apple builds this is inherited from an
+# internal BSD.xcconfig not present in this open-source drop, and it needs
+# to be consistent everywhere: without it, wrappers/unix03/chmod.c's own
+# <sys/stat.h> declaration of chmod() asm-renames chmod.c's OWN "chmod"
+# function definition to "_chmod$UNIX2003" (via __DARWIN_ALIAS) instead of
+# plain "_chmod" - which breaks every internal libc caller (mkpath_np.c,
+# sysconf.c, raise.c, pause.c, ...) that expects the plain symbol.
+target_compile_definitions(libsystem_kernel_static PRIVATE _FORTIFY_SOURCE=0 __DARWIN_VERS_1050=1 __DARWIN_ONLY_UNIX_CONFORMANCE=1 PRIVATE=1 NO_SYSCALL_LEGACY SYSCALL_PRE1050 LIBSYSCALL_INTERFACE)
+if(OPENOSX_USE_LD64_LLD)
+    target_compile_definitions(libsystem_kernel_static PRIVATE PD_LD64LLD_WEAK_LIBC_FUNCPTR)
+endif()
 
 target_link_libraries(libsystem_kernel_static PRIVATE xnu_private_headers libsystem_kernel_private_headers libsyscall_traps)
 target_link_libraries(libsystem_kernel_static PUBLIC xnu_headers pthread_common_headers AvailabilityHeaders)
@@ -220,7 +237,12 @@ target_link_libraries(libsystem_kernel_static PUBLIC xnu_headers pthread_common_
 mig(mach/clock.defs INCLUDES_FROM_TARGET libsystem_kernel_static USER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock.h NOVOUCHERS)
 mig(mach/clock_priv.defs INCLUDES_FROM_TARGET libsystem_kernel_static USER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock_priv.h NOVOUCHERS)
 mig(mach/clock_reply.defs INCLUDES_FROM_TARGET libsystem_kernel_static USER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock_reply.h NOVOUCHERS)
+mig(mach/clock_reply.defs INCLUDES_FROM_TARGET libsystem_kernel_static SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock_reply_server.h NOVOUCHERS)
 mig(mach/exc.defs INCLUDES_FROM_TARGET libsystem_kernel_static USER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/exc.h NOVOUCHERS)
+mig(mach/exc.defs INCLUDES_FROM_TARGET libsystem_kernel_static SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/exc_server.h NOVOUCHERS)
+mig(mach/mach_exc.defs INCLUDES_FROM_TARGET libsystem_kernel_static SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/mach_exc_server.h NOVOUCHERS)
+mig(mach/notify.defs INCLUDES_FROM_TARGET libsystem_kernel_static SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/notify_server.h NOVOUCHERS)
+mig(mach/memory_object_default.defs INCLUDES_FROM_TARGET libsystem_kernel_static SERVER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/memory_object_default_server.h NOVOUCHERS)
 mig(mach/host_priv.defs INCLUDES_FROM_TARGET libsystem_kernel_static USER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/host_priv.h NOVOUCHERS)
 mig(mach/host_security.defs INCLUDES_FROM_TARGET libsystem_kernel_static USER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/host_security.h NOVOUCHERS)
 mig(mach/lock_set.defs INCLUDES_FROM_TARGET libsystem_kernel_static USER_HEADER ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/lock_set.h NOVOUCHERS)
@@ -293,12 +315,41 @@ target_sources(libsystem_kernel_static PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/internal_include/mach/vm_map.c
 )
 
+# voucher_mach_msg_{adopt,revert,set,clear}: mach/mach_msg.c's mach_msg_server(_once)
+# calls these (real Darwin: registered by libdispatch's voucher backend via
+# __libkernel_voucher_init; falls back to VOUCHER_MACH_MSG_STATE_UNCHANGED/no-op
+# via _libkernel_voucher_functions_empty when nothing has registered -- exactly
+# our situation, no voucher subsystem yet). Previously only in the libsystem_kernel
+# SHARED target's source list, not this static one, so anything statically linking
+# mach_msg.c (dyld, libdyld) got dangling refs to these.
+target_sources(libsystem_kernel_static PRIVATE
+    wrappers/_libkernel_init.c
+    wrappers/_libc_funcptr.c
+    # _libc_funcptr.c's file-scope _libkernel_generic_string_functions table
+    # initializer references these 8 unconditionally (regardless of whether the
+    # table is ever consulted), so they must be defined wherever _libc_funcptr.c
+    # is compiled in, same as the voucher functions above.
+    wrappers/string/index.c      # _libkernel_strchr
+    wrappers/string/memcpy.c     # _libkernel_memmove (+ memcpy)
+    wrappers/string/memset.c     # _libkernel_memset + _libkernel_bzero
+    wrappers/string/strcmp.c     # _libkernel_strcmp
+    wrappers/string/strcpy.c     # _libkernel_strcpy
+    wrappers/string/strlcpy.c    # _libkernel_strlcpy
+    wrappers/string/strlen.c     # _libkernel_strlen
+    wrappers/system-version-compat.c  # __system_version_compat_{check_path_suffix,open_shim}
+)
+
 # We need to add these as sources to ensure they're built before the c files below,
 #   as they are generated dependencies. It's a bit messy, but it all works out just fine.
 target_sources(libsystem_kernel_static PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock.h
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock_priv.h
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock_reply.h
+    ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock_reply_server.h
+    ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/exc_server.h
+    ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/mach_exc_server.h
+    ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/notify_server.h
+    ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/memory_object_default_server.h
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/exc.h
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/host_priv.h
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/host_security.h
@@ -322,6 +373,11 @@ set_source_files_properties(
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock.h
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock_priv.h
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock_reply.h
+    ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/clock_reply_server.h
+    ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/exc_server.h
+    ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/mach_exc_server.h
+    ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/notify_server.h
+    ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/memory_object_default_server.h
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/exc.h
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/host_priv.h
     ${CMAKE_CURRENT_BINARY_DIR}/public_include/mach/host_security.h
@@ -393,20 +449,29 @@ install(TARGETS libsystem_kernel_static DESTINATION usr/local/lib/dyld_stub COMP
 
 add_darwin_shared_library(libsystem_kernel INSTALL_NAME_DIR /usr/lib/system)
 set_property(TARGET libsystem_kernel PROPERTY OUTPUT_NAME system_kernel)
+# Nothing in this tree depends on this target (only its _static sibling,
+# which is what libSystem_B_stub actually links); -all_load below force-
+# loads every object in libsystem_kernel_static, pulling in a dependency
+# web (libmalloc, corecrypto, pthread, all the pd_libSystem_compat.c
+# glue, ...) that only libSystem_B_stub's much larger link line actually
+# satisfies. Building this standalone was never exercised - no
+# buildTargets list in flake.nix ever names it - until a native macOS
+# unrestricted `ninja` (no target argument, builds literal ALL) reached
+# it first. Exclude it from that default set rather than duplicate
+# libSystem_B_stub's entire link line for a target nothing else needs;
+# `ninja libsystem_kernel` still works if anyone wants it explicitly.
+set_property(TARGET libsystem_kernel PROPERTY EXCLUDE_FROM_ALL TRUE)
 
-target_sources(libsystem_kernel PRIVATE
-    wrappers/string/index.c
-    wrappers/string/memcpy.c
-    wrappers/string/memset.c
-    wrappers/string/strcmp.c
-    wrappers/string/strcpy.c
-    wrappers/string/strlcpy.c
-    wrappers/string/strlen.c
-    wrappers/string/strsep.c
-    wrappers/_libkernel_init.c
-    wrappers/_libc_funcptr.c
-    wrappers/system-version-compat.c
-)
+target_sources(libsystem_kernel PRIVATE empty.c)
+
+# NB: no wrapper sources here -- every one of them is already compiled
+# into libsystem_kernel_static (see the target_sources(libsystem_kernel_static
+# ...) blocks earlier in this file); this target's own PUBLIC headers plus
+# -all_load'ing that static archive below is what produces the real .dylib.
+# A prior version of this file re-compiled the same sources into THIS target
+# directly (as well as linking the static lib that already contains them),
+# which -- once this target was actually built for the first time -- failed
+# with 45 duplicate-symbol errors (___bzero, __libkernel_strchr, etc).
 
 target_include_directories(libsystem_kernel PUBLIC include ${CMAKE_CURRENT_BINARY_DIR}/public_include)
 target_include_directories(libsystem_kernel PRIVATE wrappers/string)
@@ -422,11 +487,19 @@ target_compile_definitions(libsystem_kernel PRIVATE _FORTIFY_SOURCE=0 __DARWIN_V
 target_link_libraries(libsystem_kernel PRIVATE libsystem_kernel_static)
 target_link_libraries(libsystem_kernel PRIVATE CrashReporterClient)
 target_link_libraries(libsystem_kernel PRIVATE libc_public_headers)
+# -all_load below force-loads every member of libsystem_kernel_static,
+# including wrapper .c files (system-version-compat.c, persona.c,
+# posix_spawn.c, libproc.c) that call plain strlcpy/strlcat/strnlen
+# directly rather than the _libkernel_-prefixed internal aliases
+# wrappers/string/strlcpy.c provides. This target has no other buildTargets
+# entry pulling it in on the Nix/Linux path (only libsystem_kernel_static,
+# the plain archive, is ever requested there - see userlandBuild/fullBuild
+# in flake.nix), so this gap was never exercised until a native macOS
+# build's unrestricted `ninja` reached it for the first time.
+target_link_libraries(libsystem_kernel PRIVATE libc_static libplatform_static)
 target_link_options(libsystem_kernel PRIVATE -umbrella System -all_load)
 
 target_link_options(libsystem_kernel PRIVATE -umbrella System -all_load)
-
-install(TARGETS libsystem_kernel DESTINATION usr/lib/system COMPONENT BaseSystem)
 
 # END DYNAMIC LIBRARY
 

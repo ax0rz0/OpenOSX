@@ -5,6 +5,12 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifndef __unused
+// __unused (BSD/Darwin's sys/cdefs.h attribute macro) isn't defined by
+// glibc's headers.
+#define __unused __attribute__((unused))
+#endif
+
 #if 0 // __has_include(<Kernel/kern/cs_blobs.h>)
 #include <Kernel/kern/cs_blobs.h>
 #else

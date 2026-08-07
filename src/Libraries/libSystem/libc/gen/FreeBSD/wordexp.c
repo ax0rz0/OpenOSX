@@ -181,7 +181,7 @@ we_read_fully(int fd, char *buffer, size_t len)
 
 	done = 0;
 	do {
-		nread = _read(fd, buffer + done, len - done);
+		nread = read(fd, buffer + done, len - done);
 		if (nread == -1 && errno == EINTR)
 			continue;
 		if (nread <= 0)
@@ -242,7 +242,7 @@ we_askshell(const char *words, wordexp_t *we, int flags)
 #endif /* __APPLE__ */
 	(void)sigemptyset(&newsigblock);
 	(void)sigaddset(&newsigblock, SIGCHLD);
-	(void)_sigprocmask(SIG_BLOCK, &newsigblock, &oldsigblock);
+	(void)sigprocmask(SIG_BLOCK, &newsigblock, &oldsigblock);
 #ifdef __APPLE__
 	if ((spawnerr = posix_spawnattr_init(&attr)) != 0) goto spawnerrexit;
 	do {
@@ -303,9 +303,9 @@ spawnerrexit:
 #else /* !__APPLE__ */
 	if ((pid = fork()) < 0) {
 		serrno = errno;
-		_close(pdes[0]);
-		_close(pdes[1]);
-		(void)_sigprocmask(SIG_SETMASK, &oldsigblock, NULL);
+		close(pdes[0]);
+		close(pdes[1]);
+		(void)sigprocmask(SIG_SETMASK, &oldsigblock, NULL);
 		errno = serrno;
 		return (WRDE_NOSPACE);	/* XXX */
 	}
@@ -314,7 +314,7 @@ spawnerrexit:
 		 * We are the child; just get /bin/sh to run the wordexp
 		 * builtin on `words'.
 		 */
-		(void)_sigprocmask(SIG_SETMASK, &oldsigblock, NULL);
+		(void)sigprocmask(SIG_SETMASK, &oldsigblock, NULL);
 		if ((pdes[1] != STDOUT_FILENO ?
 		    _dup2(pdes[1], STDOUT_FILENO) :
 		    _fcntl(pdes[1], F_SETFD, 0)) < 0)
@@ -333,7 +333,7 @@ spawnerrexit:
 	 * byte count (not including terminating null bytes), followed by
 	 * the expanded words separated by nulls.
 	 */
-	_close(pdes[1]);
+	close(pdes[1]);
 #ifdef __APPLE__
 	close(perr[1]);
 #endif /* __APPLE__ */
@@ -435,14 +435,14 @@ spawnerrexit:
 
 	error = 0;
 cleanup:
-	_close(pdes[0]);
+	close(pdes[0]);
 #ifdef __APPLE__
 	close(perr[0]);
 #endif /* __APPLE__ */
 	do
-		wpid = _waitpid(pid, &status, 0);
+		wpid = waitpid(pid, &status, 0);
 	while (wpid < 0 && errno == EINTR);
-	(void)_sigprocmask(SIG_SETMASK, &oldsigblock, NULL);
+	(void)sigprocmask(SIG_SETMASK, &oldsigblock, NULL);
 	if (error != 0) {
 		errno = serrno;
 		return (error);

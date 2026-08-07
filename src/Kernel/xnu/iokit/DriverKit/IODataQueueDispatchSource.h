@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IODataQueueDispatchSource.iig */
+/* iig-lite generated from IODataQueueDispatchSource.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IODataQueueDispatchSource.iig:1-37 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -38,7 +37,7 @@
 typedef void (^IODataQueueClientEnqueueEntryBlock)(void *data, size_t dataSize);
 typedef void (^IODataQueueClientDequeueEntryBlock)(const void *data, size_t dataSize);
 
-/* source class IODataQueueDispatchSource IODataQueueDispatchSource.iig:38-207 */
+/* source class IODataQueueDispatchSource IODataQueueDispatchSource.iig:38-208 */
 
 #if __DOCUMENTATION__
 #define KERNEL IIG_KERNEL
@@ -218,16 +217,16 @@ private:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IODataQueueDispatchSource IODataQueueDispatchSource.iig:38-207 */
+/* generated class IODataQueueDispatchSource IODataQueueDispatchSource.iig:38-208 */
 
-#define IODataQueueDispatchSource_Create_ID            0xe8544306a54d09e0ULL
-#define IODataQueueDispatchSource_SetDataAvailableHandler_ID            0xd2c1d8cc6ec3a591ULL
-#define IODataQueueDispatchSource_SetDataServicedHandler_ID            0xd0aac29bba67b644ULL
-#define IODataQueueDispatchSource_CopyMemory_ID            0x9be617ec7d8cd728ULL
-#define IODataQueueDispatchSource_CopyDataAvailableHandler_ID            0xc856b17471f65d99ULL
-#define IODataQueueDispatchSource_CopyDataServicedHandler_ID            0xd8759c8da406b3fcULL
-#define IODataQueueDispatchSource_DataAvailable_ID            0xf799c876baf566f3ULL
-#define IODataQueueDispatchSource_DataServiced_ID            0x8daa79f78047d8d8ULL
+#define IODataQueueDispatchSource_Create_ID            0xa1cc04b18416b422ULL
+#define IODataQueueDispatchSource_SetDataAvailableHandler_ID            0xaf77e75c0746a47dULL
+#define IODataQueueDispatchSource_SetDataServicedHandler_ID            0xbf354b56259860edULL
+#define IODataQueueDispatchSource_CopyMemory_ID            0x4516480560ca89d4ULL
+#define IODataQueueDispatchSource_CopyDataAvailableHandler_ID            0xa604a2f6a4c5d288ULL
+#define IODataQueueDispatchSource_CopyDataServicedHandler_ID            0x0a5262752dda3d7eULL
+#define IODataQueueDispatchSource_DataAvailable_ID            0x7d32c4a300ac026bULL
+#define IODataQueueDispatchSource_DataServiced_ID            0x76cfc612619e76f7ULL
 
 #define IODataQueueDispatchSource_Create_Args \
         uint64_t queueByteCount, \
@@ -257,7 +256,6 @@ private:
         OSAction ** action
 
 #define IODataQueueDispatchSource_CheckForWork_Args \
-        const IORPC rpc, \
         bool synchronous
 
 #define IODataQueueDispatchSource_DataAvailable_Args \
@@ -366,6 +364,12 @@ protected:\
     kern_return_t\
     CheckForWork_Impl(IODispatchSource_CheckForWork_Args);\
 \
+    void\
+    DataAvailable_Impl(IODataQueueDispatchSource_DataAvailable_Args);\
+\
+    void\
+    DataServiced_Impl(IODataQueueDispatchSource_DataServiced_Args);\
+\
 \
 public:\
     /* _Invoke methods */\
@@ -409,25 +413,25 @@ public:\
     static kern_return_t\
     DataAvailable_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
-        DataAvailable_Handler func,\
-        const OSMetaClass * targetActionClass);\
+        DataAvailable_Handler func);\
 \
     static kern_return_t\
     DataAvailable_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
-        DataAvailable_Handler func);\
+        DataAvailable_Handler func,\
+        const OSMetaClass * targetActionClass);\
 \
     typedef void (*DataServiced_Handler)(OSMetaClassBase * target, IODataQueueDispatchSource_DataServiced_Args);\
     static kern_return_t\
     DataServiced_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
-        DataServiced_Handler func,\
-        const OSMetaClass * targetActionClass);\
+        DataServiced_Handler func);\
 \
     static kern_return_t\
     DataServiced_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
-        DataServiced_Handler func);\
+        DataServiced_Handler func,\
+        const OSMetaClass * targetActionClass);\
 \
 
 
@@ -530,8 +534,9 @@ IODataQueueDispatchSource_DECLARE_IVARS
     IODataQueueDispatchSource_VirtualMethods
 };
 
+
 #endif /* !__DOCUMENTATION__ */
 
-/* IODataQueueDispatchSource.iig:209- */
+
 
 #endif /* ! _IOKIT_UIODATAQUEUEDISPATCHSOURCE_H */

@@ -1,6 +1,32 @@
 add_library(host_corecrypto_static STATIC)
 target_include_directories(host_corecrypto_static PUBLIC include)
 target_include_directories(host_corecrypto_static PRIVATE private)
+# host_corecrypto_static is only ever a host build tool dependency (of
+# host_ld) but still wants genuine Darwin SDK headers (Mach/libkern types).
+# Our vendored SDK's own <stdint.h>/<sys/_types.h> chain #include_next's
+# expecting to layer on a COMPATIBLE libc underneath - layered on glibc
+# instead (our native host libc) it hard-conflicts on __int64_t et al
+# (Darwin: "long long", glibc/x86_64: "long", same width, different type).
+# -nostdlibinc keeps clang's own resource-dir builtins (stdarg.h etc, added
+# regardless) but drops glibc's /usr/include, so the SDK's own headers are
+# the only libc in play - exactly what a real -target ...-apple-macosx
+# compile gets, just without changing the actual (native ELF) codegen target.
+# NIX_NATIVE_DARWIN_HEADER_FLAGS (-isysroot/-D__APPLE__/etc, set by
+# build.nix) is scoped to just this target and host_commoncrypto_static,
+# not applied project-wide - see build.nix for why.
+if(DEFINED ENV{NIX_NATIVE_DARWIN_HEADER_FLAGS})
+    separate_arguments(_nix_darwin_hdr_flags UNIX_COMMAND "$ENV{NIX_NATIVE_DARWIN_HEADER_FLAGS}")
+    target_compile_options(host_corecrypto_static PRIVATE -nostdlibinc ${_nix_darwin_hdr_flags})
+    target_include_directories(host_corecrypto_static PRIVATE $ENV{NIX_NATIVE_DARWIN_HEADER_DIRS})
+endif()
+
+# cc_user_stub.c (below) is deliberately built as its own plain-native
+# object, NOT part of host_corecrypto_static's Darwin-spoofed compile: it
+# only wants write(2) to report a stub call, but under -D__APPLE__ the
+# SDK's <unistd.h> asm-aliases write() to the symbol "_write" (Darwin's
+# leading-underscore libc convention) - a symbol that doesn't exist when
+# actually linked against real glibc.
+add_library(host_cc_user_stub OBJECT cc_user_stub.c)
 
 add_library(host_corecrypto_headers INTERFACE)
 target_include_directories(host_corecrypto_headers INTERFACE include)
@@ -65,5 +91,5 @@ target_sources(host_corecrypto_static PRIVATE
     src/ccofb.c
     src/ccxts.c
     src/ccckg.c
-    cc_user_stub.c
+    $<TARGET_OBJECTS:host_cc_user_stub>
 )

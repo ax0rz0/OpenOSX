@@ -20,14 +20,22 @@
  *
  * @APPLE_LICENSE_HEADER_END@
  */
-#include <libc.h>
 #include <errno.h>
 
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/mman.h>
 
+#ifdef __APPLE__
+#include <libc.h>
 #include <mach-o/swap.h>
+#else
+#include "../mach_compat.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
+#endif
 
 #include <stdbool.h>
 
@@ -36,17 +44,20 @@
 static int
 writeFile(int fd, const void * data, size_t length)
 {
-	int error = 0;
+    const char *p = (const char *)data;
+    ssize_t written;
+    size_t total_written = 0;
 
-	if (length != (size_t)write(fd, data, length)) {
-		error = -1;
-	}
+    while (total_written < length) {
+        written = write(fd, p + total_written, length - total_written);
+        if (written < 0) {
+            perror("couldn't write output, writeFile");
+            return -1;
+        }
+        total_written += written;
+    }
 
-	if (error != 0) {
-		perror("couldn't write output");
-	}
-
-	return error;
+    return 0;
 }
 
 /*********************************************************************
@@ -107,7 +118,7 @@ readFile(const char *path, vm_offset_t * objAddr, vm_size_t * objSize)
 static void
 usage(void)
 {
-	fprintf(stderr, "Usage: %s [-s OLDSEGNAME] [-i IGNORESEGNAME] -n NEWSEGNAME input -o output\n", getprogname());
+	fprintf(stderr, "Usage: %s [-s OLDSEGNAME] [-i IGNORESEGNAME] -n NEWSEGNAME input -o output\n", "setsegname");
 	exit(1);
 }
 
@@ -267,7 +278,7 @@ main(int argc, char * argv[])
 	}
 
 	if (error) {
-		fprintf(stderr, "couldn't write output: %s\n", strerror(errno));
+		fprintf(stderr, "couldn't write output, setsegname, strerror: %s\n", strerror(errno));
 		exit(1);
 	}
 

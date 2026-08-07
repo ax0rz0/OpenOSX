@@ -234,8 +234,13 @@
         #define TARGET_OS_DRIVERKIT         0
     #endif
     
-    #define TARGET_IPHONE_SIMULATOR     TARGET_OS_SIMULATOR /* deprecated */
-    #define TARGET_OS_NANO              TARGET_OS_WATCH /* deprecated */ 
+    #ifndef TARGET_IPHONE_SIMULATOR
+        #define TARGET_IPHONE_SIMULATOR     TARGET_OS_SIMULATOR /* deprecated */
+    #endif
+
+    #ifndef TARGET_OS_NANO
+        #define TARGET_OS_NANO              TARGET_OS_WATCH /* deprecated */ 
+    #endif
 
     #define TARGET_ABI_USES_IOS_VALUES  (!TARGET_CPU_X86_64 || (TARGET_OS_IPHONE && !TARGET_OS_MACCATALYST))
     #if defined(__ppc__)

@@ -1,7 +1,7 @@
-/* iig(DriverKit-187 Aug  3 2021 18:40:13) generated from IOMemoryMap.iig */
+/* iig-lite generated from IOMemoryMap.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-#undef	IIG_IMPLEMENTATION
-#define	IIG_IMPLEMENTATION 	IOMemoryMap.iig
+#undef IIG_IMPLEMENTATION
+#define IIG_IMPLEMENTATION 	IOMemoryMap.iig
 
 #if KERNEL
 #include <libkern/c++/OSString.h>
@@ -11,13 +11,11 @@
 #include <DriverKit/IOReturn.h>
 #include <DriverKit/IOMemoryMap.h>
 
-
 #if __has_builtin(__builtin_load_member_function_pointer)
 #define SimpleMemberFunctionCast(cfnty, self, func) (cfnty)__builtin_load_member_function_pointer(self, func)
 #else
 #define SimpleMemberFunctionCast(cfnty, self, func) ({ union { typeof(func) memfun; cfnty cfun; } pair; pair.memfun = func; pair.cfun; })
 #endif
-
 
 struct IOMemoryMap__CopyState_Msg_Content
 {
@@ -48,7 +46,6 @@ struct IOMemoryMap__CopyState_Rpl
 #pragma pack()
 #define IOMemoryMap__CopyState_Rpl_ObjRefs (0)
 
-
 typedef union
 {
     const IORPC rpc;
@@ -61,105 +58,6 @@ typedef union
     };
 }
 IOMemoryMap__CopyState_Invocation;
-#if !KERNEL
-extern OSMetaClass * gOSContainerMetaClass;
-extern OSMetaClass * gOSDataMetaClass;
-extern OSMetaClass * gOSNumberMetaClass;
-extern OSMetaClass * gOSStringMetaClass;
-extern OSMetaClass * gOSBooleanMetaClass;
-extern OSMetaClass * gOSDictionaryMetaClass;
-extern OSMetaClass * gOSArrayMetaClass;
-extern OSMetaClass * gIODispatchQueueMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
-
-#define IOMemoryMap_QueueNames  ""
-
-#define IOMemoryMap_MethodNames  ""
-
-#define IOMemoryMapMetaClass_MethodNames  ""
-
-struct OSClassDescription_IOMemoryMap_t
-{
-    OSClassDescription base;
-    uint64_t           methodOptions[2 * 0];
-    uint64_t           metaMethodOptions[2 * 0];
-    char               queueNames[sizeof(IOMemoryMap_QueueNames)];
-    char               methodNames[sizeof(IOMemoryMap_MethodNames)];
-    char               metaMethodNames[sizeof(IOMemoryMapMetaClass_MethodNames)];
-};
-
-const struct OSClassDescription_IOMemoryMap_t
-OSClassDescription_IOMemoryMap =
-{
-    .base =
-    {
-        .descriptionSize         = sizeof(OSClassDescription_IOMemoryMap_t),
-        .name                    = "IOMemoryMap",
-        .superName               = "OSObject",
-        .methodOptionsSize       = 2 * sizeof(uint64_t) * 0,
-        .methodOptionsOffset     = __builtin_offsetof(struct OSClassDescription_IOMemoryMap_t, methodOptions),
-        .metaMethodOptionsSize   = 2 * sizeof(uint64_t) * 0,
-        .metaMethodOptionsOffset = __builtin_offsetof(struct OSClassDescription_IOMemoryMap_t, metaMethodOptions),
-        .queueNamesSize       = sizeof(IOMemoryMap_QueueNames),
-        .queueNamesOffset     = __builtin_offsetof(struct OSClassDescription_IOMemoryMap_t, queueNames),
-        .methodNamesSize         = sizeof(IOMemoryMap_MethodNames),
-        .methodNamesOffset       = __builtin_offsetof(struct OSClassDescription_IOMemoryMap_t, methodNames),
-        .metaMethodNamesSize     = sizeof(IOMemoryMapMetaClass_MethodNames),
-        .metaMethodNamesOffset   = __builtin_offsetof(struct OSClassDescription_IOMemoryMap_t, metaMethodNames),
-        .flags                   = 1*kOSClassCanRemote,
-    },
-    .methodOptions =
-    {
-    },
-    .metaMethodOptions =
-    {
-    },
-    .queueNames      = IOMemoryMap_QueueNames,
-    .methodNames     = IOMemoryMap_MethodNames,
-    .metaMethodNames = IOMemoryMapMetaClass_MethodNames,
-};
-
-OSMetaClass * gIOMemoryMapMetaClass;
-
-static kern_return_t
-IOMemoryMap_New(OSMetaClass * instance);
-
-const OSClassLoadInformation
-IOMemoryMap_Class = 
-{
-    .description       = &OSClassDescription_IOMemoryMap.base,
-    .metaPointer       = &gIOMemoryMapMetaClass,
-    .version           = 1,
-    .instanceSize      = sizeof(IOMemoryMap),
-
-    .New               = &IOMemoryMap_New,
-};
-
-extern const void * const
-gIOMemoryMap_Declaration;
-const void * const
-gIOMemoryMap_Declaration
-__attribute__((visibility("hidden"),section("__DATA_CONST,__osclassinfo,regular,no_dead_strip")))
-    = &IOMemoryMap_Class;
-
-static kern_return_t
-IOMemoryMap_New(OSMetaClass * instance)
-{
-    if (!new(instance) IOMemoryMapMetaClass) return (kIOReturnNoMemory);
-    return (kIOReturnSuccess);
-}
-
-kern_return_t
-IOMemoryMapMetaClass::New(OSObject * instance)
-{
-    if (!new(instance) IOMemoryMap) return (kIOReturnNoMemory);
-    return (kIOReturnSuccess);
-}
-
-#endif /* !KERNEL */
-
 kern_return_t
 IOMemoryMap::Dispatch(const IORPC rpc)
 {
@@ -194,12 +92,6 @@ IOMemoryMap::_Dispatch(IOMemoryMap * self, const IORPC rpc)
 kern_return_t
 IOMemoryMap::MetaClass::Dispatch(const IORPC rpc)
 {
-#else /* KERNEL */
-kern_return_t
-IOMemoryMapMetaClass::Dispatch(const IORPC rpc)
-{
-#endif /* !KERNEL */
-
     kern_return_t ret = kIOReturnUnsupported;
     IORPCMessage * msg = IORPCMessageFromMach(rpc.message, false);
 
@@ -213,6 +105,7 @@ IOMemoryMapMetaClass::Dispatch(const IORPC rpc)
 
     return (ret);
 }
+#endif /* KERNEL */
 
 kern_return_t
 IOMemoryMap::_CopyState(
@@ -246,9 +139,9 @@ IOMemoryMap::_CopyState(
 
     msg->__object__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    if (supermethod) ret = supermethod((OSObject *)this, rpc);
-    else             ret = ((OSObject *)this)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    if (supermethod) ret = supermethod((OSObject *)this, _rpc);
+    else             ret = ((OSObject *)this)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -264,7 +157,6 @@ IOMemoryMap::_CopyState(
     {
         if (state) *state = rpl->content.state;
     }
-
 
     return (ret);
 }
@@ -293,6 +185,4 @@ IOMemoryMap::_CopyState_Invoke(const IORPC _rpc,
 
     return (ret);
 }
-
-
 

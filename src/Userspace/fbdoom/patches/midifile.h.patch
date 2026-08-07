@@ -1,0 +1,10 @@
+--- a/midifile.h	1969-12-31 19:00:01.000000000 -0500
++++ b/midifile.h	2026-07-19 07:16:26.850986730 -0400
+@@ -53,6 +53,7 @@
+     MIDI_CONTROLLER_PORTAMENTO      = 0x05,
+     MIDI_CONTROLLER_DATA_ENTRY_MSB  = 0x06,
+     MIDI_CONTROLLER_VOLUME_MSB      = 0x07,
++    MIDI_CONTROLLER_MAIN_VOLUME     = 0x07, /* old name, used by fbDOOM's i_oplmusic.c */
+     MIDI_CONTROLLER_PAN             = 0x0A,
+     MIDI_CONTROLLER_EXPRESSION      = 0x0B,
+ 

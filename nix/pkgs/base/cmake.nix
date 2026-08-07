@@ -1,0 +1,111 @@
+{ stdenv
+, lib
+, requireFile
+, cmake
+, ninja
+, darwinCrossToolchain
+, nativeLd
+, libSystem
+, libcxxDylib
+, libcxxabiDylib
+, targetTriple ? "x86_64-apple-darwin20.4"
+}:
+
+let
+  targetInfo = import ../../lib/target-info.nix targetTriple;
+
+  sdkTarball = requireFile {
+    name = "MacOSX11.3.sdk.tar.xz";
+    sha256 = "9adc1373d3879e1973d28ad9f17c9051b02931674a3ec2a2498128989ece2cb1";
+    message = ''
+      MacOSX11.3.sdk.tar.xz (Apple SDK, proprietary - not fetchable/redistributable)
+      is not yet in your Nix store. Register your local copy with:
+        nix-store --add-fixed sha256 /path/to/MacOSX11.3.sdk.tar.xz
+    '';
+  };
+in
+stdenv.mkDerivation {
+  pname = "openosx-cmake";
+  inherit (cmake) version src;
+
+  nativeBuildInputs = [ cmake ninja ];
+
+  configurePhase = ''
+    runHook preConfigure
+
+    mkdir -p sdk
+    tar xf ${sdkTarball} -C sdk
+    export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
+
+    cat > openosx-toolchain.cmake <<EOF
+set(CMAKE_SYSTEM_NAME Darwin)
+set(CMAKE_SYSTEM_PROCESSOR ${targetInfo.mesonCpu})
+set(CMAKE_OSX_SYSROOT "$DARWIN_SDK_ROOT")
+set(CMAKE_OSX_DEPLOYMENT_TARGET "11.0")
+
+set(CMAKE_C_COMPILER "${darwinCrossToolchain}/bin/${targetTriple}-clang")
+set(CMAKE_CXX_COMPILER "${darwinCrossToolchain}/bin/${targetTriple}-clang++")
+set(CMAKE_AR "${darwinCrossToolchain}/bin/${targetTriple}-ar")
+set(CMAKE_RANLIB "${darwinCrossToolchain}/bin/${targetTriple}-ranlib")
+set(CMAKE_STRIP "${darwinCrossToolchain}/bin/${targetTriple}-strip")
+set(CMAKE_INSTALL_NAME_TOOL "${darwinCrossToolchain}/bin/${targetTriple}-install_name_tool")
+
+set(_pd_common "-isysroot $DARWIN_SDK_ROOT -mmacosx-version-min=11.0 -Qunused-arguments -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector -I${libSystem}/usr/include")
+set(CMAKE_C_FLAGS_INIT "\''${_pd_common}")
+set(CMAKE_CXX_FLAGS_INIT "\''${_pd_common} -nostdinc++ -I${libcxxDylib}/usr/include/c++/v1")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-isysroot $DARWIN_SDK_ROOT -mmacosx-version-min=11.0 -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -L${libcxxDylib}/usr/lib -L${libcxxabiDylib}/usr/lib -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-dylinker_install_name,/usr/lib/dyld -Wl,-platform_version,macos,11.0,11.5 -lc++ -lc++abi -lSystem")
+
+set(CMAKE_FIND_ROOT_PATH "$DARWIN_SDK_ROOT" "${libSystem}")
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+EOF
+
+    # KWSys probes several libc features with try_run, which cannot run a
+    # Darwin binary here. These are the answers for this target.
+    cmake -S . -B build -G Ninja \
+      -DCMAKE_TOOLCHAIN_FILE="$PWD/openosx-toolchain.cmake" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DBUILD_TESTING=OFF \
+      -DBUILD_CursesDialog=OFF \
+      -DBUILD_QtDialog=OFF \
+      -DCMAKE_USE_OPENSSL=OFF \
+      -DCMake_BUILD_LTO=OFF \
+      -DKWSYS_LFS_WORKS=0 \
+      -DKWSYS_CXX_HAS_SETENV=1 \
+      -DKWSYS_CXX_HAS_UNSETENV=1 \
+      -DKWSYS_CXX_HAS_ENVIRON_IN_STDLIB_H=1 \
+      -DKWSYS_CXX_HAS_UTIMENSAT=1 \
+      -DKWSYS_CXX_HAS_UTIMES=1 \
+      -DKWSYS_STL_HAS_WSTRING=1 \
+      -DHAVE_POLL_FINE_EXITCODE=0 \
+      -DENABLE_ACL=OFF \
+      -DHAVE_SYS_ACL_H=0 \
+      -DHAVE_COPYFILE_H=0
+
+    runHook postConfigure
+  '';
+
+  buildPhase = ''
+    runHook preBuild
+    ninja -C build
+    runHook postBuild
+  '';
+
+  installPhase = ''
+    runHook preInstall
+    DESTDIR="$out" ninja -C build install
+    runHook postInstall
+  '';
+
+  dontFixup = true;
+
+  meta = with lib; {
+    description = "CMake, cross-built to run on OpenOSX";
+    homepage = "https://cmake.org/";
+    license = licenses.bsd3;
+    platforms = platforms.linux;
+  };
+}

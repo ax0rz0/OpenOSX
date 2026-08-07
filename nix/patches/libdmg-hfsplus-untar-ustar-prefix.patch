@@ -1,0 +1,56 @@
+hfs_untar: support the ustar prefix field (paths > 100 chars) and stop
+treating the raw 100-byte name field as a NUL-terminated string.  Without
+this, image staging paths like usr/share/X11/xkb/symbols/... are silently
+truncated (or read past the field) when packed with tar --format=ustar.
+
+Also wire hfs_untar into the hfsplus CLI: the library function exists but
+this fork's hfs.c never dispatches "untar" (unknown subcommands fall
+through SILENTLY with exit status 0).
+
+--- a/hfs/hfs.c
++++ b/hfs/hfs.c
+@@ -291,6 +291,16 @@ int main(int argc, const char *argv[]) {
+ 	if(argc > 1) {
+ 		if(strcmp(argv[2], "ls") == 0) {
+ 			cmd_ls(volume, argc - 2, argv + 2);
++		} else if(strcmp(argv[2], "untar") == 0) {
++			if(argc > 3) {
++				AbstractFile* tarFile = createAbstractFileFromFile(fopen(argv[3], "rb"));
++				if(tarFile == NULL) {
++					fprintf(stderr, "error: Cannot open tar file.\n");
++					exit(1);
++				}
++				hfs_untar(volume, tarFile);
++				tarFile->close(tarFile);
++			}
+ 		} else if(strcmp(argv[2], "cat") == 0) {
+ 			cmd_cat(volume, argc - 2, argv + 2);
+ 		} else if(strcmp(argv[2], "mv") == 0) {
+
+--- a/hfs/hfslib.c
++++ b/hfs/hfslib.c
+@@ -694,6 +694,7 @@ void hfs_untar(Volume* volume, AbstractFile* tarFile) {
+
+ 		uint32_t mode = 0;
+ 		char* fileName = NULL;
++		char nameBuf[360];
+ 		const char* target = NULL;
+ 		uint32_t type = 0;
+ 		uint32_t size;
+@@ -701,7 +702,15 @@ void hfs_untar(Volume* volume, AbstractFile* tarFile) {
+ 		uint32_t gid;
+
+ 		sscanf(&block[100], "%o", &mode);
+-		fileName = &block[0];
++		/* ustar: name occupies 100 bytes and is NOT NUL-terminated when
++		 * full; long paths carry their leading components in the
++		 * 155-byte prefix field at offset 345. */
++		if(memcmp(&block[257], "ustar", 5) == 0 && block[345] != '\0') {
++			snprintf(nameBuf, sizeof(nameBuf), "%.155s/%.100s", &block[345], &block[0]);
++		} else {
++			snprintf(nameBuf, sizeof(nameBuf), "%.100s", &block[0]);
++		}
++		fileName = nameBuf;
+ 		sscanf(&block[156], "%o", &type);
+ 		target = &block[157];
+ 		sscanf(&block[124], "%o", &size);

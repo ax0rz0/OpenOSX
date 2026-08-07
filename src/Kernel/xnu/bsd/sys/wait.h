@@ -184,6 +184,17 @@ typedef enum {
 #define WAIT_MYPGRP     0       /* any process in my process group */
 
 #include <machine/endian.h>
+#ifndef __DARWIN_BYTE_ORDER
+#if defined(__LITTLE_ENDIAN__) || defined(__i386__) || defined(__x86_64__) || defined(__arm__) || defined(__arm64__)
+#define __DARWIN_LITTLE_ENDIAN  1234
+#define __DARWIN_BIG_ENDIAN     4321
+#define __DARWIN_BYTE_ORDER     __DARWIN_LITTLE_ENDIAN
+#elif defined(__BIG_ENDIAN__)
+#define __DARWIN_LITTLE_ENDIAN  1234
+#define __DARWIN_BIG_ENDIAN     4321
+#define __DARWIN_BYTE_ORDER     __DARWIN_BIG_ENDIAN
+#endif
+#endif
 
 /*
  * Deprecated:

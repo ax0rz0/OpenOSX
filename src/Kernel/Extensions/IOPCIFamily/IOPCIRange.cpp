@@ -393,6 +393,14 @@ bool IOPCIRangeListAllocateSubRange(IOPCIRange * headRange,
 				// reallocate in place - treat as free
                 range = range->nextSubRange;
             }
+			// OpenOSX: on real hardware ACPI always seeds this bridge's
+			// sub-range list with a terminating size==0 sentinel, so this
+			// dereference is normally safe. OpenOSX has no ACPI-derived
+			// bus-number windows, so a bridge's list can be genuinely empty
+			// here (NULL) once MSI resolution triggers a rescan of it -
+			// treat that as "no free space in this headRange" instead of
+			// crashing.
+			if (!range) break;
 			endPos = range->start;
 
 			// [pos,endPos] is free

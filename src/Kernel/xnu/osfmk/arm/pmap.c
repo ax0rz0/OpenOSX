@@ -8273,6 +8273,12 @@ pmap_enter_pte(pmap_t pmap, pt_entry_t *pte_p, pt_entry_t pte, vm_map_address_t 
 		PMAP_UPDATE_TLBS(pmap, v, v + (pt_attr_page_size(pt_attr) * PAGE_RATIO), false);
 	} else {
 		WRITE_PTE(pte_p, pte);
+		/*
+		 * OpenOSX: A translation fault can be retained in the hardware TLB. When
+		 * fault handling installs the first mapping, invalidate that cached
+		 * negative translation before the faulting access is retried.
+		 */
+		flush_mmu_tlb();
 		__builtin_arm_isb(ISB_SY);
 	}
 
@@ -8808,6 +8814,11 @@ Pmap_enter_loop:
 		}
 #endif
 
+#if defined(QEMUVIRT)
+	/* QEMU virt uses the ARMv8 48-bit output-address format. Keep the
+	 * descriptor attributes, but force bits 47:12 to the requested PA. */
+	pte = (pte & ~0x0000FFFFFFFFF000ULL) | ((uint64_t)pa & 0x0000FFFFFFFFF000ULL);
+#endif
 
 		if (pte == *pte_p) {
 			/*
@@ -15128,6 +15139,19 @@ pmap_lookup_in_static_trust_cache(const uint8_t cdhash[CS_CDHASH_LEN])
 #endif
 }
 
+/*
+ * OpenOSX: genuinely missing from this arm pmap.c (present in the
+ * x86_64 pmap.c equivalent, just under a plain simple_lock instead of the
+ * PPL's pmap_simple_lock - see osfmk/x86_64/pmap.c's
+ * pmap_set_compilation_service_cdhash for the sibling definition) - the
+ * two functions below reference these globals unconditionally with no
+ * declaration anywhere in this file or a header.
+ */
+MARK_AS_PMAP_DATA SIMPLE_LOCK_DECLARE(pmap_compilation_service_cdhash_lock, 0);
+MARK_AS_PMAP_DATA uint8_t pmap_compilation_service_cdhash[CS_CDHASH_LEN] = { 0 };
+
+bool pmap_cs_log_hacks = false;
+
 MARK_AS_PMAP_TEXT static void
 pmap_set_compilation_service_cdhash_internal(const uint8_t cdhash[CS_CDHASH_LEN])
 {
@@ -15174,6 +15198,19 @@ pmap_match_compilation_service_cdhash(const uint8_t cdhash[CS_CDHASH_LEN])
 #else
 	return pmap_match_compilation_service_cdhash_internal(cdhash);
 #endif
+}
+
+/*
+ * OpenOSX: called unconditionally from vm_map.c's vm_map_cs_wx_enable(),
+ * but (unlike its x86_64 pmap.c sibling, which has always had a plain
+ * "unsupported on this architecture" stub) never defined anywhere in this
+ * arm pmap.c for a config without XNU_MONITOR (PPL).
+ */
+kern_return_t
+pmap_cs_allow_invalid(__unused pmap_t pmap)
+{
+	// Unsupported on this architecture.
+	return KERN_SUCCESS;
 }
 
 MARK_AS_PMAP_TEXT static void

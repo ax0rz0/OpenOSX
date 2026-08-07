@@ -51,6 +51,31 @@ __BEGIN_DECLS
 #include <libkern/prelink.h>
 #include <stdarg.h>
 
+/*
+ * Resident (permanent kernel text) __cxa_atexit stub.  Kexts and the kernel's
+ * own C++ static constructors reference __cxa_atexit to register static
+ * destructors; we never tear those objects down individually, so a no-op that
+ * returns success is sufficient.  This MUST live in permanent text (not the
+ * __KLD segment, which is freed by OSKextRemoveKextBootstrap), otherwise a kext
+ * whose constructors run after bootstrap teardown would call a freed page.
+ *
+ * Nothing in the kernel itself references it (only kexts do, resolved later at
+ * kernel-collection link time), so it must be an exported symbol (see
+ * config/Libkern.exports) or a RELEASE build strips it: nmedit demotes every
+ * non-exported global to a local and strip -x then removes it.  When that
+ * happens the KC linker cannot resolve the kext import and binds it to the
+ * _panic trampoline, so the first kext static constructor "calls __cxa_atexit"
+ * and instead panics with a garbage format string.  "used" + default
+ * visibility additionally keep -dead_strip from dropping it before nmedit runs.
+ */
+__attribute__((used, visibility("default")))
+int
+__cxa_atexit(void (*func)(void))
+{
+	(void)func;
+	return 0;
+}
+
 #if KASAN
 #include <san/kasan.h>
 #endif

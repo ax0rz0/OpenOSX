@@ -68,8 +68,22 @@
 // __pthread_tsd_end is the end of dynamic keys.
 
 static const int __pthread_tsd_first = __TSD_RESERVED_MAX + 1;
-static const int __pthread_tsd_start = _INTERNAL_POSIX_THREAD_KEYS_MAX;
+/* OpenOSX: dyld static-links its own copy of this key allocator
+ * (pthread_static). Its bookkeeping table is separate from libSystem's
+ * libpthread, but both hand out slots from the same per-thread TSD array, so
+ * both allocating "first free slot from 256" gives dyld (dlerror buffer) and
+ * libSystem (e.g. xlocale) the SAME slot - dyld then reads foreign data and
+ * free()s it ("pointer being freed was not allocated" abort on any failed
+ * dlopen, e.g. tcc's speculative dlopen of libxcselect). Partition the
+ * dynamic range: dyld's copy allocates only from the top 32 slots, the
+ * in-process libpthread from the rest. */
+#ifdef PD_PTHREAD_TSD_DYLD_RANGE
+static const int __pthread_tsd_start = _INTERNAL_POSIX_THREAD_KEYS_END - 32;
 static const int __pthread_tsd_end = _INTERNAL_POSIX_THREAD_KEYS_END;
+#else
+static const int __pthread_tsd_start = _INTERNAL_POSIX_THREAD_KEYS_MAX;
+static const int __pthread_tsd_end = _INTERNAL_POSIX_THREAD_KEYS_END - 32;
+#endif
 
 static int __pthread_tsd_max = __pthread_tsd_first;
 static _pthread_lock __pthread_tsd_lock = _PTHREAD_LOCK_INITIALIZER;

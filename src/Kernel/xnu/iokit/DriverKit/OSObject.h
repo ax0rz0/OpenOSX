@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from OSObject.iig */
+/* iig-lite generated from OSObject.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* OSObject.iig:1-145 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -146,17 +145,123 @@ class IODispatchQueue;
 typedef char IODispatchQueueName[256];
 
 #if __IIG
-/* OSObject.iig:160-162 */
-#endif /* __IIG */
-
-
-/* source class OSObject OSObject.iig:163-193 */
+/* source class OSMetaClassBase OSObject.iig:146-159 */
 
 #if __DOCUMENTATION__
 #define KERNEL IIG_KERNEL
 
+class OSMetaClassBase
+{
+	virtual const OSMetaClass *
+	getMetaClass() const LOCALONLY;
+
+    virtual void
+    retain() const LOCALONLY;
+
+    virtual void
+    release() const LOCALONLY;
+
+	virtual bool
+    isEqualTo(const OSMetaClassBase * anObject) const LOCALONLY;
+};
+
+#undef KERNEL
+#else /* __DOCUMENTATION__ */
+
+/* generated class OSMetaClassBase OSObject.iig:146-159 */
+
+
+#define OSMetaClassBase_Methods \
+\
+public:\
+\
+    virtual kern_return_t\
+    Dispatch(const IORPC rpc) APPLE_KEXT_OVERRIDE;\
+\
+    static kern_return_t\
+    _Dispatch(OSMetaClassBase * self, const IORPC rpc);\
+\
+\
+protected:\
+    /* _Impl methods */\
+\
+\
+public:\
+    /* _Invoke methods */\
+\
+
+
+#define OSMetaClassBase_KernelMethods \
+\
+protected:\
+    /* _Impl methods */\
+\
+
+
+#define OSMetaClassBase_VirtualMethods \
+\
+public:\
+\
+    virtual const OSMetaClass *\
+    getMetaClass(\
+) APPLE_KEXT_OVERRIDE;\
+\
+    virtual void\
+    retain(\
+) APPLE_KEXT_OVERRIDE;\
+\
+    virtual void\
+    release(\
+) APPLE_KEXT_OVERRIDE;\
+\
+    virtual bool\
+    isEqualTo(\
+        const OSMetaClassBase * anObject) APPLE_KEXT_OVERRIDE;\
+\
+
+
+#if !KERNEL
+
+class OSMetaClassBaseInterface : public OSInterface
+{
+public:
+};
+
+struct OSMetaClassBase_IVars;
+struct OSMetaClassBase_LocalIVars;
+
+class OSMetaClassBase : public , public OSMetaClassBaseInterface
+{
+public:
+    union
+    {
+        OSMetaClassBase_IVars * ivars;
+        OSMetaClassBase_LocalIVars * lvars;
+    };
+    using super = ;
+
+    OSMetaClassBase_Methods
+    OSMetaClassBase_VirtualMethods
+};
+
+#endif /* !KERNEL */
+
+#endif /* !__DOCUMENTATION__ */
+
+
+#endif /* __IIG */
+
+
 /*!
+                   
+                                      
+        
 */
+
+/* source class OSObject OSObject.iig:169-194 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
 
 class OSObject : public OSMetaClassBase
 {
@@ -188,17 +293,17 @@ public:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class OSObject OSObject.iig:163-193 */
+/* generated class OSObject OSObject.iig:169-194 */
 
-#define OSObject_SetDispatchQueue_ID            0xe608ae8273dae1bcULL
-#define OSObject_CopyDispatchQueue_ID            0x95115b48fd29f7c9ULL
+#define OSObject_SetDispatchQueue_ID            0x49684e305bd0507cULL
+#define OSObject_CopyDispatchQueue_ID            0xfdac32ac5a6909b5ULL
 
 #define OSObject_SetDispatchQueue_Args \
-        const char * name, \
+        const IODispatchQueueName name, \
         IODispatchQueue * queue
 
 #define OSObject_CopyDispatchQueue_Args \
-        const char * name, \
+        const IODispatchQueueName name, \
         IODispatchQueue ** queue
 
 #define OSObject_Methods \
@@ -213,13 +318,13 @@ public:\
 \
     kern_return_t\
     SetDispatchQueue(\
-        const IODispatchQueueName name,\
+        const char * name,\
         IODispatchQueue * queue,\
         OSDispatchMethod supermethod = NULL);\
 \
     kern_return_t\
     CopyDispatchQueue(\
-        const IODispatchQueueName name,\
+        const char * name,\
         IODispatchQueue ** queue,\
         OSDispatchMethod supermethod = NULL);\
 \
@@ -250,6 +355,12 @@ public:\
 protected:\
     /* _Impl methods */\
 \
+    kern_return_t\
+    SetDispatchQueue_Impl(OSObject_SetDispatchQueue_Args);\
+\
+    kern_return_t\
+    CopyDispatchQueue_Impl(OSObject_CopyDispatchQueue_Args);\
+\
 
 
 #define OSObject_VirtualMethods \
@@ -266,41 +377,19 @@ public:\
 \
     virtual void\
     retain(\
-) const APPLE_KEXT_OVERRIDE;\
+) APPLE_KEXT_OVERRIDE;\
 \
     virtual void\
     release(\
-) const APPLE_KEXT_OVERRIDE;\
+) APPLE_KEXT_OVERRIDE;\
 \
 
-
-#if !KERNEL
-
-extern OSMetaClass          * gOSObjectMetaClass;
-extern const OSClassLoadInformation OSObject_Class;
-
-class OSObjectMetaClass : public OSMetaClass
-{
-public:
-    virtual kern_return_t
-    New(OSObject * instance) override;
-    virtual kern_return_t
-    Dispatch(const IORPC rpc) override;
-};
-
-#endif /* !KERNEL */
 
 #if !KERNEL
 
 class OSObjectInterface : public OSInterface
 {
 public:
-    virtual bool
-    init() = 0;
-
-    virtual void
-    free() = 0;
-
 };
 
 struct OSObject_IVars;
@@ -308,42 +397,23 @@ struct OSObject_LocalIVars;
 
 class OSObject : public OSMetaClassBase, public OSObjectInterface
 {
-#if !KERNEL
-    friend class OSObjectMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
 public:
-#ifdef OSObject_DECLARE_IVARS
-OSObject_DECLARE_IVARS
-#else /* OSObject_DECLARE_IVARS */
     union
     {
         OSObject_IVars * ivars;
         OSObject_LocalIVars * lvars;
     };
-#endif /* OSObject_DECLARE_IVARS */
-#endif /* !KERNEL */
-
-#if !KERNEL
-    static OSMetaClass *
-    sGetMetaClass() { return gOSObjectMetaClass; };
-#endif /* KERNEL */
-
     using super = OSMetaClassBase;
 
-#if !KERNEL
     OSObject_Methods
     OSObject_VirtualMethods
-#endif /* !KERNEL */
-
 };
-#endif /* !KERNEL */
 
+#endif /* !KERNEL */
 
 #endif /* !__DOCUMENTATION__ */
 
-/* OSObject.iig:195- */
+
 
 #define DEFN(classname, name)                                       \
 name ## _Impl(classname ## _ ## name ## _Args)

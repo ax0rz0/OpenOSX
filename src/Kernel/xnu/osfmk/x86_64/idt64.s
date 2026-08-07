@@ -694,6 +694,13 @@ L_dispatch_from_user_no_push_rax:
 	mov	16(%rax), %rax	/* Offset of per-CPU shadow */
 
 #if DEVELOPMENT || DEBUG
+	/* OpenOSX bring-up: the cacheline-stash diagnostic (do_cacheline_stash)
+	 * dereferences the faulting RIP to capture the instruction bytes. Its
+	 * fault-recovery only catches a #PF during that read, NOT the #GP raised
+	 * when the faulting RIP is non-canonical -- which is exactly what happens
+	 * for dyld's first fault here, so the diagnostic itself panics and masks
+	 * the real fault. Disabled during bring-up. */
+#if 0
 	/* Stash the cacheline for #UD, #PF, and #GP */
 	cmpl	$(T_INVALID_OPCODE), 8+ISF64_TRAPNO(%rsp)
 	je	do_cacheline_stash
@@ -701,6 +708,7 @@ L_dispatch_from_user_no_push_rax:
 	je	do_cacheline_stash
 	cmpl	$(T_GENERAL_PROTECTION), 8+ISF64_TRAPNO(%rsp)
 	je	do_cacheline_stash
+#endif
 #endif
 
 L_dispatch_kgsb:

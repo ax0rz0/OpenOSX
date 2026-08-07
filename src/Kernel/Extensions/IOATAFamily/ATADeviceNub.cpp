@@ -330,12 +330,17 @@ ATADeviceNub::getDeviceID( void )
 	desc->prepare(kIODirectionIn);
 	// tell the bus to exec the command
 	DLOG("Sending ID command to bus controller\n");	
-	IOReturn err =	executeCommand( cmd);	
+	kprintf("ATANUB: unit %d issuing IDENTIFY (cmd 0x%x), waiting...\n",
+	        (int)_unitNumber, _deviceType == kATADeviceType ? 0xEC : 0xA1);
+	IOReturn err =	executeCommand( cmd);
 	DLOG("Command returned error = %ld\n",(long int)err );
+	kprintf("ATANUB: unit %d executeCommand err=0x%x\n", (int)_unitNumber, err);
 	if(!err)
 	{
 		completion->sync->wait();
 	}
+	kprintf("ATANUB: unit %d IDENTIFY done, cmdResult=0x%x\n",
+	        (int)_unitNumber, cmd->getResult());
 	
 	desc->complete( kIODirectionIn );
 		

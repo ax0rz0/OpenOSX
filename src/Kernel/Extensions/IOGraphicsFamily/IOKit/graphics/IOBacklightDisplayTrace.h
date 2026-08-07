@@ -1,0 +1,43 @@
+//
+//  IOBacklightDisplayTrace.hpp
+//  IOGraphics
+//
+//  Created by Godfrey van der Linden on 19-8-8.
+//
+
+#ifndef _IOKIT_GRAPHICS_IOBACKLIGHTDISPLAYTRACE_H
+#define _IOKIT_GRAPHICS_IOBACKLIGHTDISPLAYTRACE_H
+
+#include <IOKit/graphics/GTraceTypes.hpp>
+
+#ifndef ABLTRACE_RAW
+#define ABLTRACE_RAW(args...)
+#endif
+
+#ifndef ABL_SOURCE_IOD_ADDPARAMETERHANDLER
+#define ABL_SOURCE_IOD_ADDPARAMETERHANDLER 0
+#endif
+#ifndef ABL_SOURCE_IOD_SETPARAMETER
+#define ABL_SOURCE_IOD_SETPARAMETER 0
+#endif
+#ifndef ABL_SOURCE_IOD_DOINTEGERSET
+#define ABL_SOURCE_IOD_DOINTEGERSET 0
+#endif
+#ifndef ABL_SOURCE_IOD_DOUPDATE
+#define ABL_SOURCE_IOD_DOUPDATE 0
+#endif
+
+#ifndef ABL_SET_BRIGHTNESS_PROBE
+#define ABL_SET_BRIGHTNESS_PROBE 0
+#endif
+#ifndef ABL_SET_BRIGHTNESS
+#define ABL_SET_BRIGHTNESS 0
+#endif
+#ifndef ABL_COMMIT
+#define ABL_COMMIT 0
+#endif
+#ifndef ABL_SET_DISPLAY_POWER
+#define ABL_SET_DISPLAY_POWER 0
+#endif
+
+#endif // _IOKIT_GRAPHICS_IOBACKLIGHTDISPLAYTRACE_H

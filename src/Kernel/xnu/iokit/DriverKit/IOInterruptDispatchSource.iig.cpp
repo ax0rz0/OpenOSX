@@ -1,7 +1,7 @@
-/* iig(DriverKit-187 Aug  3 2021 18:40:13) generated from IOInterruptDispatchSource.iig */
+/* iig-lite generated from IOInterruptDispatchSource.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-#undef	IIG_IMPLEMENTATION
-#define	IIG_IMPLEMENTATION 	IOInterruptDispatchSource.iig
+#undef IIG_IMPLEMENTATION
+#define IIG_IMPLEMENTATION 	IOInterruptDispatchSource.iig
 
 #if KERNEL
 #include <libkern/c++/OSString.h>
@@ -11,13 +11,15 @@
 #include <DriverKit/IOReturn.h>
 #include <DriverKit/IOInterruptDispatchSource.h>
 
-
 #if __has_builtin(__builtin_load_member_function_pointer)
 #define SimpleMemberFunctionCast(cfnty, self, func) (cfnty)__builtin_load_member_function_pointer(self, func)
 #else
 #define SimpleMemberFunctionCast(cfnty, self, func) ({ union { typeof(func) memfun; cfnty cfun; } pair; pair.memfun = func; pair.cfun; })
 #endif
 
+#if KERNEL
+OSDefineMetaClassAndStructors(IOInterruptDispatchSource, IODispatchSource)
+#endif /* KERNEL */
 
 struct IOInterruptDispatchSource_Create_Msg_Content
 {
@@ -54,7 +56,6 @@ struct IOInterruptDispatchSource_Create_Rpl
 #pragma pack()
 #define IOInterruptDispatchSource_Create_Rpl_ObjRefs (1)
 
-
 typedef union
 {
     const IORPC rpc;
@@ -88,7 +89,7 @@ struct IOInterruptDispatchSource_GetInterruptType_Msg
 struct IOInterruptDispatchSource_GetInterruptType_Rpl_Content
 {
     IORPCMessage __hdr;
-    unsigned long long  interruptType;
+    uint64_t  interruptType;
 };
 #pragma pack(4)
 struct IOInterruptDispatchSource_GetInterruptType_Rpl
@@ -98,7 +99,6 @@ struct IOInterruptDispatchSource_GetInterruptType_Rpl
 };
 #pragma pack()
 #define IOInterruptDispatchSource_GetInterruptType_Rpl_ObjRefs (0)
-
 
 typedef union
 {
@@ -141,7 +141,6 @@ struct IOInterruptDispatchSource_SetHandler_Rpl
 };
 #pragma pack()
 #define IOInterruptDispatchSource_SetHandler_Rpl_ObjRefs (0)
-
 
 typedef union
 {
@@ -187,7 +186,6 @@ struct IOInterruptDispatchSource_InterruptOccurred_Rpl
 #pragma pack()
 #define IOInterruptDispatchSource_InterruptOccurred_Rpl_ObjRefs (0)
 
-
 typedef union
 {
     const IORPC rpc;
@@ -200,111 +198,6 @@ typedef union
     };
 }
 IOInterruptDispatchSource_InterruptOccurred_Invocation;
-#if !KERNEL
-extern OSMetaClass * gOSContainerMetaClass;
-extern OSMetaClass * gOSDataMetaClass;
-extern OSMetaClass * gOSNumberMetaClass;
-extern OSMetaClass * gOSBooleanMetaClass;
-extern OSMetaClass * gOSDictionaryMetaClass;
-extern OSMetaClass * gOSArrayMetaClass;
-extern OSMetaClass * gOSStringMetaClass;
-extern OSMetaClass * gIOMemoryDescriptorMetaClass;
-extern OSMetaClass * gIOBufferMemoryDescriptorMetaClass;
-extern OSMetaClass * gIOUserClientMetaClass;
-#endif /* !KERNEL */
-
-#if KERNEL
-OSDefineMetaClassAndStructors(IOInterruptDispatchSource, IODispatchSource);
-#endif /* KERNEL */
-
-#if !KERNEL
-
-#define IOInterruptDispatchSource_QueueNames  ""
-
-#define IOInterruptDispatchSource_MethodNames  ""
-
-#define IOInterruptDispatchSourceMetaClass_MethodNames  ""
-
-struct OSClassDescription_IOInterruptDispatchSource_t
-{
-    OSClassDescription base;
-    uint64_t           methodOptions[2 * 0];
-    uint64_t           metaMethodOptions[2 * 0];
-    char               queueNames[sizeof(IOInterruptDispatchSource_QueueNames)];
-    char               methodNames[sizeof(IOInterruptDispatchSource_MethodNames)];
-    char               metaMethodNames[sizeof(IOInterruptDispatchSourceMetaClass_MethodNames)];
-};
-
-const struct OSClassDescription_IOInterruptDispatchSource_t
-OSClassDescription_IOInterruptDispatchSource =
-{
-    .base =
-    {
-        .descriptionSize         = sizeof(OSClassDescription_IOInterruptDispatchSource_t),
-        .name                    = "IOInterruptDispatchSource",
-        .superName               = "IODispatchSource",
-        .methodOptionsSize       = 2 * sizeof(uint64_t) * 0,
-        .methodOptionsOffset     = __builtin_offsetof(struct OSClassDescription_IOInterruptDispatchSource_t, methodOptions),
-        .metaMethodOptionsSize   = 2 * sizeof(uint64_t) * 0,
-        .metaMethodOptionsOffset = __builtin_offsetof(struct OSClassDescription_IOInterruptDispatchSource_t, metaMethodOptions),
-        .queueNamesSize       = sizeof(IOInterruptDispatchSource_QueueNames),
-        .queueNamesOffset     = __builtin_offsetof(struct OSClassDescription_IOInterruptDispatchSource_t, queueNames),
-        .methodNamesSize         = sizeof(IOInterruptDispatchSource_MethodNames),
-        .methodNamesOffset       = __builtin_offsetof(struct OSClassDescription_IOInterruptDispatchSource_t, methodNames),
-        .metaMethodNamesSize     = sizeof(IOInterruptDispatchSourceMetaClass_MethodNames),
-        .metaMethodNamesOffset   = __builtin_offsetof(struct OSClassDescription_IOInterruptDispatchSource_t, metaMethodNames),
-        .flags                   = 1*kOSClassCanRemote,
-    },
-    .methodOptions =
-    {
-    },
-    .metaMethodOptions =
-    {
-    },
-    .queueNames      = IOInterruptDispatchSource_QueueNames,
-    .methodNames     = IOInterruptDispatchSource_MethodNames,
-    .metaMethodNames = IOInterruptDispatchSourceMetaClass_MethodNames,
-};
-
-OSMetaClass * gIOInterruptDispatchSourceMetaClass;
-
-static kern_return_t
-IOInterruptDispatchSource_New(OSMetaClass * instance);
-
-const OSClassLoadInformation
-IOInterruptDispatchSource_Class = 
-{
-    .description       = &OSClassDescription_IOInterruptDispatchSource.base,
-    .metaPointer       = &gIOInterruptDispatchSourceMetaClass,
-    .version           = 1,
-    .instanceSize      = sizeof(IOInterruptDispatchSource),
-
-    .New               = &IOInterruptDispatchSource_New,
-};
-
-extern const void * const
-gIOInterruptDispatchSource_Declaration;
-const void * const
-gIOInterruptDispatchSource_Declaration
-__attribute__((visibility("hidden"),section("__DATA_CONST,__osclassinfo,regular,no_dead_strip")))
-    = &IOInterruptDispatchSource_Class;
-
-static kern_return_t
-IOInterruptDispatchSource_New(OSMetaClass * instance)
-{
-    if (!new(instance) IOInterruptDispatchSourceMetaClass) return (kIOReturnNoMemory);
-    return (kIOReturnSuccess);
-}
-
-kern_return_t
-IOInterruptDispatchSourceMetaClass::New(OSObject * instance)
-{
-    if (!new(instance) IOInterruptDispatchSource) return (kIOReturnNoMemory);
-    return (kIOReturnSuccess);
-}
-
-#endif /* !KERNEL */
-
 kern_return_t
 IOInterruptDispatchSource::Dispatch(const IORPC rpc)
 {
@@ -319,31 +212,41 @@ IOInterruptDispatchSource::_Dispatch(IOInterruptDispatchSource * self, const IOR
 
     switch (msg->msgid)
     {
+#if KERNEL
         case IOInterruptDispatchSource_SetHandler_ID:
         {
             ret = IOInterruptDispatchSource::SetHandler_Invoke(rpc, self, SimpleMemberFunctionCast(IOInterruptDispatchSource::SetHandler_Handler, *self, &IOInterruptDispatchSource::SetHandler_Impl));
             break;
         }
+#endif /* !KERNEL */
+#if KERNEL
         case IODispatchSource_SetEnableWithCompletion_ID:
         {
             ret = IODispatchSource::SetEnableWithCompletion_Invoke(rpc, self, SimpleMemberFunctionCast(IODispatchSource::SetEnableWithCompletion_Handler, *self, &IOInterruptDispatchSource::SetEnableWithCompletion_Impl));
             break;
         }
+#endif /* !KERNEL */
+#if KERNEL
         case IODispatchSource_Cancel_ID:
         {
             ret = IODispatchSource::Cancel_Invoke(rpc, self, SimpleMemberFunctionCast(IODispatchSource::Cancel_Handler, *self, &IOInterruptDispatchSource::Cancel_Impl));
             break;
         }
+#endif /* !KERNEL */
+#if KERNEL
         case IODispatchSource_CheckForWork_ID:
         {
             ret = IODispatchSource::CheckForWork_Invoke(rpc, self, SimpleMemberFunctionCast(IODispatchSource::CheckForWork_Handler, *self, &IOInterruptDispatchSource::CheckForWork_Impl));
             break;
         }
+#endif /* !KERNEL */
+#if KERNEL
         case IOInterruptDispatchSource_InterruptOccurred_ID:
         {
             ret = IOInterruptDispatchSource::InterruptOccurred_Invoke(rpc, self, SimpleMemberFunctionCast(IOInterruptDispatchSource::InterruptOccurred_Handler, *self, &IOInterruptDispatchSource::InterruptOccurred_Impl));
             break;
         }
+#endif /* !KERNEL */
 
         default:
             ret = IODispatchSource::_Dispatch(self, rpc);
@@ -357,27 +260,14 @@ IOInterruptDispatchSource::_Dispatch(IOInterruptDispatchSource * self, const IOR
 kern_return_t
 IOInterruptDispatchSource::MetaClass::Dispatch(const IORPC rpc)
 {
-#else /* KERNEL */
-kern_return_t
-IOInterruptDispatchSourceMetaClass::Dispatch(const IORPC rpc)
-{
-#endif /* !KERNEL */
-
     kern_return_t ret = kIOReturnUnsupported;
     IORPCMessage * msg = IORPCMessageFromMach(rpc.message, false);
 
     switch (msg->msgid)
     {
-#if KERNEL
-        case IOInterruptDispatchSource_Create_ID:
-            ret = IOInterruptDispatchSource::Create_Invoke(rpc, &IOInterruptDispatchSource::Create_Impl);
-            break;
-#endif /* !KERNEL */
-#if KERNEL
         case IOInterruptDispatchSource_GetInterruptType_ID:
             ret = IOInterruptDispatchSource::GetInterruptType_Invoke(rpc, &IOInterruptDispatchSource::GetInterruptType_Impl);
             break;
-#endif /* !KERNEL */
 
         default:
             ret = OSMetaClassBase::Dispatch(rpc);
@@ -386,9 +276,10 @@ IOInterruptDispatchSourceMetaClass::Dispatch(const IORPC rpc)
 
     return (ret);
 }
+#endif /* KERNEL */
 
 kern_return_t
-IOInterruptDispatchSource::Create_Call(
+IOInterruptDispatchSource::Create(
         IOService * provider,
         uint32_t index,
         IODispatchQueue * queue,
@@ -424,13 +315,13 @@ IOInterruptDispatchSource::Create_Call(
     msg->provider__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
     msg->content.provider = (OSObjectRef) provider;
 
-    msg->content.index = index;
-
     msg->queue__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
     msg->content.queue = (OSObjectRef) queue;
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    ret = OSMTypeID(IOInterruptDispatchSource)->Invoke(rpc);
+    msg->content.index = index;
+
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    ret = OSMTypeID(IOInterruptDispatchSource)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -448,6 +339,38 @@ IOInterruptDispatchSource::Create_Call(
         if (rpl->content.source && !*source) ret = kIOReturnBadArgument;
     }
 
+    return (ret);
+}
+
+kern_return_t
+IOInterruptDispatchSource::Create_Invoke(const IORPC _rpc,
+        Create_Handler func)
+{
+    IOInterruptDispatchSource_Create_Invocation rpc = { _rpc };
+    kern_return_t ret;
+    IOService * provider;
+    IODispatchQueue * queue;
+
+    if (IOInterruptDispatchSource_Create_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
+    provider = OSDynamicCast(IOService, (OSObject *) rpc.message->content.provider);
+    if (!provider && rpc.message->content.provider) return (kIOReturnBadArgument);
+    queue = OSDynamicCast(IODispatchQueue, (OSObject *) rpc.message->content.queue);
+    if (!queue && rpc.message->content.queue) return (kIOReturnBadArgument);
+
+    ret = (*func)(provider,
+        rpc.message->content.index,
+        queue,
+        (IOInterruptDispatchSource **)&rpc.reply->content.source);
+
+    if (kIOReturnSuccess != ret) return (ret);
+
+    rpc.reply->content.__hdr.msgid = IOInterruptDispatchSource_Create_ID;
+    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
+    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
+    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
+    rpc.reply->mach.msgh_body.msgh_descriptor_count = 1;
+    rpc.reply->content.__hdr.objectRefs = IOInterruptDispatchSource_Create_Rpl_ObjRefs;
+    rpc.reply->source__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
 
     return (ret);
 }
@@ -490,8 +413,8 @@ IOInterruptDispatchSource::GetInterruptType(
 
     msg->content.index = index;
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    ret = OSMTypeID(IOInterruptDispatchSource)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    ret = OSMTypeID(IOInterruptDispatchSource)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -508,6 +431,33 @@ IOInterruptDispatchSource::GetInterruptType(
         if (interruptType) *interruptType = rpl->content.interruptType;
     }
 
+    return (ret);
+}
+
+kern_return_t
+IOInterruptDispatchSource::GetInterruptType_Invoke(const IORPC _rpc,
+        GetInterruptType_Handler func)
+{
+    IOInterruptDispatchSource_GetInterruptType_Invocation rpc = { _rpc };
+    kern_return_t ret;
+    IOService * provider;
+
+    if (IOInterruptDispatchSource_GetInterruptType_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
+    provider = OSDynamicCast(IOService, (OSObject *) rpc.message->content.provider);
+    if (!provider && rpc.message->content.provider) return (kIOReturnBadArgument);
+
+    ret = (*func)(provider,
+        rpc.message->content.index,
+        &rpc.reply->content.interruptType);
+
+    if (kIOReturnSuccess != ret) return (ret);
+
+    rpc.reply->content.__hdr.msgid = IOInterruptDispatchSource_GetInterruptType_ID;
+    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
+    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
+    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
+    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
+    rpc.reply->content.__hdr.objectRefs = IOInterruptDispatchSource_GetInterruptType_Rpl_ObjRefs;
 
     return (ret);
 }
@@ -547,9 +497,9 @@ IOInterruptDispatchSource::SetHandler(
     msg->action__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
     msg->content.action = (OSObjectRef) action;
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    if (supermethod) ret = supermethod((OSObject *)this, rpc);
-    else             ret = ((OSObject *)this)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    if (supermethod) ret = supermethod((OSObject *)this, _rpc);
+    else             ret = ((OSObject *)this)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -564,107 +514,6 @@ IOInterruptDispatchSource::SetHandler(
     if (kIOReturnSuccess == ret)
     {
     }
-
-
-    return (ret);
-}
-
-kern_return_t
-IOInterruptDispatchSource::InterruptOccurred(
-        IORPC rpc,
-        OSAction * action,
-        uint64_t count,
-        uint64_t time,
-        OSDispatchMethod supermethod)
-{
-    kern_return_t ret;
-    struct IOInterruptDispatchSource_InterruptOccurred_Msg * msg = (typeof(msg)) rpc.reply;
-
-
-    memset(msg, 0, sizeof(struct IOInterruptDispatchSource_InterruptOccurred_Msg));
-    msg->mach.msgh.msgh_id   = kIORPCVersion190615;
-    msg->mach.msgh.msgh_size = sizeof(*msg);
-    msg->content.__hdr.flags = 1*kIORPCMessageOneway
-                             | 1*kIORPCMessageSimpleReply
-                             | 0*kIORPCMessageLocalHost
-                             | 1*kIORPCMessageOnqueue;
-    msg->content.__hdr.msgid = IOInterruptDispatchSource_InterruptOccurred_ID;
-    msg->content.__object = (OSObjectRef) action;
-    msg->content.__hdr.objectRefs = IOInterruptDispatchSource_InterruptOccurred_Msg_ObjRefs;
-    msg->mach.msgh_body.msgh_descriptor_count = 2;
-
-    msg->__object__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
-
-    msg->action__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
-    msg->content.action = (OSObjectRef) action;
-
-    msg->content.count = count;
-
-    msg->content.time = time;
-
-
-    ret = kIOReturnSuccess;
-
-    return (ret);
-}
-
-kern_return_t
-IOInterruptDispatchSource::Create_Invoke(const IORPC _rpc,
-        Create_Handler func)
-{
-    IOInterruptDispatchSource_Create_Invocation rpc = { _rpc };
-    kern_return_t ret;
-    IOService * provider;
-    IODispatchQueue * queue;
-
-    if (IOInterruptDispatchSource_Create_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
-    provider = OSDynamicCast(IOService, (OSObject *) rpc.message->content.provider);
-    if (!provider && rpc.message->content.provider) return (kIOReturnBadArgument);
-    queue = OSDynamicCast(IODispatchQueue, (OSObject *) rpc.message->content.queue);
-    if (!queue && rpc.message->content.queue) return (kIOReturnBadArgument);
-
-    ret = (*func)(        provider,
-        rpc.message->content.index,
-        queue,
-        (IOInterruptDispatchSource **)&rpc.reply->content.source);
-
-    if (kIOReturnSuccess != ret) return (ret);
-
-    rpc.reply->content.__hdr.msgid = IOInterruptDispatchSource_Create_ID;
-    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
-    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
-    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
-    rpc.reply->mach.msgh_body.msgh_descriptor_count = 1;
-    rpc.reply->content.__hdr.objectRefs = IOInterruptDispatchSource_Create_Rpl_ObjRefs;
-    rpc.reply->source__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
-
-    return (ret);
-}
-
-kern_return_t
-IOInterruptDispatchSource::GetInterruptType_Invoke(const IORPC _rpc,
-        GetInterruptType_Handler func)
-{
-    IOInterruptDispatchSource_GetInterruptType_Invocation rpc = { _rpc };
-    kern_return_t ret;
-    IOService * provider;
-
-    if (IOInterruptDispatchSource_GetInterruptType_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
-    provider = OSDynamicCast(IOService, (OSObject *) rpc.message->content.provider);
-    if (!provider && rpc.message->content.provider) return (kIOReturnBadArgument);
-
-    ret = (*func)(        provider,
-        rpc.message->content.index,
-        &rpc.reply->content.interruptType);
-
-    if (kIOReturnSuccess != ret) return (ret);
-
-    rpc.reply->content.__hdr.msgid = IOInterruptDispatchSource_GetInterruptType_ID;
-    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
-    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
-    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
-    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
-    rpc.reply->content.__hdr.objectRefs = IOInterruptDispatchSource_GetInterruptType_Rpl_ObjRefs;
 
     return (ret);
 }
@@ -693,6 +542,44 @@ IOInterruptDispatchSource::SetHandler_Invoke(const IORPC _rpc,
     rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
     rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
     rpc.reply->content.__hdr.objectRefs = IOInterruptDispatchSource_SetHandler_Rpl_ObjRefs;
+
+    return (ret);
+}
+
+kern_return_t
+IOInterruptDispatchSource::InterruptOccurred(
+        IORPC rpc,
+        OSAction * action,
+        uint64_t count,
+        uint64_t time,
+        OSDispatchMethod supermethod)
+{
+    kern_return_t ret;
+    struct IOInterruptDispatchSource_InterruptOccurred_Msg * msg = (typeof(msg)) rpc.reply;
+
+    memset(msg, 0, sizeof(struct IOInterruptDispatchSource_InterruptOccurred_Msg));
+    msg->mach.msgh.msgh_id   = kIORPCVersion190615;
+    msg->mach.msgh.msgh_size = sizeof(*msg);
+    msg->content.__hdr.flags = 1*kIORPCMessageOneway
+                             | 1*kIORPCMessageSimpleReply
+                             | 0*kIORPCMessageLocalHost
+                             | 1*kIORPCMessageOnqueue;
+    msg->content.__hdr.msgid = IOInterruptDispatchSource_InterruptOccurred_ID;
+    msg->content.__object = (OSObjectRef) action;
+    msg->content.__hdr.objectRefs = IOInterruptDispatchSource_InterruptOccurred_Msg_ObjRefs;
+    msg->mach.msgh_body.msgh_descriptor_count = 2;
+
+    msg->__object__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
+
+    msg->action__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
+    msg->content.action = (OSObjectRef) action;
+
+    msg->content.count = count;
+
+    msg->content.time = time;
+
+
+    ret = kIOReturnSuccess;
 
     return (ret);
 }
@@ -727,9 +614,6 @@ IOInterruptDispatchSource::InterruptOccurred_Invoke(const IORPC _rpc,
         rpc.message->content.count,
         rpc.message->content.time);
 
-
     return (kIOReturnSuccess);
 }
-
-
 

@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IOMemoryMap.iig */
+/* iig-lite generated from IOMemoryMap.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IOMemoryMap.iig:1-46 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -47,11 +46,6 @@ struct _IOMemoryMapPrivateState {
 	uint64_t address;
 };
 
-/* source class IOMemoryMap IOMemoryMap.iig:47-87 */
-
-#if __DOCUMENTATION__
-#define KERNEL IIG_KERNEL
-
 /*!
  * @class IOMemoryMap
  *
@@ -62,6 +56,11 @@ struct _IOMemoryMapPrivateState {
  * To allocate memory for I/O or sharing, use IOBufferMemoryDescriptor::Create()
  * Methods in this class are used for memory that was supplied as a parameter.
  */
+
+/* source class IOMemoryMap IOMemoryMap.iig:58-88 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
 
 class KERNEL IOMemoryMap : public OSObject
 {
@@ -98,9 +97,9 @@ public:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IOMemoryMap IOMemoryMap.iig:47-87 */
+/* generated class IOMemoryMap IOMemoryMap.iig:58-88 */
 
-#define IOMemoryMap__CopyState_ID            0xfc92b3d7f2d48ec7ULL
+#define IOMemoryMap__CopyState_ID            0x8b37d99c4750ea02ULL
 
 #define IOMemoryMap__CopyState_Args \
         _IOMemoryMapPrivateState * state
@@ -174,22 +173,6 @@ public:\
 
 #if !KERNEL
 
-extern OSMetaClass          * gIOMemoryMapMetaClass;
-extern const OSClassLoadInformation IOMemoryMap_Class;
-
-class IOMemoryMapMetaClass : public OSMetaClass
-{
-public:
-    virtual kern_return_t
-    New(OSObject * instance) override;
-    virtual kern_return_t
-    Dispatch(const IORPC rpc) override;
-};
-
-#endif /* !KERNEL */
-
-#if !KERNEL
-
 class IOMemoryMapInterface : public OSInterface
 {
 public:
@@ -200,42 +183,41 @@ struct IOMemoryMap_LocalIVars;
 
 class IOMemoryMap : public OSObject, public IOMemoryMapInterface
 {
-#if !KERNEL
-    friend class IOMemoryMapMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
 public:
-#ifdef IOMemoryMap_DECLARE_IVARS
-IOMemoryMap_DECLARE_IVARS
-#else /* IOMemoryMap_DECLARE_IVARS */
     union
     {
         IOMemoryMap_IVars * ivars;
         IOMemoryMap_LocalIVars * lvars;
     };
-#endif /* IOMemoryMap_DECLARE_IVARS */
-#endif /* !KERNEL */
-
-#if !KERNEL
-    static OSMetaClass *
-    sGetMetaClass() { return gIOMemoryMapMetaClass; };
-#endif /* KERNEL */
-
     using super = OSObject;
 
-#if !KERNEL
     IOMemoryMap_Methods
     IOMemoryMap_VirtualMethods
-#endif /* !KERNEL */
-
 };
-#endif /* !KERNEL */
 
+#endif /* !KERNEL */
 
 #endif /* !__DOCUMENTATION__ */
 
 
-/* IOMemoryMap.iig:96- */
+
+/* source class IOMemoryMapPrivate IOMemoryMap.iig:90-95 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
+
+class EXTENDS (IOMemoryMap) IOMemoryMapPrivate
+{
+	virtual kern_return_t
+	_CopyState(
+		_IOMemoryMapPrivateState * state);
+};
+
+#undef KERNEL
+#else /* __DOCUMENTATION__ */
+
+#endif /* !__DOCUMENTATION__ */
+
+
 
 #endif /* ! _IOKIT_UIOMEMORYMAP_H */

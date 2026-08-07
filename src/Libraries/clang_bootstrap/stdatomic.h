@@ -8,14 +8,20 @@
  */
 
 #ifndef __CLANG_STDATOMIC_H
-#define __CLANG_STDATOMIC_H
 
 /* If we're hosted, fall back to the system's stdatomic.h. FreeBSD, for
  * example, already has a Clang-compatible stdatomic.h header.
+ *
+ * NB: the guard __CLANG_STDATOMIC_H is deliberately NOT defined before this
+ * include_next. clang's real builtin stdatomic.h uses the SAME guard, so
+ * defining it here would make the delegated-to header a no-op -- and this copy's
+ * own body lives in the #else, which isn't taken -- leaving memory_order et al.
+ * undefined. Set the guard only on the branch that actually defines the API.
  */
 #if __STDC_HOSTED__ && __has_include_next(<stdatomic.h>)
 # include_next <stdatomic.h>
 #else
+#define __CLANG_STDATOMIC_H
 
 #include <stddef.h>
 #include <stdint.h>

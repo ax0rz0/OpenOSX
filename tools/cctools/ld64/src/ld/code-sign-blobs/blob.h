@@ -114,7 +114,17 @@ public:
 	
 	static BlobCore *readBlob(std::FILE *file)	{ return readBlob(file, 0, 0, 0); }
 	static BlobCore *readBlob(int fd)			{ return readBlob(fd, 0, 0, 0); }
-	
+
+	BlobCore *clone() const {
+		size_t size = this->length();
+		void *newMem = malloc(size);
+		if (!newMem)
+			return nullptr;
+
+		memcpy(newMem, this, size);
+
+		return reinterpret_cast<BlobCore *>(newMem);
+	}
 protected:
 	static BlobCore *readBlob(std::FILE *file, uint32_t magic, size_t minSize, size_t maxSize); // streaming
 	static BlobCore *readBlob(int fd, uint32_t magic, size_t minSize, size_t maxSize); // streaming

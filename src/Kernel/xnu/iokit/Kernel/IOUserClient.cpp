@@ -2706,7 +2706,8 @@ is_io_service_get_matching_services(
 	io_string_t matching,
 	io_iterator_t *existing )
 {
-	return kIOReturnUnsupported;
+	return internal_io_service_get_matching_services(master_port,
+	    matching, (mach_msg_type_number_t)(strlen(matching) + 1), existing);
 }
 
 /* Routine io_service_get_matching_services_ool */
@@ -2789,7 +2790,8 @@ is_io_service_get_matching_service(
 	io_string_t matching,
 	io_service_t *service )
 {
-	return kIOReturnUnsupported;
+	return internal_io_service_get_matching_service(master_port,
+	    matching, (mach_msg_type_number_t)(strlen(matching) + 1), service);
 }
 
 /* Routine io_service_get_matching_services_ool */

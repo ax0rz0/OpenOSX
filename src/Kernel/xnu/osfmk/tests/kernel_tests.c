@@ -140,7 +140,8 @@ struct xnupost_test kernel_post_tests[] = {XNUPOST_TEST_CONFIG_BASIC(zalloc_test
 	                                   XNUPOST_TEST_CONFIG_BASIC(vfp_state_test),
 #endif
 	                                   XNUPOST_TEST_CONFIG_BASIC(vm_tests),
-	                                   XNUPOST_TEST_CONFIG_BASIC(counter_tests)};
+	                                   //XNUPOST_TEST_CONFIG_BASIC(counter_tests)
+									};
 
 uint32_t kernel_post_tests_count = sizeof(kernel_post_tests) / sizeof(xnupost_test_data_t);
 

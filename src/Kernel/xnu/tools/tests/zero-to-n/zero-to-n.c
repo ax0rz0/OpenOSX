@@ -1252,7 +1252,7 @@ usage()
 	    "[--verbose] [--spin-one] [--spin-all] [--spin-time <nanos>] [--affinity]\n\t\t"
 	    "[--no-sleep] [--drop-priority] [--churn-pri <pri>] [--churn-count <n>]\n\t\t"
 	    "[--rt-churn] [--rt-churn-count <n>] [--rt-ll] [--test-rt] [--test-rt-smt] [--test-rt-avoid0]",
-	    getprogname());
+	    "zero-to-n");
 }
 
 static struct option* g_longopts;

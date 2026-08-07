@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IOService.iig */
+/* iig-lite generated from IOService.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IOService.iig:1-60 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -61,11 +60,6 @@ enum {
 	kIOServicePowerCapabilityLow = 0x00010000,
 };
 
-/* source class IOService IOService.iig:61-360 */
-
-#if __DOCUMENTATION__
-#define KERNEL IIG_KERNEL
-
 /*!
  * @class IOService
  *
@@ -77,7 +71,15 @@ enum {
  * Drivers and devices are represented as subclasses of IOService.
  *
 
+                   
+                                   
+        
 */
+
+/* source class IOService IOService.iig:77-361 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
 
 class KERNEL IOService : public OSObject
 {
@@ -368,25 +370,25 @@ private:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IOService IOService.iig:61-360 */
+/* generated class IOService IOService.iig:77-361 */
 
-#define IOService_Start_ID            0xab6f76dde6d693f2ULL
-#define IOService_Stop_ID            0x98e715041c459fa5ULL
-#define IOService_ClientCrashed_ID            0xf608d8d479c824a3ULL
-#define IOService_GetRegistryEntryID_ID            0x8a6f522f3894a0d7ULL
-#define IOService_SetName_ID            0xff378dd57615eb9fULL
-#define IOService_RegisterService_ID            0xe9722c2bb1347c28ULL
-#define IOService_CopyProperties_ID            0x833ec8f92f8b5362ULL
-#define IOService_SearchProperty_ID            0xad751cdb94c8dcc8ULL
-#define IOService_SetProperties_ID            0xd8a753ea156f9162ULL
-#define IOService_SetPowerState_ID            0xd200fde7d57ecca6ULL
-#define IOService_ChangePowerState_ID            0xdb75cfc3395484a0ULL
-#define IOService_NewUserClient_ID            0xf669efffcb89ed9cULL
-#define IOService_Create_ID            0xe1a46dbd68bbe09cULL
-#define IOService_Terminate_ID            0xf7a595d9927810c8ULL
-#define IOService_CopyProviderProperties_ID            0xc2a554959002c8e7ULL
-#define IOService_RequireMaxBusStall_ID            0xc21228652ff536afULL
-#define IOService_Stop_async_ID            0xa8c93137712a16a2ULL
+#define IOService_Start_ID            0xf6f426352a1c353eULL
+#define IOService_Stop_ID            0xde435fcc366d7edaULL
+#define IOService_ClientCrashed_ID            0x50b09593011fefecULL
+#define IOService_GetRegistryEntryID_ID            0xc64a7afc94271418ULL
+#define IOService_SetName_ID            0x163b417fa467310fULL
+#define IOService_RegisterService_ID            0x0e98c1151bbd9c67ULL
+#define IOService_CopyProperties_ID            0x5784fc96e2f4c58dULL
+#define IOService_SearchProperty_ID            0x134ebd2ff4760828ULL
+#define IOService_SetProperties_ID            0x48fc8c2408f7c750ULL
+#define IOService_SetPowerState_ID            0x6228a2d1e7d3194bULL
+#define IOService_ChangePowerState_ID            0xf999fe0203243723ULL
+#define IOService_NewUserClient_ID            0x432ea52220dd49f3ULL
+#define IOService_Create_ID            0xb185332687908e2eULL
+#define IOService_Terminate_ID            0xad4452655ae445b3ULL
+#define IOService_CopyProviderProperties_ID            0x37b0be4369e89e02ULL
+#define IOService_RequireMaxBusStall_ID            0xa14e2b1ee3658977ULL
+#define IOService_Stop_async_ID            0xe0ae185736c0b8c1ULL
 
 #define IOService_Start_Args \
         IOService * provider
@@ -402,25 +404,25 @@ private:
         uint64_t * registryEntryID
 
 #define IOService_SetName_Args \
-        const char * name
+        const IOServiceName name
 
 #define IOService_RegisterService_Args \
 
 
 #define IOService_SetDispatchQueue_Args \
-        const char * name, \
+        const IODispatchQueueName name, \
         IODispatchQueue * queue
 
 #define IOService_CopyDispatchQueue_Args \
-        const char * name, \
+        const IODispatchQueueName name, \
         IODispatchQueue ** queue
 
 #define IOService_CopyProperties_Args \
         OSDictionary ** properties
 
 #define IOService_SearchProperty_Args \
-        const char * name, \
-        const char * plane, \
+        const IOPropertyName name, \
+        const IORegistryPlaneName plane, \
         uint64_t options, \
         OSContainer ** property
 
@@ -439,7 +441,7 @@ private:
 
 #define IOService_Create_Args \
         IOService * provider, \
-        const char * propertiesKey, \
+        const IOPropertyName propertiesKey, \
         IOService ** result
 
 #define IOService_Terminate_Args \
@@ -488,7 +490,7 @@ public:\
 \
     kern_return_t\
     SetName(\
-        const IOServiceName name,\
+        const char * name,\
         OSDispatchMethod supermethod = NULL);\
 \
     kern_return_t\
@@ -502,8 +504,8 @@ public:\
 \
     kern_return_t\
     SearchProperty(\
-        const IOPropertyName name,\
-        const IORegistryPlaneName plane,\
+        const char * name,\
+        const char * plane,\
         uint64_t options,\
         OSContainer ** property,\
         OSDispatchMethod supermethod = NULL);\
@@ -532,7 +534,7 @@ public:\
     kern_return_t\
     Create(\
         IOService * provider,\
-        const IOPropertyName propertiesKey,\
+        const char * propertiesKey,\
         IOService ** result,\
         OSDispatchMethod supermethod = NULL);\
 \
@@ -658,7 +660,7 @@ public:\
         OSMetaClassBase * target,\
         SetName_Handler func);\
 \
-    typedef kern_return_t (*RegisterService_Handler)(OSMetaClassBase * targetIOService_RegisterService_Args);\
+    typedef kern_return_t (*RegisterService_Handler)(OSMetaClassBase * target);\
     static kern_return_t\
     RegisterService_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
@@ -791,22 +793,6 @@ public:\
 
 #if !KERNEL
 
-extern OSMetaClass          * gIOServiceMetaClass;
-extern const OSClassLoadInformation IOService_Class;
-
-class IOServiceMetaClass : public OSMetaClass
-{
-public:
-    virtual kern_return_t
-    New(OSObject * instance) override;
-    virtual kern_return_t
-    Dispatch(const IORPC rpc) override;
-};
-
-#endif /* !KERNEL */
-
-#if !KERNEL
-
 class IOServiceInterface : public OSInterface
 {
 public:
@@ -817,41 +803,22 @@ struct IOService_LocalIVars;
 
 class IOService : public OSObject, public IOServiceInterface
 {
-#if !KERNEL
-    friend class IOServiceMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
 public:
-#ifdef IOService_DECLARE_IVARS
-IOService_DECLARE_IVARS
-#else /* IOService_DECLARE_IVARS */
     union
     {
         IOService_IVars * ivars;
         IOService_LocalIVars * lvars;
     };
-#endif /* IOService_DECLARE_IVARS */
-#endif /* !KERNEL */
-
-#if !KERNEL
-    static OSMetaClass *
-    sGetMetaClass() { return gIOServiceMetaClass; };
-#endif /* KERNEL */
-
     using super = OSObject;
 
-#if !KERNEL
     IOService_Methods
     IOService_VirtualMethods
-#endif /* !KERNEL */
-
 };
-#endif /* !KERNEL */
 
+#endif /* !KERNEL */
 
 #endif /* !__DOCUMENTATION__ */
 
-/* IOService.iig:362- */
+
 
 #endif /* ! _IOKIT_UIOSERVICE_H */

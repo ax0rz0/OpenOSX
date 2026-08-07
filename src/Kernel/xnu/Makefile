@@ -31,6 +31,16 @@ export MakeInc_def=${VERSDIR}/makedefs/MakeInc.def
 export MakeInc_rule=${VERSDIR}/makedefs/MakeInc.rule
 export MakeInc_dir=${VERSDIR}/makedefs/MakeInc.dir
 
+# Host OS type
+UNAME_S := $(shell uname -s)
+
+ifeq ($(UNAME_S),Linux)
+	export SYSCTL_HW_PHYSICALCPU := $(shell grep -E '^core id' /proc/cpuinfo | sort -u | wc -l)
+	export SYSCTL_HW_LOGICALCPU  := $(shell grep -E '^processor' /proc/cpuinfo | sort -u | wc -l)
+else
+	export SYSCTL_HW_PHYSICALCPU := $(shell /usr/sbin/sysctl -n hw.physicalcpu)
+	export SYSCTL_HW_LOGICALCPU  := $(shell /usr/sbin/sysctl -n hw.logicalcpu)
+endif
 
 #
 # Dispatch non-xnu build aliases to their own build
@@ -122,8 +132,6 @@ installsrc:
 
 else ifneq ($(findstring xnu_tests,$(RC_ProjectName)),)
 
-export SYSCTL_HW_PHYSICALCPU := $(shell /usr/sbin/sysctl -n hw.physicalcpu)
-export SYSCTL_HW_LOGICALCPU  := $(shell /usr/sbin/sysctl -n hw.logicalcpu)
 MAKEJOBS := --jobs=$(shell expr $(SYSCTL_HW_LOGICALCPU) + 1)
 
 default: install
@@ -139,8 +147,6 @@ installsrc:
 
 else ifeq ($(RC_ProjectName),xnu_tests_driverkit)
 
-export SYSCTL_HW_PHYSICALCPU := $(shell /usr/sbin/sysctl -n hw.physicalcpu)
-export SYSCTL_HW_LOGICALCPU  := $(shell /usr/sbin/sysctl -n hw.logicalcpu)
 MAKEJOBS := --jobs=$(shell expr $(SYSCTL_HW_LOGICALCPU) + 1)
 
 default: install
@@ -172,8 +178,6 @@ endif
 # CPUs. If the system does not support SMT, use N+1.
 # If MAKEJOBS or -jN is passed on the make line, that takes precedence.
 #
-export SYSCTL_HW_PHYSICALCPU := $(shell /usr/sbin/sysctl -n hw.physicalcpu)
-export SYSCTL_HW_LOGICALCPU  := $(shell /usr/sbin/sysctl -n hw.logicalcpu)
 MAKEJOBS := --jobs=$(shell expr $(SYSCTL_HW_LOGICALCPU) + 1)
 
 TOP_TARGETS = \

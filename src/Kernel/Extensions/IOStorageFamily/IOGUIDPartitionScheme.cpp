@@ -624,6 +624,10 @@ IOMedia * IOGUIDPartitionScheme::instantiateMediaObject( gpt_ent * partition,
             uuid_string_t uuid;
             uuid_unparse(partition->ent_uuid, uuid);
             newMedia->setProperty(kIOMediaUUIDKey, uuid);
+            kprintf("GPTSCHEME: created partition %d name='%s' UUID=%s hint='%s'\n",
+                    (int) partitionID,
+                    partitionName[0] ? partitionName : name,
+                    uuid, partitionHint ? partitionHint : "(null)");
 
             UInt64 gptAttributes = OSSwapLittleToHostInt64( partition->ent_attr );
             newMedia->setProperty(kIOMediaGPTPartitionAttributesKey, gptAttributes, 64);

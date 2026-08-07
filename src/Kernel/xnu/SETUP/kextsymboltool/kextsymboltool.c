@@ -20,21 +20,28 @@
  *
  * @APPLE_LICENSE_HEADER_END@
  */
-#include <libc.h>
 #include <errno.h>
 #include <ctype.h>
 
-#include <mach/mach_init.h>
 
 #include <sys/stat.h>
 #include <sys/file.h>
 #include <sys/mman.h>
-
+#ifdef __APPLE__
+#include <libc.h>
+#include <mach/mach_init.h>
 #include <mach-o/arch.h>
 #include <mach-o/fat.h>
 #include <mach-o/loader.h>
 #include <mach-o/nlist.h>
 #include <mach-o/swap.h>
+#else
+#include "../mach_compat.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
+#endif
 
 #include <uuid/uuid.h>
 #include <stdbool.h>
@@ -75,19 +82,20 @@ extern char* __cxa_demangle(const char* mangled_name,
 __private_extern__ ToolError
 writeFile(int fd, const void * data, size_t length)
 {
-	ToolError err;
+    const char *p = (const char *)data;
+    ssize_t written;
+    size_t total_written = 0;
 
-	if (length != (size_t)write(fd, data, length)) {
-		err = kErrorDiskFull;
-	} else {
-		err = kErrorNone;
-	}
-
-	if (kErrorNone != err) {
-		perror("couldn't write output");
-	}
-
-	return err;
+    while (total_written < length) {
+        written = write(fd, p + total_written, length - total_written);
+        if (written < 0) {
+            perror("couldn't write output, writeFile");
+            return -1;
+        }
+        total_written += written;
+    }
+	
+    return 0;
 }
 
 /*********************************************************************
@@ -95,16 +103,16 @@ writeFile(int fd, const void * data, size_t length)
 __private_extern__ ToolError
 seekFile(int fd, off_t offset)
 {
-	ToolError err;
+	ToolError err = kErrorNone;
+	off_t result = lseek(fd, offset, SEEK_SET);
 
-	if (offset != lseek(fd, offset, SEEK_SET)) {
-		err = kErrorDiskFull;
-	} else {
-		err = kErrorNone;
-	}
-
-	if (kErrorNone != err) {
-		perror("couldn't write output");
+	if (result == -1) {
+		perror("couldn't seek in output file");
+		err = kError;
+	} else if (result != offset) {
+		fprintf(stderr, "couldn't seek in output file: requested 0x%llx, got 0x%llx\n",
+		        (unsigned long long)offset, (unsigned long long)result);
+		err = kError;
 	}
 
 	return err;
@@ -712,7 +720,7 @@ main(int argc, char * argv[])
 
 	fd = open(output_name, O_WRONLY | O_CREAT | O_TRUNC, 0755);
 	if (-1 == fd) {
-		perror("couldn't write output");
+		perror("couldn't write output, open");
 		err = kErrorFileAccess;
 		goto finish;
 	}
@@ -825,6 +833,12 @@ main(int argc, char * argv[])
 		goto finish;
 	}
 
+	symsoffset = lseek(fd, 0, SEEK_CUR);
+	if (symsoffset == -1) {
+		perror("failed to get symsoffset");
+		err = kError;
+		goto finish;
+	}
 	err = seekFile(fd, symsoffset);
 	if (kErrorNone != err) {
 		goto finish;

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # Copyright (c) 1999-2008 Apple Inc. All rights reserved.
 #
@@ -50,18 +50,23 @@
 realpath()
 {
 	local FILE="$1"
-	local PARENT=$(dirname "$FILE")
-	local BASE=$(basename "$FILE")
-	pushd "$PARENT" >/dev/null 2>&1 || return 0
-	local DIR=$(pwd -P)
-	popd >/dev/null
-	if [ "$DIR" == "/" ]; then
+	local PARENT
+	local BASE
+	local DIR
+
+	PARENT=$(dirname "$FILE") || return 1
+	BASE=$(basename "$FILE") || return 1
+	DIR=$(cd "$PARENT" >/dev/null 2>&1 && pwd -P) || return 1
+
+	if [ "$DIR" = "/" ]; then
 		echo "/$BASE"
 	else
 		echo "$DIR/$BASE"
 	fi
-	return 1
+	return 0
 }
+
+UNAME_S="$(uname -s)"
 
 scriptPath=$(realpath "$0")
 scriptRoot=$(dirname "$scriptPath")
@@ -71,33 +76,70 @@ if [ -n "${SDKROOT}" ]; then
 	sdkRoot="${SDKROOT}";
 fi
 
-if [ -z "${MIGCC}" ]; then
-  xcrunPath="/usr/bin/xcrun"
-  if [ -x "${xcrunPath}" ]; then
-    MIGCC=`"${xcrunPath}" -sdk "$sdkRoot" -find cc`
-  else
-    MIGCC=$(realpath "${scriptRoot}/cc")
-  fi
+if [ "$UNAME_S" = "Linux" ]; then
+	xcrunPath="/usr/local/osxcross/bin/xcrun"
+else
+	xcrunPath="/usr/bin/xcrun"
 fi
 
-C=${MIGCC}
-M=${MIGCOM-${migcomPath}}
+if [ -z "${MIGCC}" ]; then
+	if [ -x "${xcrunPath}" ]; then
+		MIGCC=`"${xcrunPath}" -sdk "$sdkRoot" -find cc 2>/dev/null`
+	fi
+	# xcrun exists on a macOS host but has no usable developer dir inside a
+	# Nix build, so it prints nothing and leaves MIGCC empty - the invocation
+	# below then fails as `: command not found`. Fall back to the compiler
+	# beside this script, and finally to whichever cc is on PATH.
+	if [ ! -x "${MIGCC}" ]; then
+		MIGCC=$(realpath "${scriptRoot}/cc" 2>/dev/null)
+	fi
+	if [ ! -x "${MIGCC}" ]; then
+		MIGCC=$(command -v cc)
+	fi
+fi
+
+if [ "$UNAME_S" = "Linux" ]; then
+	C=${MIGCC}
+	M=${MIGCOM-}
+	if [ -z "$M" ]; then
+		M=`"${xcrunPath}" -sdk "$sdkRoot" -find migcom`
+	fi
+else
+	C=${MIGCC}
+	M=${MIGCOM-}
+	if [ -z "$M" ] && [ -x "${migcomPath}" ]; then
+		M="${migcomPath}"
+	fi
+	if [ -z "$M" ] && [ -x "${xcrunPath}" ]; then
+		M=`"${xcrunPath}" -sdk "$sdkRoot" -find migcom 2>/dev/null`
+	fi
+fi
 
 if [ $# -eq 1 ] && [ "$1" = "-version" ] ; then
 	"$M" "$@"
 	exit $?
 fi
 
-cppflags="-D__MACH30__"
+migflags=()
+cppflags=( "-D__MACH30__" )
+target=()
+iSysRootParm=()
 
 files=
-arch=`/usr/bin/arch`
 
-WORKTMP=`/usr/bin/mktemp -d "${TMPDIR:-/tmp}/mig.XXXXXX"`
+if [ "$UNAME_S" = "Linux" ] || [ "$UNAME_S" = "Darwin" ]; then
+    arch="$(uname -m)"
+else
+    echo "Unsupported OS: $UNAME_S"
+    exit 1
+fi
+
+# Create a temporary directory
+WORKTMP="$(mktemp -d "${TMPDIR:-/tmp}/mig.XXXXXX")"
 if [ $? -ne 0 ]; then
-      echo "Failure creating temporary work directory: ${WORKTMP}"
-      echo "Exiting..."
-      exit 1
+    echo "Failure creating temporary work directory: ${WORKTMP}"
+    echo "Exiting..."
+    exit 1
 fi
 
 # parse out the arguments until we hit plain file name(s)
@@ -213,6 +255,5 @@ do
     rm -f "${temp}.c"
 done
 
-/bin/rmdir "${WORKTMP}"
+rmdir "${WORKTMP}"
 exit 0
-

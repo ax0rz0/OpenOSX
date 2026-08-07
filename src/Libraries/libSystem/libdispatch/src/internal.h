@@ -282,6 +282,15 @@ upcast(dispatch_object_t dou)
 #if __has_include(<mach/mach_sync_ipc.h>)
 #include <mach/mach_sync_ipc.h>
 #endif
+// mach_msg_destroy() is really implemented in
+// libsystem_kernel/mach/mach_msg.c and really declared in
+// libsystem_kernel/mach/mach/mach.h - but <mach/mach.h> above (as resolved
+// on this include path) doesn't carry it through. mach_msg_header_t is
+// already fully defined by <mach/message.h> above, so declare it here
+// rather than force-including anything earlier (which desyncs include
+// order badly enough to lose mach_error_t and duplicate MIG notify
+// typedefs).
+extern void mach_msg_destroy(mach_msg_header_t *msg);
 #endif /* HAVE_MACH */
 #if __has_include(<os/reason_private.h>) && __has_include(<os/variant_private.h>)
 #define HAVE_OS_FAULT_WITH_PAYLOAD 1

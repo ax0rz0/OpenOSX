@@ -41,6 +41,11 @@
 */
 
 #define _FILE_OFFSET_BITS 64
+#ifndef __APPLE__
+// strptime/asprintf are XSI/GNU extensions, not C89 - glibc only declares
+// them when a feature-test macro requesting those extensions is set.
+#define _GNU_SOURCE
+#endif
 
 #include "config.h"
 #ifndef HAVE_ASPRINTF

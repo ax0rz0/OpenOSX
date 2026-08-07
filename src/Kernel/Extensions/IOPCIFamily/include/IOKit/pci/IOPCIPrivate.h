@@ -26,12 +26,18 @@
 
 #if defined(KERNEL)
 
-// FIXME: Revert this once we have IOACPIFamily
-#if (defined(__i386__) || defined(__x86_64__)) && !defined(__PUREDARWIN__)
+#if (defined(__i386__) || defined(__x86_64__))
 #define ACPI_SUPPORT            1
 #else
 #define ACPI_SUPPORT            0
 #endif
+
+// VT-d (Intel IOMMU) page-table support is not implemented in OpenOSX: the
+// balloc.c / rballoc.c allocators that vtd.c source-includes were never imported.
+// QEMU without an intel-iommu device does not need it, so keep it disabled; the
+// AppleVTD entry points become no-ops (see IOPCIBridge.cpp). This is independent
+// of ACPI_SUPPORT, which we DO need for MSI (IOPCIPlatformInitialize).
+#define VTD_SUPPORT             0
 
 #if !defined(__ppc__)
 #define USE_IOPCICONFIGURATOR   1

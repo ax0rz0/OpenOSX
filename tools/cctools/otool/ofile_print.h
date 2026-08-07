@@ -342,6 +342,10 @@ extern void print_note_command(
     struct note_command *nc,
     uint64_t object_size);
 
+extern void print_fileset_entry_command(
+    struct fileset_entry_command* fse,
+    struct load_command *lc,
+    uint64_t object_size);
 extern void print_entry_point_command(
     struct entry_point_command *ep);
 

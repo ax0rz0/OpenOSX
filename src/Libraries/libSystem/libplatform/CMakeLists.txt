@@ -4,7 +4,130 @@ add_library(libplatform_headers INTERFACE)
 target_include_directories(libplatform_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 add_library(libplatform_private_headers INTERFACE)
-target_include_directories(libplatform_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/private)
+target_include_directories(libplatform_private_headers INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/private)
+
+# Static archive of the freestanding libplatform routines dyld needs when linked
+# -nostdlib: the string/mem primitives (memcpy/memset/memmove/strlen/strcmp/...),
+# the _simple_* buffered-I/O helpers, OSAtomic, and os_unfair_lock. Arch-specific
+# atomics follow OPENOSX_ARCH.
+if(OPENOSX_ARM64)
+    # The upstream ARM64 file only contains the commpage FIFO entry points.
+    # OpenOSX's merged libSystem also needs the ordinary OSAtomic API used
+    # by libc and malloc; keep those portable ARM implementations in the
+    # archive as well.
+    set(_libplatform_atomics
+        src/os/atomic.c
+        src/atomics/arm64/OSAtomic.c)
+    # ARM64 supplies the complete setjmp/longjmp implementation in one native
+    # assembly file.  Its signal trampoline is the generic C implementation.
+    set(_libplatform_setjmp
+        src/setjmp/arm64/setjmp.s
+        src/setjmp/generic/sigtramp.c)
+else()
+    # OSAtomic.s: OSAtomicAdd/CompareAndSwap primitives. Plus the PFZ (pre-emption-
+    # free zone) commpage pieces dyld's OSAtomicFifoEnqueue/Dequeue reference:
+    # pfz.s defines _preempt/_backoff, init.c defines the commpage_pfz_base pointer.
+    set(_libplatform_atomics
+        src/atomics/x86_64/OSAtomic.s
+        src/atomics/x86_64/pfz.s
+        src/atomics/init.c)
+    set(_libplatform_setjmp
+        src/setjmp/x86_64/setjmp.s
+        src/setjmp/x86_64/_setjmp.s
+        src/setjmp/x86_64/_sigtramp.s
+        src/setjmp/generic/sigtramp.c)
+endif()
+
+add_darwin_static_library(libplatform_static)
+target_sources(libplatform_static PRIVATE
+    src/string/generic/bzero.c
+    src/string/generic/ffsll.c
+    src/string/generic/flsll.c
+    src/string/generic/flsl.c
+    src/string/generic/memccpy.c
+    src/string/generic/memchr.c
+    src/string/generic/memcmp.c
+    src/string/generic/memmove.c
+    src/string/generic/memset_pattern.c
+    src/string/generic/strchr.c
+    src/string/generic/strcmp.c
+    src/string/generic/strcpy.c
+    src/string/generic/strlcat.c
+    src/string/generic/strlcpy.c
+    src/string/generic/strlen.c
+    src/string/generic/strncmp.c
+    src/string/generic/strncpy.c
+    src/string/generic/strnlen.c
+    src/string/generic/strstr.c
+    src/simple/getenv.c
+    src/simple/asl.c
+    src/simple/string_io.c
+    src/os/lock.c
+    src/os/alloc_once.c
+    src/os/semaphore.c
+    src/setjmp/generic/sigaction.c   # __platform_sigaction (libc's sigaction.c wrapper)
+    ${_libplatform_setjmp}
+    ${_libplatform_atomics}
+)
+# VARIANT_STATIC: emit the plain C names (memcpy/memmove/strlen/strcmp/...) as
+# real symbols, not just the __platform_* internals -- this is the static-archive
+# build variant, exactly what a -nostdlib client like dyld links against.
+target_compile_definitions(libplatform_static PRIVATE
+    VARIANT_STATIC
+    PRIVATE=1
+    __DARWIN_ONLY_UNIX_CONFORMANCE=1
+)
+target_include_directories(libplatform_static PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/private
+    ${CMAKE_CURRENT_SOURCE_DIR}/internal
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/os
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/os/resolver
+    # os/tsd.h, gethostuuid.h and the userspace mach/* headers (vm_page_size.h)
+    # live in libsystem_kernel.
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libsystem_kernel/os
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libsystem_kernel/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libsystem_kernel/private_include  # os/tsd.h (os/*.c)
+    # The userspace mach/* headers (vm_page_size.h, vm_map.h). NB: include/mach/*
+    # are broken symlinks; the real headers live under mach/mach/, so add mach/.
+    ${CMAKE_CURRENT_SOURCE_DIR}/../libsystem_kernel/mach
+    ${CMAKE_BINARY_DIR}/src/Libraries/libSystem/libsystem_kernel/public_include  # generated MIG mach/*
+    # reconstructed os/alloc_once_private.h (shared with pthread_static)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../pthread/compat-include
+)
+if(TARGET libsystem_kernel_static)
+    add_dependencies(libplatform_static libsystem_kernel_static)
+endif()
+if(TARGET libc_headers_gen_script)
+    add_dependencies(libplatform_static libc_headers_gen_script)
+endif()
+# bridgeos availability shim, force-included (C only -- no .s).
+target_compile_options(libplatform_static PRIVATE
+    $<$<COMPILE_LANGUAGE:C>:-include${CMAKE_CURRENT_SOURCE_DIR}/pd_bridgeos_compat.h>
+)
+target_link_libraries(libplatform_static PRIVATE
+    AvailabilityHeaders
+    architecture_headers        # architecture/i386/asm_help.h (OSAtomic.s)
+    clang_bootstrap_headers
+    libc_public_headers
+    libc_private_headers
+    pthread_common_headers
+    pthread_common_private_headers
+    # xnu_private_headers FIRST: the public mach/thread_switch.h strips
+    # SWITCH_OPTION_OSLOCK_* (#ifdef PRIVATE); the System PrivateHeaders copy
+    # keeps them and must win the <mach/thread_switch.h> lookup (lock.c).
+    xnu_private_headers
+    xnu_headers
+)
+set_source_files_properties(
+    src/atomics/x86_64/OSAtomic.s
+    src/atomics/x86_64/pfz.s
+    PROPERTIES LANGUAGE ASM COMPILE_FLAGS "-x assembler-with-cpp"
+)
+# init.c assigns the commpage PFZ base (uintptr_t) to a void* -- width-preserving
+# on LP64; the promoted -Werror=int-conversion is spurious here.
+set_source_files_properties(src/atomics/init.c
+    PROPERTIES COMPILE_FLAGS "-Wno-int-conversion")
 
 install(
     FILES include/setjmp.h include/string_x86.h include/ucontext.h

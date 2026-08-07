@@ -28,7 +28,9 @@
 #include <sys/stat.h>
 #include <mach/vm_prot.h>
 #ifdef __APPLE__ // ld64-port
+#ifdef __APPLE__
 #include <sys/sysctl.h>
+#endif
 #endif
 #include <mach-o/dyld.h>
 #include <fcntl.h>
@@ -1374,7 +1376,7 @@ std::vector<const char*> Options::exportsData() const
 std::vector<const char*> Options::SetWithWildcards::data() const
 {
 	std::vector<const char*> data;
-	for (NameSet::iterator it=regularBegin(); it != regularEnd(); ++it) {
+	for (NameSet::const_iterator it=regularBegin(); it != regularEnd(); ++it) {
 		data.push_back(*it);
 	}
 	for (std::vector<const char*>::const_iterator it=fWildCard.begin(); it != fWildCard.end(); ++it) {
@@ -2204,12 +2206,12 @@ std::string Options::getVersionString32(uint32_t ver) const
 	unsigned microVersion = ver & 0xFF;
 	unsigned minorVersion = (ver >> 8) & 0xFF;
 	unsigned majorVersion = (ver >> 16) & 0xFF;
-	std::stringstream versionString;
+	char buf[64];
 	if ( microVersion == 0 )
-		versionString << majorVersion << "." << minorVersion;
+		snprintf(buf, sizeof(buf), "%u.%u", majorVersion, minorVersion);
 	else
-		versionString << majorVersion << "." << minorVersion << "." << microVersion;
-	return versionString.str();
+		snprintf(buf, sizeof(buf), "%u.%u.%u", majorVersion, minorVersion, microVersion);
+	return buf;
 }
 
 std::string Options::getVersionString64(uint64_t ver) const
@@ -2219,9 +2221,11 @@ std::string Options::getVersionString64(uint64_t ver) const
 	uint64_t c = (ver >> 20) & 0x3FF;
 	uint64_t d = (ver >> 10) & 0x3FF;
 	uint64_t e = ver & 0x3FF;
-	std::stringstream versionString;
-	versionString << a << "." << b << "." << c << "." << d << "." << e;
-	return versionString.str();
+	char buf[96];
+	snprintf(buf, sizeof(buf), "%llu.%llu.%llu.%llu.%llu",
+		(unsigned long long)a, (unsigned long long)b, (unsigned long long)c,
+		(unsigned long long)d, (unsigned long long)e);
+	return buf;
 }
 
 // Convert X.Y[.Z] to 32-bit value xxxxyyzz
@@ -5560,7 +5564,10 @@ void Options::reconfigureDefaults()
 		// the platform is macOS then set the min version to the current
 		if ( !fPlatfromVersionCmdFound && !inferredFromSDKpath && (fSDKVersion == 0) && platforms().contains(ld::Platform::macOS)
 #ifdef __APPLE__ // ld64-port
-			&& !(getenv("RC_ProjectName") && getenv("MACOSX_DEPLOYMENT_TARGET")) && (fOutputKind != Options::kObjectFile) ) {
+			&& !(getenv("RC_ProjectName") && getenv("MACOSX_DEPLOYMENT_TARGET")) && (fOutputKind != Options::kObjectFile)
+#endif
+			) {
+#ifdef __APPLE__ // ld64-port
 			int mib[2] = { CTL_KERN, KERN_OSRELEASE };
 			char kernVersStr[100];
 			size_t strlen = sizeof(kernVersStr);
@@ -6057,7 +6064,7 @@ void Options::checkIllegalOptionCombinations()
 
 	// make sure all required exported symbols exist
 	std::vector<const char*> impliedExports;
-	for (NameSet::iterator it=fExportSymbols.regularBegin(); it != fExportSymbols.regularEnd(); ++it) {
+	for (NameSet::const_iterator it=fExportSymbols.regularBegin(); it != fExportSymbols.regularEnd(); ++it) {
 		const char* name = *it;
 		const int len = strlen(name);
 		if ( (strcmp(&name[len-3], ".eh") == 0) || (strncmp(name, ".objc_category_name_", 20) == 0) ) {
@@ -6089,7 +6096,7 @@ void Options::checkIllegalOptionCombinations()
 	}
 
 	// make sure all required re-exported symbols exist
-	for (NameSet::iterator it=fReExportSymbols.regularBegin(); it != fReExportSymbols.regularEnd(); ++it) {
+	for (NameSet::const_iterator it=fReExportSymbols.regularBegin(); it != fReExportSymbols.regularEnd(); ++it) {
 		fInitialUndefines.push_back(*it);
 	}
 	

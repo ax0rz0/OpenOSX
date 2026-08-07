@@ -2319,6 +2319,11 @@ IOATAController::scanForDrives( void )
 		if( ! (milsSpent < 3100) )
 			goto AllDone;
 
+		kprintf("ATASCAN unit %d: stat=0x%02x altstat=0x%02x cylLo=0x%02x cylHi=0x%02x sCount=0x%02x sectN=0x%02x\n",
+				unit, (unsigned)status, (unsigned)*_tfAltSDevCReg,
+				(unsigned)*_tfCylLoReg, (unsigned)*_tfCylHiReg,
+				(unsigned)*_tfSCountReg, (unsigned)*_tfSectorNReg );
+
 		// check for ATAPI device signature first
 		if ( ( *_tfCylLoReg == 0x14) && ( *_tfCylHiReg == 0xEB) )
 		{	
@@ -2391,7 +2396,7 @@ ______________________________________________________________________________*/
 IOReturn 
 IOATAController::txDataIn (IOLogicalAddress buf, IOByteCount length)
 {
-	register UInt16		*buf16 = (UInt16*)buf;
+	UInt16		*buf16 = (UInt16*)buf;
 
 	// on reads, we expect an interrupt after we send the data except on the last block.
 	// in the case of the last block, we will clear this bit when we return to the 
@@ -2467,7 +2472,7 @@ ______________________________________________________________________________*/
 IOReturn 
 IOATAController::txDataOut(IOLogicalAddress buf, IOByteCount length)
 {
-	register UInt16		*buf16 = (UInt16*)buf;
+	UInt16		*buf16 = (UInt16*)buf;
 
 	while (length >= 32)						// write in groups of 16 words at a time
 	{

@@ -345,7 +345,7 @@ CCRSACryptorCrypt(CCRSACryptorRef rsaKey, const void *in, size_t inLen, void *ou
             rc = ccrsa_pub_crypt(ccrsa_ctx_public(rsaKey->fk), buf, buf);
             break;
         case ccRSAKeyPrivate:
-            rc = ccrsa_priv_crypt(rsaKey->fk, buf, buf);
+            rc = ccrsa_priv_crypt((ccrsa_priv_ctx_t)rsaKey->fk, buf, buf);
             break;
         default:
             rc=-1;
@@ -608,7 +608,7 @@ CCRSACryptorVerify(CCRSACryptorRef publicKey, CCAsymmetricPadding padding,
     if(padding==ccPKCS1Padding)
         rc=ccrsa_verify_pkcs1v15(fk, di->oid, hashLen, hash, signedDataLen, signedData, &valid);
     else
-        rc=ccrsa_verify_pss(fk, di, di, hashLen, hash, signedDataLen, signedData, saltLen, &valid);
+        rc =ccrsa_verify_pss((ccrsa_full_ctx_t)fk, di, di, hashLen, hash, signedDataLen, signedData, saltLen, &valid);
     
     CCCryptorStatus rv;
     if(!valid || rc!=0 )

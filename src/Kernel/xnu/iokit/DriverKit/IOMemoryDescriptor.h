@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IOMemoryDescriptor.iig */
+/* iig-lite generated from IOMemoryDescriptor.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IOMemoryDescriptor.iig:1-72 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -73,11 +72,6 @@ struct _IOMDPrivateState {
 	uint64_t options;
 };
 
-/* source class IOMemoryDescriptor IOMemoryDescriptor.iig:73-185 */
-
-#if __DOCUMENTATION__
-#define KERNEL IIG_KERNEL
-
 /*!
  * @class IOMemoryDescriptor
  *
@@ -89,7 +83,15 @@ struct _IOMDPrivateState {
  * Methods in this class are used for memory that was supplied as a parameter.
  *
 
+                   
+                                
+        
 */
+
+/* source class IOMemoryDescriptor IOMemoryDescriptor.iig:89-186 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
 
 class KERNEL IOMemoryDescriptor : public OSObject
 {
@@ -193,12 +195,12 @@ private:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IOMemoryDescriptor IOMemoryDescriptor.iig:73-185 */
+/* generated class IOMemoryDescriptor IOMemoryDescriptor.iig:89-186 */
 
-#define IOMemoryDescriptor__CopyState_ID            0xa2c0861d4118ce5eULL
-#define IOMemoryDescriptor_CreateMapping_ID            0xc5e69b0414ff6ee5ULL
-#define IOMemoryDescriptor_CreateSubMemoryDescriptor_ID            0xb085b5ee60ac732fULL
-#define IOMemoryDescriptor_CreateWithMemoryDescriptors_ID            0xba1530c996c4febcULL
+#define IOMemoryDescriptor__CopyState_ID            0x03a4e730d3c5fecfULL
+#define IOMemoryDescriptor_CreateMapping_ID            0x3b7ce65f9e5d7a62ULL
+#define IOMemoryDescriptor_CreateSubMemoryDescriptor_ID            0xb4e298644832702dULL
+#define IOMemoryDescriptor_CreateWithMemoryDescriptors_ID            0xe01251f2aafb452bULL
 
 #define IOMemoryDescriptor__CopyState_Args \
         _IOMDPrivateState * state
@@ -259,14 +261,14 @@ public:\
         uint64_t offset,\
         uint64_t length,\
         IOMemoryDescriptor * ofDescriptor,\
-        IOMemoryDescriptor ** memory) __attribute__((availability(driverkit,introduced=20.0)));\
+        IOMemoryDescriptor ** memory);\
 \
     static kern_return_t\
     CreateWithMemoryDescriptors(\
         uint64_t memoryDescriptorCreateOptions,\
         uint32_t withDescriptorsCount,\
         IOMemoryDescriptor ** const withDescriptors,\
-        IOMemoryDescriptor ** memory) __attribute__((availability(driverkit,introduced=20.0)));\
+        IOMemoryDescriptor ** memory);\
 \
     kern_return_t\
     Map(\
@@ -344,22 +346,6 @@ public:\
 
 #if !KERNEL
 
-extern OSMetaClass          * gIOMemoryDescriptorMetaClass;
-extern const OSClassLoadInformation IOMemoryDescriptor_Class;
-
-class IOMemoryDescriptorMetaClass : public OSMetaClass
-{
-public:
-    virtual kern_return_t
-    New(OSObject * instance) override;
-    virtual kern_return_t
-    Dispatch(const IORPC rpc) override;
-};
-
-#endif /* !KERNEL */
-
-#if !KERNEL
-
 class IOMemoryDescriptorInterface : public OSInterface
 {
 public:
@@ -370,43 +356,42 @@ struct IOMemoryDescriptor_LocalIVars;
 
 class IOMemoryDescriptor : public OSObject, public IOMemoryDescriptorInterface
 {
-#if !KERNEL
-    friend class IOMemoryDescriptorMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
 public:
-#ifdef IOMemoryDescriptor_DECLARE_IVARS
-IOMemoryDescriptor_DECLARE_IVARS
-#else /* IOMemoryDescriptor_DECLARE_IVARS */
     union
     {
         IOMemoryDescriptor_IVars * ivars;
         IOMemoryDescriptor_LocalIVars * lvars;
     };
-#endif /* IOMemoryDescriptor_DECLARE_IVARS */
-#endif /* !KERNEL */
-
-#if !KERNEL
-    static OSMetaClass *
-    sGetMetaClass() { return gIOMemoryDescriptorMetaClass; };
-#endif /* KERNEL */
-
     using super = OSObject;
 
-#if !KERNEL
     IOMemoryDescriptor_Methods
     IOMemoryDescriptor_VirtualMethods
-#endif /* !KERNEL */
-
 };
-#endif /* !KERNEL */
 
+#endif /* !KERNEL */
 
 #endif /* !__DOCUMENTATION__ */
 
 
-/* IOMemoryDescriptor.iig:194- */
+
+/* source class IOMemoryDescriptorPrivate IOMemoryDescriptor.iig:188-193 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
+
+class EXTENDS (IOMemoryDescriptor) IOMemoryDescriptorPrivate
+{
+	virtual kern_return_t
+	_CopyState(
+		_IOMDPrivateState * state);
+};
+
+#undef KERNEL
+#else /* __DOCUMENTATION__ */
+
+#endif /* !__DOCUMENTATION__ */
+
+
 
 
 

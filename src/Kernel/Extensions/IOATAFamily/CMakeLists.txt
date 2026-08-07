@@ -10,6 +10,7 @@ target_sources(IOATAFamily PRIVATE
     IOATAController.cpp
     IOATADevConfig.cpp
     IOATADevice.cpp
+    IOPCIATA.cpp
     IOATARegI386.cpp
 )
 target_include_directories(IOATAFamily PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} include/IOKit/ata private_include/IOKit/ata)

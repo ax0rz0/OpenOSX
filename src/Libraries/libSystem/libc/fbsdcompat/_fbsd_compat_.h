@@ -37,6 +37,25 @@
 
 #define	__isthreaded	1
 
+/*
+ * TSD-key infrastructure normally supplied by libc's private <sys/cdefs.h>
+ * (libc/include/sys/cdefs.h). Under this compat shim that header is shadowed by
+ * xnu's PrivateHeaders/sys/cdefs.h, which omits the __LIBC_PTHREAD_KEY_* slots
+ * and the pthread_key_init_np prototype -- provide them here so ttyname.c (and
+ * any other TSD-key user built with this shim) resolves. __LIBC_PTHREAD_KEY(x)
+ * is the fixed Apple ABI slot base (10 + x) on device.
+ */
+#ifndef __LIBC_PTHREAD_KEY
+#define	__LIBC_PTHREAD_KEY(x)		(10 + (x))
+#define	__LIBC_PTHREAD_KEY_XLOCALE	__LIBC_PTHREAD_KEY(0)
+#define	__LIBC_PTHREAD_KEY_LOCALTIME	__LIBC_PTHREAD_KEY(2)
+#define	__LIBC_PTHREAD_KEY_GMTIME	__LIBC_PTHREAD_KEY(3)
+#define	__LIBC_PTHREAD_KEY_GDTOA_BIGINT	__LIBC_PTHREAD_KEY(4)
+#define	__LIBC_PTHREAD_KEY_PARSEFLOAT	__LIBC_PTHREAD_KEY(5)
+#define	__LIBC_PTHREAD_KEY_TTYNAME	__LIBC_PTHREAD_KEY(6)
+extern int pthread_key_init_np(int, void (*)(void *));
+#endif
+
 #ifdef	_FLOCK_DEBUG
 #define _FLOCKFILE(x) _flockfile_debug(x, __FILE__, __LINE__)
 #else

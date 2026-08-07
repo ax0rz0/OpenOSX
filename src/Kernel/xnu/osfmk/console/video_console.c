@@ -101,6 +101,7 @@
 #include <vm/vm_kern.h>
 #include <machine/io_map_entries.h>
 #include <machine/machine_cpu.h>
+#include <machine/machine_routines.h>	/* ml_phys_write_word, for the early framebuffer */
 
 #include <pexpert/pexpert.h>
 #include <sys/kdebug.h>
@@ -247,6 +248,7 @@ static void gc_clear_line(unsigned int xx, unsigned int yy, int which);
 static void gc_clear_screen(unsigned int xx, unsigned int yy, int top,
     unsigned int bottom, int which);
 static void gc_enable(boolean_t enable);
+static void vc_serial_replay_early(void);
 static void gc_hide_cursor(unsigned int xx, unsigned int yy);
 static void gc_initialize(struct vc_info * info);
 static boolean_t gc_is_tab_stop(unsigned int column);
@@ -355,8 +357,14 @@ gc_enable( boolean_t enable )
 	spl_t s;
 
 	if (enable == FALSE) {
-		// only disable console output if it goes to the graphics console
-		if (console_is_serial() == FALSE) {
+		/* Only disable console output if it goes solely to the graphics
+		 * console. PD routes the whole console through VC_CONS_OPS and
+		 * mirrors it to serial in vcputc(); disableConsoleOutput would
+		 * starve that mirror and mute serial whenever the screen is
+		 * released (e.g. IOFramebuffer::open() when Xorg starts). The
+		 * framebuffer itself is already protected by gc_enabled below. */
+		if (console_is_serial() == FALSE &&
+		    !(serialmode & SERIALMODE_OUTPUT)) {
 			disableConsoleOutput = TRUE;
 		}
 		gc_enabled           = FALSE;
@@ -462,6 +470,8 @@ gc_enable( boolean_t enable )
 		gc_ops.enable(TRUE);
 		gc_enabled           = TRUE;
 		disableConsoleOutput = FALSE;
+
+		vc_serial_replay_early();
 	}
 }
 
@@ -1246,9 +1256,186 @@ gc_update_color(int color, boolean_t fore)
 	gc_ops.update_color(color, fore);
 }
 
+/* serial_putc has no shared prototype (serial_console.c declares it the same
+ * way); used below to mirror the video console to the UART. */
+extern void serial_putc(char);
+
+static uint64_t  pd_efb_phys   = 0;    /* physical base of the framebuffer */
+static uint32_t  pd_efb_stride = 0;    /* in pixels, not bytes */
+static uint32_t  pd_efb_cols   = 0;
+static uint32_t  pd_efb_rows   = 0;
+static uint32_t  pd_efb_x      = 0;
+static uint32_t  pd_efb_y      = 0;
+
+void pd_early_fb_init(void);
+void pd_early_fb_putc(char c);
+void pd_early_fb_puts(const char *s);
+
+void
+pd_early_fb_init(void)
+{
+	if (pd_efb_phys != 0) {
+		return;
+	}
+	if (!PE_state.video.v_baseAddr || PE_state.video.v_depth != 32) {
+		return;
+	}
+	if (!PE_state.video.v_rowBytes || !PE_state.video.v_width) {
+		return;
+	}
+
+	pd_efb_phys   = PE_state.video.v_baseAddr & ~3ULL;
+	pd_efb_stride = PE_state.video.v_rowBytes / 4;
+	pd_efb_cols   = PE_state.video.v_width  / ISO_CHAR_WIDTH;
+	pd_efb_rows   = PE_state.video.v_height / ISO_CHAR_HEIGHT;
+	pd_efb_x      = 0;
+	pd_efb_y      = 0;
+}
+
+static void
+pd_early_fb_pixel(uint32_t x, uint32_t y, uint32_t colour)
+{
+	ml_phys_write_word((vm_offset_t)(pd_efb_phys +
+	    ((uint64_t)y * pd_efb_stride + x) * 4), colour);
+}
+
+/*
+ * Blank the text line about to be written. Wrapping to the top and clearing
+ * ahead is deliberate: a real scroll would have to move every pixel on the
+ * screen through ml_phys_write_word one word at a time, which is slow enough
+ * to change the timing of whatever is being debugged.
+ */
+static void
+pd_early_fb_clear_line(uint32_t line)
+{
+	uint32_t row, col;
+
+	for (row = 0; row < ISO_CHAR_HEIGHT; row++) {
+		for (col = 0; col < pd_efb_cols * ISO_CHAR_WIDTH; col++) {
+			pd_early_fb_pixel(col, line * ISO_CHAR_HEIGHT + row, 0);
+		}
+	}
+}
+
+void
+pd_early_fb_putc(char c)
+{
+	const unsigned char *glyph;
+	uint32_t row, col;
+
+	if (pd_efb_phys == 0) {
+		pd_early_fb_init();
+		if (pd_efb_phys == 0) {
+			return;
+		}
+		pd_early_fb_clear_line(0);
+	}
+
+	if (c == '\r') {
+		pd_efb_x = 0;
+		return;
+	}
+	if (c == '\n') {
+		pd_efb_x = 0;
+		pd_efb_y = (pd_efb_y + 1) % pd_efb_rows;
+		pd_early_fb_clear_line(pd_efb_y);
+		return;
+	}
+	if (pd_efb_x >= pd_efb_cols) {
+		pd_early_fb_putc('\n');
+	}
+
+	glyph = iso_font + ((unsigned char)c * ISO_CHAR_HEIGHT);
+	for (row = 0; row < ISO_CHAR_HEIGHT; row++) {
+		unsigned char bits = glyph[row];
+
+		for (col = 0; col < ISO_CHAR_WIDTH; col++) {
+			pd_early_fb_pixel(pd_efb_x * ISO_CHAR_WIDTH + col,
+			    pd_efb_y * ISO_CHAR_HEIGHT + row,
+			    (bits & (1 << col)) ? 0x00FFFFFF : 0);
+		}
+	}
+	pd_efb_x++;
+}
+
+#define VC_EARLY_RING_SIZE 16384
+
+extern bool console_serial_video_mirror(void);
+void vc_serial_putc(char c);
+
+static char vc_early_ring[VC_EARLY_RING_SIZE];
+static uint32_t vc_early_len = 0;
+static boolean_t vc_early_replayed = FALSE;
+
+void
+vc_serial_record_early(char c)
+{
+	if (!gc_enabled) {
+		pd_early_fb_putc(c);
+	}
+
+	/*
+	 * The ring only needs to cover what the replay will redraw, so it does
+	 * stop once the console exists.
+	 */
+	if (gc_initialized || vc_early_replayed) {
+		return;
+	}
+	if (vc_early_len < VC_EARLY_RING_SIZE) {
+		vc_early_ring[vc_early_len++] = c;
+	}
+}
+
+static void
+vc_serial_replay_early(void)
+{
+	uint32_t i;
+
+	if (vc_early_replayed) {
+		return;
+	}
+	vc_early_replayed = TRUE;
+
+	if (!console_serial_video_mirror()) {
+		return;
+	}
+	for (i = 0; i < vc_early_len; i++) {
+		vc_serial_putc(vc_early_ring[i]);
+	}
+}
+
+void
+vc_serial_putc(char c)
+{
+	if (gc_initialized && gc_enabled) {
+		VCPUTC_LOCK_LOCK();
+		if (gc_enabled) {
+			gc_hide_cursor(gc_x, gc_y);
+			gc_putchar(c);
+			gc_show_cursor(gc_x, gc_y);
+		}
+		VCPUTC_LOCK_UNLOCK();
+	}
+}
+
 void
 vcputc(__unused int l, __unused int u, int c)
 {
+	/*
+	 * PD: mirror everything rendered on the video console to the serial
+	 * port. vcputc is the single sink for the VC_CONS_OPS console, so once
+	 * IOFramebuffer flips the active console to video, ALL output that would
+	 * otherwise only reach the framebuffer - including userland printf via
+	 * /dev/console (e.g. launchd) - passes through here. Mirroring at this
+	 * choke point (rather than the kprintf/ring paths, which miss the
+	 * userland tty path) is what makes the full boot visible on serial.
+	 * _cnputs() already injects '\r' before '\n', so no CR handling here.
+	 * Gated on serial output being requested; kprintf no longer emits its
+	 * own serial copy (PE_kputc is plain cnputc_unbuffered), so no doubling.
+	 */
+	if (serialmode & SERIALMODE_OUTPUT) {
+		serial_putc((char)c);
+	}
 	if (gc_initialized && gc_enabled) {
 		VCPUTC_LOCK_LOCK();
 		if (gc_enabled) {
@@ -2797,7 +2984,9 @@ gc_pause( boolean_t pause, boolean_t graphics_now )
 	s = splhigh();
 	VCPUTC_LOCK_LOCK();
 
-	disableConsoleOutput = (pause && !console_is_serial());
+	/* Same serial-mirror consideration as gc_enable(). */
+	disableConsoleOutput = (pause && !console_is_serial() &&
+	    !(serialmode & SERIALMODE_OUTPUT));
 	gc_enabled           = (!pause && !graphics_now);
 
 	VCPUTC_LOCK_UNLOCK();
@@ -2907,8 +3096,6 @@ initialize_screen(PE_Video * boot_vinfo, unsigned int op)
 #ifndef __LP64__
 			new_vinfo.v_physaddr |= (((uint64_t) boot_vinfo->v_baseAddrHigh) << 32);
 #endif
-			kprintf("initialize_screen: b=%08llX, w=%08X, h=%08X, r=%08X, d=%08X\n",                  /* (BRINGUP) */
-			    new_vinfo.v_physaddr, new_vinfo.v_width, new_vinfo.v_height, new_vinfo.v_rowbytes, new_vinfo.v_type);       /* (BRINGUP) */
 		}
 
 		if (!newVideoVirt && !new_vinfo.v_physaddr) {                                                   /* Check to see if we have a framebuffer */

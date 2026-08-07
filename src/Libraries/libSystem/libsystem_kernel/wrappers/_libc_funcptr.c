@@ -32,52 +32,60 @@
 extern _libkernel_functions_t _libkernel_functions;
 extern void mig_os_release(void* ptr);
 
-__attribute__((visibility("hidden")))
+#ifdef PD_LD64LLD_WEAK_LIBC_FUNCPTR
+#define PD_LIBKERNEL_FUNCPTR_ATTR __attribute__((visibility("hidden"), weak))
+#define PD_LIBKERNEL_FUNCPTR_EXPORT_ATTR __attribute__((weak))
+#else
+#define PD_LIBKERNEL_FUNCPTR_ATTR __attribute__((visibility("hidden")))
+#define PD_LIBKERNEL_FUNCPTR_EXPORT_ATTR
+#endif
+
+/*
+ * OpenOSX: these allocator wrappers dispatch through _libkernel_functions,
+ * which is NULL until __libkernel_init() runs (during libSystem's initializer).
+ * dyld links libsystem_kernel statically but never runs that init, and provides
+ * its OWN malloc/free/realloc (a pre-libSystem pool allocator in dyldNew.cpp).
+ * Marking these weak lets dyld's strong definitions win the link (otherwise this
+ * archive member -- pulled in for the string dispatchers -- shadowed dyld's
+ * malloc, so every dyld allocation dereferenced the NULL table: fault_addr=0x10,
+ * the malloc slot offset). Normal libSystem clients still get these as the only
+ * (weak) definition and route through the initialized table as before.
+ */
+__attribute__((visibility("hidden"), weak))
 void *
 malloc(size_t size)
 {
 	return _libkernel_functions->malloc(size);
 }
 
-__attribute__((visibility("hidden")))
+__attribute__((visibility("hidden"), weak))
 void
 free(void *ptr)
 {
 	return _libkernel_functions->free(ptr);
 }
 
-__attribute__((visibility("hidden")))
+__attribute__((visibility("hidden"), weak))
 void *
 realloc(void *ptr, size_t size)
 {
 	return _libkernel_functions->realloc(ptr, size);
 }
 
-__attribute__((visibility("hidden")))
-void *
-reallocf(void *ptr, size_t size)
-{
-	void *nptr = realloc(ptr, size);
-	if (!nptr && ptr) {
-		free(ptr);
-	}
-	return nptr;
-}
-
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 void
 _pthread_exit_if_canceled(int error)
 {
 	return _libkernel_functions->_pthread_exit_if_canceled(error);
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 void
 _pthread_set_self(void *ptr __attribute__((__unused__)))
 {
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 void
 _pthread_clear_qos_tsd(mach_port_t thread_port)
 {
@@ -87,7 +95,7 @@ _pthread_clear_qos_tsd(mach_port_t thread_port)
 	}
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 int
 pthread_current_stack_contains_np(const void *addr, size_t len)
 {
@@ -103,16 +111,154 @@ pthread_current_stack_contains_np(const void *addr, size_t len)
  * Upcalls to optimized libplatform string functions
  */
 
+/*
+ * OpenOSX: the upstream _libkernel_generic_string_functions table only
+ * populated a subset of the slots -- on a real system the FULL optimized table
+ * is installed by __libkernel_platform_init() (during libSystem's initializer)
+ * before any string function is ever called, so the gaps never mattered. But
+ * dyld links libsystem_kernel statically and NEVER runs platform_init, so it
+ * uses this generic table as-is. Any dispatched string function whose slot was
+ * left NULL (strncmp/strncpy/strnlen/strstr/memchr/memcmp/memccpy/strlcat) then
+ * calls through a NULL pointer -> jump to 0. dyld's __guard_setup() calls
+ * strncmp() during bootstrap, which crashed pid 1 with rip=0 before _main().
+ * Provide portable generic implementations for every remaining slot so the
+ * generic table is self-sufficient, matching what the optimized table supplies.
+ */
+__attribute__((visibility("hidden")))
+static void *
+_libkernel_memchr(const void *s, int c, size_t n)
+{
+	const unsigned char *p = (const unsigned char *)s;
+	while (n--) {
+		if (*p == (unsigned char)c)
+			return (void *)p;
+		p++;
+	}
+	return 0;
+}
+
+__attribute__((visibility("hidden")))
+static int
+_libkernel_memcmp(const void *s1, const void *s2, size_t n)
+{
+	const unsigned char *a = (const unsigned char *)s1;
+	const unsigned char *b = (const unsigned char *)s2;
+	while (n--) {
+		if (*a != *b)
+			return (int)*a - (int)*b;
+		a++; b++;
+	}
+	return 0;
+}
+
+__attribute__((visibility("hidden")))
+static void *
+_libkernel_memccpy(void *__restrict dst, const void *__restrict src, int c, size_t n)
+{
+	unsigned char *d = (unsigned char *)dst;
+	const unsigned char *s = (const unsigned char *)src;
+	while (n--) {
+		unsigned char ch = *s++;
+		*d++ = ch;
+		if (ch == (unsigned char)c)
+			return d;
+	}
+	return 0;
+}
+
+__attribute__((visibility("hidden")))
+static size_t
+_libkernel_generic_strnlen(const char *s, size_t maxlen)
+{
+	size_t i = 0;
+	while (i < maxlen && s[i] != '\0')
+		i++;
+	return i;
+}
+
+__attribute__((visibility("hidden")))
+static int
+_libkernel_strncmp(const char *s1, const char *s2, size_t n)
+{
+	while (n--) {
+		unsigned char c1 = (unsigned char)*s1++;
+		unsigned char c2 = (unsigned char)*s2++;
+		if (c1 != c2)
+			return (int)c1 - (int)c2;
+		if (c1 == '\0')
+			break;
+	}
+	return 0;
+}
+
+__attribute__((visibility("hidden")))
+static char *
+_libkernel_strncpy(char *__restrict dst, const char *__restrict src, size_t maxlen)
+{
+	size_t i = 0;
+	for (; i < maxlen && src[i] != '\0'; i++)
+		dst[i] = src[i];
+	for (; i < maxlen; i++)
+		dst[i] = '\0';
+	return dst;
+}
+
+__attribute__((visibility("hidden")))
+static size_t
+_libkernel_strlcat(char *__restrict dst, const char *__restrict src, size_t maxlen)
+{
+	size_t dlen = _libkernel_generic_strnlen(dst, maxlen);
+	size_t slen = 0;
+	while (src[slen] != '\0')
+		slen++;
+	if (dlen == maxlen)
+		return maxlen + slen;
+	size_t i = 0;
+	while (src[i] != '\0' && dlen + i + 1 < maxlen) {
+		dst[dlen + i] = src[i];
+		i++;
+	}
+	dst[dlen + i] = '\0';
+	return dlen + slen;
+}
+
+__attribute__((visibility("hidden")))
+static char *
+_libkernel_strstr(const char *s, const char *find)
+{
+	if (find[0] == '\0')
+		return (char *)s;
+	for (; *s != '\0'; s++) {
+		const char *a = s;
+		const char *b = find;
+		while (*a != '\0' && *b != '\0' && *a == *b) {
+			a++; b++;
+		}
+		if (*b == '\0')
+			return (char *)s;
+	}
+	return 0;
+}
+
 static const struct _libkernel_string_functions
     _libkernel_generic_string_functions = {
+	.version = 1,
 	.bzero = _libkernel_bzero,
+	.memchr = _libkernel_memchr,
+	.memcmp = _libkernel_memcmp,
 	.memmove = _libkernel_memmove,
+	.memccpy = _libkernel_memccpy,
 	.memset = _libkernel_memset,
 	.strchr = _libkernel_strchr,
 	.strcmp = _libkernel_strcmp,
 	.strcpy = _libkernel_strcpy,
+	.strlcat = _libkernel_strlcat,
 	.strlcpy = _libkernel_strlcpy,
 	.strlen = _libkernel_strlen,
+	.strncmp = _libkernel_strncmp,
+	.strncpy = _libkernel_strncpy,
+	.strnlen = _libkernel_generic_strnlen,
+	.strstr = _libkernel_strstr,
 };
 static _libkernel_string_functions_t _libkernel_string_functions =
     &_libkernel_generic_string_functions;
@@ -124,133 +270,126 @@ __libkernel_platform_init(_libkernel_string_functions_t fns)
 	return KERN_SUCCESS;
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 void
 bzero(void *s, size_t n)
 {
 	return _libkernel_string_functions->bzero(s, n);
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 void
 __bzero(void *s, size_t n)
 {
 	return _libkernel_string_functions->bzero(s, n);
 }
 
-__attribute__((visibility("hidden")))
+/* Default (not hidden) visibility: libSystem.B exports memchr from here.
+ * libplatform has no dedicated exported copy that gets pulled otherwise --
+ * the -u root resolves to this archive first, so a hidden def would leave
+ * the export list unsatisfiable ("cannot export hidden symbol"). */
 void *
+PD_LIBKERNEL_FUNCPTR_EXPORT_ATTR
 memchr(const void *s, int c, size_t n)
 {
 	return _libkernel_string_functions->memchr(s, c, n);
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 int
 memcmp(const void *s1, const void *s2, size_t n)
 {
 	return _libkernel_string_functions->memcmp(s1, s2, n);
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 void *
 memmove(void *dst, const void *src, size_t n)
 {
 	return _libkernel_string_functions->memmove(dst, src, n);
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 void *
 memcpy(void *dst, const void *src, size_t n)
 {
 	return _libkernel_string_functions->memmove(dst, src, n);
 }
 
-__attribute__((visibility("hidden")))
-void *
-memccpy(void *__restrict dst, const void *__restrict src, int c, size_t n)
-{
-	return _libkernel_string_functions->memccpy(dst, src, c, n);
-}
+/* memccpy: same problem as strlcpy/strnlen/index/strlcat -- libplatform
+ * already has a genuinely public memccpy, so just drop this hidden dup
+ * rather than add a third definition. */
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 void *
 memset(void *b, int c, size_t len)
 {
 	return _libkernel_string_functions->memset(b, c, len);
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 char *
 strchr(const char *s, int c)
 {
 	return _libkernel_string_functions->strchr(s, c);
 }
 
-__attribute__((visibility("hidden")))
-char *
-index(const char *s, int c)
-{
-	return _libkernel_string_functions->strchr(s, c);
-}
+/* index: see the strlcpy/strnlen comment further down -- same problem
+ * (explicit visibility("hidden") here with no public alternative). Real
+ * public index() now lives in stub/pd_libSystem_compat.c. */
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 int
 strcmp(const char *s1, const char *s2)
 {
 	return _libkernel_string_functions->strcmp(s1, s2);
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_EXPORT_ATTR
 char *
 strcpy(char * restrict dst, const char * restrict src)
 {
 	return _libkernel_string_functions->strcpy(dst, src);
 }
 
-__attribute__((visibility("hidden")))
-size_t
-strlcat(char * restrict dst, const char * restrict src, size_t maxlen)
-{
-	return _libkernel_string_functions->strlcat(dst, src, maxlen);
-}
+/* strlcat: same problem as strlcpy/strnlen/index -- real public strlcat
+ * now lives in libc/string/pd_strnlen.c. */
 
-__attribute__((visibility("hidden")))
-size_t
-strlcpy(char * restrict dst, const char * restrict src, size_t maxlen)
-{
-	return _libkernel_string_functions->strlcpy(dst, src, maxlen);
-}
+/*
+ * strlcpy: no PD_LIBKERNEL_FUNCPTR_ATTR public wrapper here. That attribute
+ * makes the symbol private_extern, and -exported_symbols_list can't undo
+ * that at final link -- unlike strlen/strncmp below (which happen to also
+ * get a genuinely public definition from libplatform, so whichever the
+ * linker keeps is fine), strlcpy had no other public source, so it stayed
+ * hidden no matter what the exports list said. The real public strlcpy now
+ * lives in libc/string/pd_strnlen.c.
+ */
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 size_t
 strlen(const char *str)
 {
 	return _libkernel_string_functions->strlen(str);
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 int
 strncmp(const char *s1, const char *s2, size_t n)
 {
 	return _libkernel_string_functions->strncmp(s1, s2, n);
 }
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_EXPORT_ATTR
 char *
 strncpy(char * restrict dst, const char * restrict src, size_t maxlen)
 {
 	return _libkernel_string_functions->strncpy(dst, src, maxlen);
 }
 
-__attribute__((visibility("hidden")))
-size_t
-strnlen(const char *s, size_t maxlen)
-{
-	return _libkernel_string_functions->strnlen(s, maxlen);
-}
+/* strnlen: see the strlcpy comment above -- same problem, same fix (real
+ * public strnlen now lives in libc/string/pd_strnlen.c). */
 
-__attribute__((visibility("hidden")))
+PD_LIBKERNEL_FUNCPTR_ATTR
 char *
 strstr(const char *s, const char *find)
 {

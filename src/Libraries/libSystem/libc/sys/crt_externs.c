@@ -47,6 +47,10 @@ DECLARE_VAR(environ, char **);
 DECLARE_VAR(_mh_execute_header, struct mach_header);
 DECLARE_PROGNAME(__progname, char *);
 
+#if defined(OPENOSX_EARLY_USERLAND) && defined(__DYNAMIC__)
+char **environ;
+#endif
+
 char ***_NSGetArgv(void) {
     return(USE_VAR(NXArgv));
 }
@@ -97,7 +101,12 @@ _program_vars_init(const struct ProgramVars* vars) {
 #endif
     NXArgv_pointer		= vars->NXArgvPtr;
     NXArgc_pointer		= vars->NXArgcPtr;
+#if defined(OPENOSX_EARLY_USERLAND)
+    environ			= vars->environPtr ? *vars->environPtr : NULL;
+    environ_pointer		= &environ;
+#else
     environ_pointer		= vars->environPtr;
+#endif
     __progname_pointer		= vars->__prognamePtr;
     _mh_execute_header_pointer	= vars->mh;
 }
@@ -149,4 +158,3 @@ void *__eh_value_gcc_272 = (void *)0;
 /* This is what egcs uses for its global data pointer */
 void *__eh_global_dataptr = (void *)0;
 #endif /* __ppc__ */
-

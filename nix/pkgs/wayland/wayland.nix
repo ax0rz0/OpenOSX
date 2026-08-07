@@ -1,0 +1,103 @@
+{ stdenv
+, lib
+, requireFile
+, meson
+, ninja
+, pkg-config
+, darwinCrossToolchain
+, nativeLd
+, libSystem
+, libffi
+, waylandScanner
+, src
+, targetTriple ? "x86_64-apple-darwin20.4"
+}:
+
+let
+  targetInfo = import ../../lib/target-info.nix targetTriple;
+  sdkTarball = requireFile {
+    name = "MacOSX11.3.sdk.tar.xz";
+    sha256 = "9adc1373d3879e1973d28ad9f17c9051b02931674a3ec2a2498128989ece2cb1";
+    message = ''
+      MacOSX11.3.sdk.tar.xz (Apple SDK, proprietary - not fetchable/redistributable)
+      is not yet in your Nix store. Register your local copy with:
+        nix-store --add-fixed sha256 /path/to/MacOSX11.3.sdk.tar.xz
+    '';
+  };
+in
+stdenv.mkDerivation {
+  pname = "openosx-wayland";
+  version = "1.25.0";
+  inherit src;
+
+  nativeBuildInputs = [ meson ninja pkg-config waylandScanner ];
+  buildInputs = [ libffi ];
+
+  configurePhase = ''
+    runHook preConfigure
+
+    mkdir -p sdk
+    tar xf ${sdkTarball} -C sdk
+    export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
+
+    cat > openosx-cross.ini <<EOF
+[binaries]
+c = '${darwinCrossToolchain}/bin/${targetTriple}-clang'
+ar = '${darwinCrossToolchain}/bin/${targetTriple}-ar'
+strip = '${darwinCrossToolchain}/bin/${targetTriple}-strip'
+pkg-config = '${pkg-config}/bin/pkg-config'
+
+[built-in options]
+c_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-U_FORTIFY_SOURCE', '-D_FORTIFY_SOURCE=0', '-D_DARWIN_C_SOURCE', '-fno-stack-protector', '-I${libSystem}/usr/include']
+    c_link_args = ['-isysroot', '$DARWIN_SDK_ROOT', '-mmacosx-version-min=11.0', '-fuse-ld=${nativeLd}/bin/ld', '-nostdlib', '-L${libSystem}/usr/lib', '-Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib', '-Wl,-platform_version,macos,11.0,11.5', '-lSystem']
+
+[host_machine]
+system = 'darwin'
+subsystem = 'macos'
+cpu_family = '${targetInfo.mesonCpuFamily}'
+cpu = '${targetInfo.mesonCpu}'
+endian = '${targetInfo.mesonEndian}'
+
+[properties]
+needs_exe_wrapper = true
+EOF
+
+    export PKG_CONFIG_PATH="${waylandScanner}/lib/pkgconfig:${libffi}/lib/pkgconfig"
+    export PKG_CONFIG_PATH_FOR_BUILD="${waylandScanner}/lib/pkgconfig"
+    meson setup build \
+      --cross-file openosx-cross.ini \
+      --prefix=$out \
+      --libdir=lib \
+      --buildtype=release \
+      -Ddefault_library=both \
+      -Dlibraries=true \
+      -Dscanner=false \
+      -Dtests=false \
+      -Ddocumentation=false \
+      -Ddtd_validation=false
+
+    runHook postConfigure
+  '';
+
+  buildPhase = ''
+    runHook preBuild
+    ninja -C build
+    runHook postBuild
+  '';
+
+  installPhase = ''
+    runHook preInstall
+    ninja -C build install
+    runHook postInstall
+  '';
+
+  dontFixup = true;
+  dontStrip = true;
+
+  meta = with lib; {
+    description = "Wayland client and server libraries cross-built for OpenOSX";
+    homepage = "https://wayland.freedesktop.org/";
+    license = licenses.mit;
+    platforms = platforms.linux;
+  };
+}

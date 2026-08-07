@@ -271,8 +271,9 @@ _bsdthread_create(struct proc *p,
 	PTHREAD_TRACE(pthread_thread_create | DBG_FUNC_START, flags, 0, 0, 0);
 
 	kret = pthread_kern->thread_create(ctask, &th);
-	if (kret != KERN_SUCCESS)
+	if (kret != KERN_SUCCESS) {
 		return(ENOMEM);
+	}
 	thread_reference(th);
 
 	pthread_kern->thread_set_tag(th, THREAD_TAG_PTHREAD);
@@ -642,7 +643,6 @@ _bsdthread_register(struct proc *p,
 
 	/* return the supported feature set as the return value. */
 	*retval = PTHREAD_FEATURE_SUPPORTED;
-
 	return(0);
 }
 

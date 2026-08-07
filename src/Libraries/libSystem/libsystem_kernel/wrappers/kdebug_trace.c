@@ -34,6 +34,16 @@
 #include <mach/mach.h>
 #include <mach/mach_vm.h>
 
+#ifndef KDBG_TYPEFILTER_BITMAP_SIZE
+#define KDBG_TYPEFILTER_BITMAP_SIZE ((256 * 256) / 8)
+#endif
+#ifndef KDEBUG_COMMPAGE_ENABLE_TYPEFILTER
+#define KDEBUG_COMMPAGE_ENABLE_TYPEFILTER 0x2
+#endif
+#ifndef KDEBUG_ENABLE_CONT_TIME
+#define KDEBUG_ENABLE_CONT_TIME 0x20
+#endif
+
 extern int __kdebug_typefilter(void** addr, size_t* size);
 extern int __kdebug_trace64(uint32_t code, uint64_t arg1, uint64_t arg2,
     uint64_t arg3, uint64_t arg4);
@@ -58,6 +68,10 @@ static int kdebug_signpost_internal(uint32_t debugid, uintptr_t arg1,
  * before returning with the correct error code. This tradeoff in performance
  * is intentional.
  */
+
+#ifndef atomic_compare_exchange_strong
+#define atomic_compare_exchange_strong(object, expected, desired) __c11_atomic_compare_exchange_strong(object, expected, desired, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
+#endif
 
 void *
 kdebug_typefilter(void)

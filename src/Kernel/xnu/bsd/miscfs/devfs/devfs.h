@@ -111,6 +111,14 @@ void *  devfs_make_node_clone(dev_t dev, int chrblk, uid_t uid, gid_t gid,
 void *  devfs_make_node(dev_t dev, int chrblk, uid_t uid, gid_t gid,
     int perms, const char *fmt, ...);
 
+/*
+ * Function: devfs_is_ready
+ *
+ * Purpose:
+ *   Return non-zero once devfs can accept device nodes.
+ */
+int     devfs_is_ready(void);
+
 #ifdef BSD_KERNEL_PRIVATE
 /*
  * Function: devfs_make_link

@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IODMACommand.iig */
+/* iig-lite generated from IODMACommand.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IODMACommand.iig:1-73 */
 /*
  * Copyright (c) 2020 Apple Inc. All rights reserved.
  *
@@ -74,11 +73,6 @@ struct IODMACommandSpecification {
 	uint64_t _resv[16];
 };
 
-/* source class IODMACommand IODMACommand.iig:74-188 */
-
-#if __DOCUMENTATION__
-#define KERNEL IIG_KERNEL
-
 /*!
  * @class IODMACommand
  *
@@ -94,6 +88,11 @@ struct IODMACommandSpecification {
  * to/from a driver allocated bounce buffer.
  *
 */
+
+/* source class IODMACommand IODMACommand.iig:90-189 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
 
 class KERNEL IODMACommand : public OSObject
 {
@@ -199,13 +198,13 @@ public:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IODMACommand IODMACommand.iig:74-188 */
+/* generated class IODMACommand IODMACommand.iig:90-189 */
 
-#define IODMACommand_Create_ID            0xf296a92bb435af2eULL
-#define IODMACommand_PrepareForDMA_ID            0xf88a8c08b75b1110ULL
-#define IODMACommand_CompleteDMA_ID            0xae15e446c7041259ULL
-#define IODMACommand_GetPreparation_ID            0xcb1908ddf3b73cdeULL
-#define IODMACommand_PerformOperation_ID            0xc41cd97d9b3042eeULL
+#define IODMACommand_Create_ID            0xaee3e66d8ba7da5bULL
+#define IODMACommand_PrepareForDMA_ID            0xd7b6d75c679018feULL
+#define IODMACommand_CompleteDMA_ID            0xdf3f466a3365d6e9ULL
+#define IODMACommand_GetPreparation_ID            0x619d3e2e1a30dcfcULL
+#define IODMACommand_PerformOperation_ID            0x61c901284ed2f407ULL
 
 #define IODMACommand_Create_Args \
         IOService * device, \
@@ -274,7 +273,7 @@ public:\
     GetPreparation(\
         uint64_t * offset,\
         uint64_t * length,\
-        __attribute__((os_returns_retained)) IOMemoryDescriptor ** memory,\
+        IOMemoryDescriptor ** memory,\
         OSDispatchMethod supermethod = NULL);\
 \
     kern_return_t\
@@ -363,22 +362,6 @@ public:\
 
 #if !KERNEL
 
-extern OSMetaClass          * gIODMACommandMetaClass;
-extern const OSClassLoadInformation IODMACommand_Class;
-
-class IODMACommandMetaClass : public OSMetaClass
-{
-public:
-    virtual kern_return_t
-    New(OSObject * instance) override;
-    virtual kern_return_t
-    Dispatch(const IORPC rpc) override;
-};
-
-#endif /* !KERNEL */
-
-#if !KERNEL
-
 class IODMACommandInterface : public OSInterface
 {
 public:
@@ -389,41 +372,22 @@ struct IODMACommand_LocalIVars;
 
 class IODMACommand : public OSObject, public IODMACommandInterface
 {
-#if !KERNEL
-    friend class IODMACommandMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
 public:
-#ifdef IODMACommand_DECLARE_IVARS
-IODMACommand_DECLARE_IVARS
-#else /* IODMACommand_DECLARE_IVARS */
     union
     {
         IODMACommand_IVars * ivars;
         IODMACommand_LocalIVars * lvars;
     };
-#endif /* IODMACommand_DECLARE_IVARS */
-#endif /* !KERNEL */
-
-#if !KERNEL
-    static OSMetaClass *
-    sGetMetaClass() { return gIODMACommandMetaClass; };
-#endif /* KERNEL */
-
     using super = OSObject;
 
-#if !KERNEL
     IODMACommand_Methods
     IODMACommand_VirtualMethods
-#endif /* !KERNEL */
-
 };
-#endif /* !KERNEL */
 
+#endif /* !KERNEL */
 
 #endif /* !__DOCUMENTATION__ */
 
-/* IODMACommand.iig:190- */
+
 
 #endif /* ! _IOKIT_UIODMACOMMMAND_H */

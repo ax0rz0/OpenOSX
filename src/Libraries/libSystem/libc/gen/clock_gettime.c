@@ -37,6 +37,7 @@
 #include <os/base_private.h>
 
 extern uint64_t __thread_selfusage(void);
+extern uint64_t mach_boottime_usec(void);
 
 #define timeval2nsec(tv) (tv.tv_sec * NSEC_PER_SEC + tv.tv_usec * NSEC_PER_USEC)
 

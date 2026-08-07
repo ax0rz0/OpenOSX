@@ -388,10 +388,15 @@ commpage_init_cpu_capabilities( void )
 		    CPUID_LEAF7_FEATURE_AVX512VPCDQ);
 	}
 
-	uint64_t misc_enable = rdmsr64(MSR_IA32_MISC_ENABLE);
-	setif(bits, kHasENFSTRG, (misc_enable & 1ULL) &&
+	i386_cpu_info_t *infop = cpuid_info();
+
+	/* MSR_IA32_MISC_ENABLE != present on AMD */
+	if (infop->cpuid_ven == CPUID_VEN_INTEL) {
+		uint64_t misc_enable = rdmsr64(MSR_IA32_MISC_ENABLE);
+		setif(bits, kHasENFSTRG, (misc_enable & 1ULL) &&
 	    (cpuid_leaf7_features() &
 	    CPUID_LEAF7_FEATURE_ERMS));
+	}
 
 	_cpu_capabilities = bits;               // set kernel version for use by drivers etc
 }
@@ -516,6 +521,13 @@ commpage_populate_one(
 
 	next = 0;
 	commPagePtr = (char *)commpage_allocate( submap, (vm_size_t) area_used, uperm );
+
+	/* OpenOSX/QEMU-TCG: from here until this function returns, commPagePtr32
+	 * (or 64) is non-NULL but the page is only lazily faulted in as the writes
+	 * below actually touch it.
+	 */
+	boolean_t istate = ml_set_interrupts_enabled(FALSE);
+
 	*kernAddressPtr = commPagePtr;                          // save address either in commPagePtr32 or 64
 	commPageBaseOffset = base_offset;
 
@@ -558,6 +570,8 @@ commpage_populate_one(
 	if (next > _COMM_PAGE_END) {
 		panic("commpage overflow: next = 0x%08x, commPagePtr = 0x%p", next, commPagePtr);
 	}
+
+	ml_set_interrupts_enabled(istate);
 }
 
 

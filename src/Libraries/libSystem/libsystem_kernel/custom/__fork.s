@@ -93,8 +93,11 @@ L1:
 	
 	//child here...
 	xorq	%rax, %rax
-	REG_TO_EXTERN(%rax, __current_pid)
-	movl	%eax,(%r11)
+	REG_TO_EXTERN(%rax, __current_pid)	// stores 0 to __current_pid (already
+						// does the store in both PIC and non-PIC
+						// forms; a trailing movl %eax,(%r11) here
+						// faults because after the fork syscall
+						// %r11 holds RFLAGS, not &__current_pid)
 L2:
 	// parent ends up here skipping child portion
 	addq	$24, %rsp   // restore the stack

@@ -24,6 +24,24 @@ XARGS=xargs
 GREP=grep
 FGREP=fgrep
 
+copy_header_tree()
+{
+	if [ -d "$1" ]; then
+		${MKDIR} "$2"
+		${CP} -R "$1"/. "$2"
+		${CHMOD} -R u+rw "$2"
+	fi
+}
+
+copy_missing_header_tree()
+{
+	if [ -d "$1" ]; then
+		${MKDIR} "$2"
+		${CP} -Rn "$1"/. "$2"
+		${CHMOD} -R u+rw "$2"
+	fi
+}
+
 eval $(${SRCROOT}/scripts/generate_features.pl --bash)
 UNIFDEFARGS=$(${SRCROOT}/scripts/generate_features.pl --unifdef)
 
@@ -224,6 +242,71 @@ SYS_INSTHDRS=(
 	${SRCROOT}/include/sys/statvfs.h
 )
 
+XNU_BSD_SYS_DIR=${SRCROOT}/../../../Kernel/xnu/bsd/sys
+if [ -f "${XNU_BSD_SYS_DIR}/cdefs.h" ]; then
+	SYS_INSTHDRS=( "${SYS_INSTHDRS[@]}" "${XNU_BSD_SYS_DIR}/cdefs.h" )
+else
+	SYS_INSTHDRS=( "${SYS_INSTHDRS[@]}" "${SRCROOT}/include/sys/cdefs.h" )
+fi
+if [ -f "${XNU_BSD_SYS_DIR}/appleapiopts.h" ]; then
+	SYS_INSTHDRS=( "${SYS_INSTHDRS[@]}" "${XNU_BSD_SYS_DIR}/appleapiopts.h" )
+fi
+if [ -f "${XNU_BSD_SYS_DIR}/_endian.h" ]; then
+	SYS_INSTHDRS=( "${SYS_INSTHDRS[@]}" "${XNU_BSD_SYS_DIR}/_endian.h" )
+fi
+if [ -f "${XNU_BSD_SYS_DIR}/signal.h" ]; then
+	SYS_INSTHDRS=( "${SYS_INSTHDRS[@]}" "${XNU_BSD_SYS_DIR}/signal.h" )
+fi
+if [ -f "${XNU_BSD_SYS_DIR}/syslimits.h" ]; then
+	SYS_INSTHDRS=( "${SYS_INSTHDRS[@]}" "${XNU_BSD_SYS_DIR}/syslimits.h" )
+fi
+if [ -f "${XNU_BSD_SYS_DIR}/types.h" ]; then
+	SYS_INSTHDRS=( "${SYS_INSTHDRS[@]}" "${XNU_BSD_SYS_DIR}/types.h" )
+fi
+if [ -f "${XNU_BSD_SYS_DIR}/wait.h" ]; then
+	SYS_INSTHDRS=( "${SYS_INSTHDRS[@]}" "${XNU_BSD_SYS_DIR}/wait.h" )
+fi
+if [ -d "${XNU_BSD_SYS_DIR}/_types" ]; then
+	SYS_INSTHDRS=( "${SYS_INSTHDRS[@]}" "${XNU_BSD_SYS_DIR}/_types.h" )
+	SYS_TYPES_INSTHDRS=( "${XNU_BSD_SYS_DIR}"/_types/*.h )
+fi
+XNU_BSD_DIR=${SRCROOT}/../../../Kernel/xnu/bsd
+XNU_LIBKERN_DIR=${SRCROOT}/../../../Kernel/xnu/libkern/libkern
+XNU_LIBKERN_OS_DIR=${SRCROOT}/../../../Kernel/xnu/libkern/os
+XNU_OSFMK_DIR=${SRCROOT}/../../../Kernel/xnu/osfmk
+XNU_MACH_DIR=${SRCROOT}/../../../Kernel/xnu/osfmk/mach
+PD_LIBMALLOC_COMPAT_DIR=${SRCROOT}/../libmalloc/compat-include
+MACHINE_INSTHDRS=()
+MACHINE_I386_INSTHDRS=()
+I386_INSTHDRS=()
+MACHINE_ARM_INSTHDRS=()
+ARM_INSTHDRS=()
+XNU_LIBKERN_INSTHDRS=()
+XNU_LIBKERN_I386_INSTHDRS=()
+for hdr in _types.h endian.h limits.h _mcontext.h signal.h types.h; do
+	if [ -f "${XNU_BSD_DIR}/machine/${hdr}" ]; then
+		MACHINE_INSTHDRS=( "${MACHINE_INSTHDRS[@]}" "${XNU_BSD_DIR}/machine/${hdr}" )
+	fi
+done
+for hdr in _types.h _limits.h endian.h limits.h _mcontext.h signal.h types.h; do
+	if [ -f "${XNU_BSD_DIR}/i386/${hdr}" ]; then
+		MACHINE_I386_INSTHDRS=( "${MACHINE_I386_INSTHDRS[@]}" "${XNU_BSD_DIR}/i386/${hdr}" )
+		I386_INSTHDRS=( "${I386_INSTHDRS[@]}" "${XNU_BSD_DIR}/i386/${hdr}" )
+	fi
+done
+for hdr in _types.h _limits.h endian.h limits.h _mcontext.h signal.h types.h; do
+	if [ -f "${XNU_BSD_DIR}/arm/${hdr}" ]; then
+		MACHINE_ARM_INSTHDRS=( "${MACHINE_ARM_INSTHDRS[@]}" "${XNU_BSD_DIR}/arm/${hdr}" )
+		ARM_INSTHDRS=( "${ARM_INSTHDRS[@]}" "${XNU_BSD_DIR}/arm/${hdr}" )
+	fi
+done
+if [ -f "${XNU_LIBKERN_DIR}/_OSByteOrder.h" ]; then
+	XNU_LIBKERN_INSTHDRS=( "${XNU_LIBKERN_DIR}/_OSByteOrder.h" )
+fi
+if [ -f "${XNU_LIBKERN_DIR}/i386/_OSByteOrder.h" ]; then
+	XNU_LIBKERN_I386_INSTHDRS=( "${XNU_LIBKERN_DIR}/i386/_OSByteOrder.h" )
+fi
+
 PRIVUUID_INSTHDRS=( ${SRCROOT}/uuid/namespace.h )
 
 else # DRIVERKITSDK
@@ -290,6 +373,14 @@ if [ -n "${THERM_INSTHDRS}" ]; then
 ${MKDIR} ${INCDIR}/libkern
 ${INSTALL} -m ${INSTALLMODE} ${THERM_INSTHDRS[@]} ${INCDIR}/libkern
 fi
+if [ -n "${XNU_LIBKERN_INSTHDRS}" ]; then
+${MKDIR} ${INCDIR}/libkern
+${INSTALL} -m ${INSTALLMODE} ${XNU_LIBKERN_INSTHDRS[@]} ${INCDIR}/libkern
+fi
+if [ -n "${XNU_LIBKERN_I386_INSTHDRS}" ]; then
+${MKDIR} ${INCDIR}/libkern/i386
+${INSTALL} -m ${INSTALLMODE} ${XNU_LIBKERN_I386_INSTHDRS[@]} ${INCDIR}/libkern/i386
+fi
 if [ -n "${PROTO_INSTHDRS}" ]; then
 ${MKDIR} ${INCDIR}/protocols
 ${INSTALL} -m ${INSTALLMODE} ${PROTO_INSTHDRS[@]} ${INCDIR}/protocols
@@ -301,6 +392,79 @@ fi
 if [ -n "${SYS_INSTHDRS}" ]; then
 ${MKDIR} ${INCDIR}/sys
 ${INSTALL} -m ${INSTALLMODE} ${SYS_INSTHDRS[@]} ${INCDIR}/sys
+if [ -f "${DERIVED_FILES_DIR}/include/x86_64/libc-features.h" ]; then
+${INSTALL} -m ${INSTALLMODE} "${DERIVED_FILES_DIR}/include/x86_64/libc-features.h" ${INCDIR}/sys
+fi
+cat > ${INCDIR}/sys/_symbol_aliasing.h <<'EOF'
+#ifndef _CDEFS_H_
+# error "Never use <sys/_symbol_aliasing.h> directly. Use <sys/cdefs.h> instead."
+#endif
+#define __DARWIN_ALIAS_STARTING_MAC___MAC_10_6(x) x
+#define __DARWIN_ALIAS_STARTING_MAC___MAC_10_13(x) x
+#define __DARWIN_ALIAS_STARTING_IPHONE___IPHONE_2_0(x) x
+#define __DARWIN_ALIAS_STARTING_IPHONE___IPHONE_3_2(x) x
+#define __DARWIN_ALIAS_STARTING_IPHONE___IPHONE_NA(x) x
+EOF
+cat > ${INCDIR}/sys/_posix_availability.h <<'EOF'
+#ifndef _CDEFS_H_
+# error "Never use <sys/_posix_availability.h> directly. Use <sys/cdefs.h> instead."
+#endif
+#define ___POSIX_C_DEPRECATED_STARTING_199506L
+#define ___POSIX_C_DEPRECATED_STARTING_200112L
+EOF
+fi
+if [ -n "${SYS_TYPES_INSTHDRS}" ]; then
+${MKDIR} ${INCDIR}/sys/_types
+${INSTALL} -m ${INSTALLMODE} ${SYS_TYPES_INSTHDRS[@]} ${INCDIR}/sys/_types
+fi
+copy_missing_header_tree "${XNU_BSD_SYS_DIR}" "${INCDIR}/sys"
+copy_missing_header_tree "${XNU_BSD_DIR}/machine" "${INCDIR}/machine"
+copy_missing_header_tree "${XNU_BSD_DIR}/i386" "${INCDIR}/i386"
+copy_missing_header_tree "${XNU_BSD_DIR}/i386" "${INCDIR}/machine/i386"
+copy_missing_header_tree "${XNU_BSD_DIR}/arm" "${INCDIR}/arm"
+copy_missing_header_tree "${XNU_BSD_DIR}/arm" "${INCDIR}/machine/arm"
+copy_missing_header_tree "${XNU_BSD_DIR}/bsm" "${INCDIR}/bsm"
+copy_missing_header_tree "${XNU_OSFMK_DIR}/i386" "${INCDIR}/i386"
+copy_missing_header_tree "${XNU_OSFMK_DIR}/arm" "${INCDIR}/arm"
+copy_header_tree "${XNU_OSFMK_DIR}/arm" "${INCDIR}/System/arm"
+copy_missing_header_tree "${XNU_OSFMK_DIR}/arm64" "${INCDIR}/mach/arm64"
+copy_missing_header_tree "${XNU_MACH_DIR}" "${INCDIR}/mach"
+copy_missing_header_tree "${XNU_OSFMK_DIR}/mach_debug" "${INCDIR}/mach_debug"
+copy_missing_header_tree "${XNU_LIBKERN_DIR}" "${INCDIR}/libkern"
+copy_missing_header_tree "${XNU_LIBKERN_OS_DIR}" "${INCDIR}/os"
+copy_missing_header_tree "${XNU_BSD_DIR}/net" "${INCDIR}/net"
+copy_missing_header_tree "${XNU_BSD_DIR}/netinet" "${INCDIR}/netinet"
+copy_missing_header_tree "${XNU_BSD_DIR}/netinet6" "${INCDIR}/netinet6"
+copy_missing_header_tree "${XNU_BSD_DIR}/uuid" "${INCDIR}/uuid"
+copy_missing_header_tree "${PD_LIBMALLOC_COMPAT_DIR}/machine" "${INCDIR}/machine"
+copy_missing_header_tree "${PD_LIBMALLOC_COMPAT_DIR}/System" "${INCDIR}/System"
+if [ -f "${XNU_BSD_DIR}/kern/makesyscalls.sh" ] && [ -f "${XNU_BSD_DIR}/kern/syscalls.master" ]; then
+	SYSCALL_HDR_TMP=${DERIVED_FILES_DIR}/openosx-syscall-h
+	${MKDIR} "${SYSCALL_HDR_TMP}"
+	(cd "${SYSCALL_HDR_TMP}" && "${BASH}" "${XNU_BSD_DIR}/kern/makesyscalls.sh" "${XNU_BSD_DIR}/kern/syscalls.master" header)
+	if [ -f "${SYSCALL_HDR_TMP}/syscall.h" ]; then
+		${INSTALL} -m ${INSTALLMODE} "${SYSCALL_HDR_TMP}/syscall.h" "${INCDIR}/sys"
+	fi
+fi
+if [ -n "${MACHINE_INSTHDRS}" ]; then
+${MKDIR} ${INCDIR}/machine
+${INSTALL} -m ${INSTALLMODE} ${MACHINE_INSTHDRS[@]} ${INCDIR}/machine
+fi
+if [ -n "${MACHINE_I386_INSTHDRS}" ]; then
+${MKDIR} ${INCDIR}/machine/i386
+${INSTALL} -m ${INSTALLMODE} ${MACHINE_I386_INSTHDRS[@]} ${INCDIR}/machine/i386
+fi
+if [ -n "${I386_INSTHDRS}" ]; then
+${MKDIR} ${INCDIR}/i386
+${INSTALL} -m ${INSTALLMODE} ${I386_INSTHDRS[@]} ${INCDIR}/i386
+fi
+if [ -n "${MACHINE_ARM_INSTHDRS}" ]; then
+	${MKDIR} ${INCDIR}/machine/arm
+	${INSTALL} -m ${INSTALLMODE} ${MACHINE_ARM_INSTHDRS[@]} ${INCDIR}/machine/arm
+fi
+if [ -n "${ARM_INSTHDRS}" ]; then
+	${MKDIR} ${INCDIR}/arm
+	${INSTALL} -m ${INSTALLMODE} ${ARM_INSTHDRS[@]} ${INCDIR}/arm
 fi
 if [ -n "${XLOCALE_INSTHDRS}" ]; then
 ${MKDIR} ${INCDIR}/xlocale
@@ -333,6 +497,56 @@ fi
 if [ -n "${SYS_INSTHDRS}" ]; then
 ${MKDIR} ${PRIVHDRS}/sys
 ${INSTALL} -m ${INSTALLMODE} ${SYS_INSTHDRS[@]} ${PRIVHDRS}/sys
+fi
+if [ -f "${INCDIR}/sys/_symbol_aliasing.h" ]; then
+${INSTALL} -m ${INSTALLMODE} "${INCDIR}/sys/_symbol_aliasing.h" ${PRIVHDRS}/sys
+fi
+if [ -f "${INCDIR}/sys/_posix_availability.h" ]; then
+${INSTALL} -m ${INSTALLMODE} "${INCDIR}/sys/_posix_availability.h" ${PRIVHDRS}/sys
+fi
+if [ -n "${SYS_TYPES_INSTHDRS}" ]; then
+${MKDIR} ${PRIVHDRS}/sys/_types
+${INSTALL} -m ${INSTALLMODE} ${SYS_TYPES_INSTHDRS[@]} ${PRIVHDRS}/sys/_types
+fi
+copy_header_tree "${XNU_BSD_SYS_DIR}" "${PRIVHDRS}/sys"
+copy_header_tree "${XNU_BSD_DIR}/machine" "${PRIVHDRS}/machine"
+copy_header_tree "${XNU_BSD_DIR}/i386" "${PRIVHDRS}/i386"
+copy_header_tree "${XNU_BSD_DIR}/i386" "${PRIVHDRS}/machine/i386"
+copy_header_tree "${XNU_BSD_DIR}/bsm" "${PRIVHDRS}/bsm"
+copy_header_tree "${XNU_OSFMK_DIR}/i386" "${PRIVHDRS}/i386"
+copy_header_tree "${XNU_MACH_DIR}" "${PRIVHDRS}/mach"
+copy_header_tree "${XNU_OSFMK_DIR}/mach_debug" "${PRIVHDRS}/mach_debug"
+copy_header_tree "${XNU_LIBKERN_DIR}" "${PRIVHDRS}/libkern"
+copy_header_tree "${XNU_LIBKERN_OS_DIR}" "${PRIVHDRS}/os"
+copy_header_tree "${XNU_BSD_DIR}/net" "${PRIVHDRS}/net"
+copy_header_tree "${XNU_BSD_DIR}/netinet" "${PRIVHDRS}/netinet"
+copy_header_tree "${XNU_BSD_DIR}/netinet6" "${PRIVHDRS}/netinet6"
+copy_header_tree "${XNU_BSD_DIR}/uuid" "${PRIVHDRS}/uuid"
+copy_header_tree "${PD_LIBMALLOC_COMPAT_DIR}/machine" "${PRIVHDRS}/machine"
+copy_header_tree "${PD_LIBMALLOC_COMPAT_DIR}/System" "${PRIVHDRS}/System"
+if [ -f "${INCDIR}/sys/syscall.h" ]; then
+${MKDIR} ${PRIVHDRS}/sys
+${INSTALL} -m ${INSTALLMODE} "${INCDIR}/sys/syscall.h" ${PRIVHDRS}/sys
+fi
+if [ -n "${MACHINE_INSTHDRS}" ]; then
+${MKDIR} ${PRIVHDRS}/machine
+${INSTALL} -m ${INSTALLMODE} ${MACHINE_INSTHDRS[@]} ${PRIVHDRS}/machine
+fi
+if [ -n "${MACHINE_I386_INSTHDRS}" ]; then
+${MKDIR} ${PRIVHDRS}/machine/i386
+${INSTALL} -m ${INSTALLMODE} ${MACHINE_I386_INSTHDRS[@]} ${PRIVHDRS}/machine/i386
+fi
+if [ -n "${I386_INSTHDRS}" ]; then
+${MKDIR} ${PRIVHDRS}/i386
+${INSTALL} -m ${INSTALLMODE} ${I386_INSTHDRS[@]} ${PRIVHDRS}/i386
+fi
+if [ -n "${XNU_LIBKERN_INSTHDRS}" ]; then
+${MKDIR} ${PRIVHDRS}/libkern
+${INSTALL} -m ${INSTALLMODE} ${XNU_LIBKERN_INSTHDRS[@]} ${PRIVHDRS}/libkern
+fi
+if [ -n "${XNU_LIBKERN_I386_INSTHDRS}" ]; then
+${MKDIR} ${PRIVHDRS}/libkern/i386
+${INSTALL} -m ${INSTALLMODE} ${XNU_LIBKERN_I386_INSTHDRS[@]} ${PRIVHDRS}/libkern/i386
 fi
 if [ -n "${PRIVUUID_INSTHDRS}" ]; then
 ${MKDIR} ${PRIVHDRS}/uuid

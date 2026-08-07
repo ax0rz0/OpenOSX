@@ -91,6 +91,32 @@
 #define _SYS__ENDIAN_H_
 
 #include <sys/cdefs.h>
+/*
+ * __DARWIN_BYTE_ORDER must be defined before the #elif chain below: if it is
+ * undefined it evaluates to 0 == 0 against __DARWIN_BIG_ENDIAN and
+ * htonl/ntohl silently become identity macros on little-endian targets
+ * (this bit OpenOSX's libc: inet_aton returned host-order addresses,
+ * because with -Ixnu/osfmk ahead of -Ixnu/bsd, <machine/endian.h> resolves
+ * to osfmk's kernel-internal copy, which never defines __DARWIN_BYTE_ORDER).
+ * Include it here as modern SDKs do, then fall back to the compiler's
+ * __BYTE_ORDER__ if the header that won the search still left it undefined.
+ */
+#include <machine/endian.h>
+#if !defined(lint) && !defined(__DARWIN_BYTE_ORDER)
+#ifndef __DARWIN_LITTLE_ENDIAN
+#define __DARWIN_LITTLE_ENDIAN  1234
+#endif
+#ifndef __DARWIN_BIG_ENDIAN
+#define __DARWIN_BIG_ENDIAN     4321
+#endif
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#define __DARWIN_BYTE_ORDER     __DARWIN_BIG_ENDIAN
+#elif defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#define __DARWIN_BYTE_ORDER     __DARWIN_LITTLE_ENDIAN
+#else
+#error "cannot determine __DARWIN_BYTE_ORDER"
+#endif
+#endif /* !lint && !__DARWIN_BYTE_ORDER */
 
 /*
  * Macros for network/external number representation conversion.

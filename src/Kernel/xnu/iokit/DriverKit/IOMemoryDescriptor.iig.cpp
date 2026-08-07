@@ -1,7 +1,7 @@
-/* iig(DriverKit-187 Aug  3 2021 18:40:13) generated from IOMemoryDescriptor.iig */
+/* iig-lite generated from IOMemoryDescriptor.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-#undef	IIG_IMPLEMENTATION
-#define	IIG_IMPLEMENTATION 	IOMemoryDescriptor.iig
+#undef IIG_IMPLEMENTATION
+#define IIG_IMPLEMENTATION 	IOMemoryDescriptor.iig
 
 #if KERNEL
 #include <libkern/c++/OSString.h>
@@ -15,13 +15,11 @@
 #include <DriverKit/IOService.h>
 /* @iig end */
 
-
 #if __has_builtin(__builtin_load_member_function_pointer)
 #define SimpleMemberFunctionCast(cfnty, self, func) (cfnty)__builtin_load_member_function_pointer(self, func)
 #else
 #define SimpleMemberFunctionCast(cfnty, self, func) ({ union { typeof(func) memfun; cfnty cfun; } pair; pair.memfun = func; pair.cfun; })
 #endif
-
 
 struct IOMemoryDescriptor__CopyState_Msg_Content
 {
@@ -51,7 +49,6 @@ struct IOMemoryDescriptor__CopyState_Rpl
 };
 #pragma pack()
 #define IOMemoryDescriptor__CopyState_Rpl_ObjRefs (0)
-
 
 typedef union
 {
@@ -100,7 +97,6 @@ struct IOMemoryDescriptor_CreateMapping_Rpl
 #pragma pack()
 #define IOMemoryDescriptor_CreateMapping_Rpl_ObjRefs (1)
 
-
 typedef union
 {
     const IORPC rpc;
@@ -148,7 +144,6 @@ struct IOMemoryDescriptor_CreateSubMemoryDescriptor_Rpl
 #pragma pack()
 #define IOMemoryDescriptor_CreateSubMemoryDescriptor_Rpl_ObjRefs (1)
 
-
 typedef union
 {
     const IORPC rpc;
@@ -195,7 +190,6 @@ struct IOMemoryDescriptor_CreateWithMemoryDescriptors_Rpl
 #pragma pack()
 #define IOMemoryDescriptor_CreateWithMemoryDescriptors_Rpl_ObjRefs (1)
 
-
 typedef union
 {
     const IORPC rpc;
@@ -208,107 +202,6 @@ typedef union
     };
 }
 IOMemoryDescriptor_CreateWithMemoryDescriptors_Invocation;
-#if !KERNEL
-extern OSMetaClass * gOSContainerMetaClass;
-extern OSMetaClass * gOSDataMetaClass;
-extern OSMetaClass * gOSNumberMetaClass;
-extern OSMetaClass * gOSStringMetaClass;
-extern OSMetaClass * gOSBooleanMetaClass;
-extern OSMetaClass * gOSDictionaryMetaClass;
-extern OSMetaClass * gOSArrayMetaClass;
-extern OSMetaClass * gIODispatchQueueMetaClass;
-extern OSMetaClass * gIOServiceMetaClass;
-extern OSMetaClass * gIOMemoryMapMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
-
-#define IOMemoryDescriptor_QueueNames  ""
-
-#define IOMemoryDescriptor_MethodNames  ""
-
-#define IOMemoryDescriptorMetaClass_MethodNames  ""
-
-struct OSClassDescription_IOMemoryDescriptor_t
-{
-    OSClassDescription base;
-    uint64_t           methodOptions[2 * 0];
-    uint64_t           metaMethodOptions[2 * 0];
-    char               queueNames[sizeof(IOMemoryDescriptor_QueueNames)];
-    char               methodNames[sizeof(IOMemoryDescriptor_MethodNames)];
-    char               metaMethodNames[sizeof(IOMemoryDescriptorMetaClass_MethodNames)];
-};
-
-const struct OSClassDescription_IOMemoryDescriptor_t
-OSClassDescription_IOMemoryDescriptor =
-{
-    .base =
-    {
-        .descriptionSize         = sizeof(OSClassDescription_IOMemoryDescriptor_t),
-        .name                    = "IOMemoryDescriptor",
-        .superName               = "OSObject",
-        .methodOptionsSize       = 2 * sizeof(uint64_t) * 0,
-        .methodOptionsOffset     = __builtin_offsetof(struct OSClassDescription_IOMemoryDescriptor_t, methodOptions),
-        .metaMethodOptionsSize   = 2 * sizeof(uint64_t) * 0,
-        .metaMethodOptionsOffset = __builtin_offsetof(struct OSClassDescription_IOMemoryDescriptor_t, metaMethodOptions),
-        .queueNamesSize       = sizeof(IOMemoryDescriptor_QueueNames),
-        .queueNamesOffset     = __builtin_offsetof(struct OSClassDescription_IOMemoryDescriptor_t, queueNames),
-        .methodNamesSize         = sizeof(IOMemoryDescriptor_MethodNames),
-        .methodNamesOffset       = __builtin_offsetof(struct OSClassDescription_IOMemoryDescriptor_t, methodNames),
-        .metaMethodNamesSize     = sizeof(IOMemoryDescriptorMetaClass_MethodNames),
-        .metaMethodNamesOffset   = __builtin_offsetof(struct OSClassDescription_IOMemoryDescriptor_t, metaMethodNames),
-        .flags                   = 1*kOSClassCanRemote,
-    },
-    .methodOptions =
-    {
-    },
-    .metaMethodOptions =
-    {
-    },
-    .queueNames      = IOMemoryDescriptor_QueueNames,
-    .methodNames     = IOMemoryDescriptor_MethodNames,
-    .metaMethodNames = IOMemoryDescriptorMetaClass_MethodNames,
-};
-
-OSMetaClass * gIOMemoryDescriptorMetaClass;
-
-static kern_return_t
-IOMemoryDescriptor_New(OSMetaClass * instance);
-
-const OSClassLoadInformation
-IOMemoryDescriptor_Class = 
-{
-    .description       = &OSClassDescription_IOMemoryDescriptor.base,
-    .metaPointer       = &gIOMemoryDescriptorMetaClass,
-    .version           = 1,
-    .instanceSize      = sizeof(IOMemoryDescriptor),
-
-    .New               = &IOMemoryDescriptor_New,
-};
-
-extern const void * const
-gIOMemoryDescriptor_Declaration;
-const void * const
-gIOMemoryDescriptor_Declaration
-__attribute__((visibility("hidden"),section("__DATA_CONST,__osclassinfo,regular,no_dead_strip")))
-    = &IOMemoryDescriptor_Class;
-
-static kern_return_t
-IOMemoryDescriptor_New(OSMetaClass * instance)
-{
-    if (!new(instance) IOMemoryDescriptorMetaClass) return (kIOReturnNoMemory);
-    return (kIOReturnSuccess);
-}
-
-kern_return_t
-IOMemoryDescriptorMetaClass::New(OSObject * instance)
-{
-    if (!new(instance) IOMemoryDescriptor) return (kIOReturnNoMemory);
-    return (kIOReturnSuccess);
-}
-
-#endif /* !KERNEL */
-
 kern_return_t
 IOMemoryDescriptor::Dispatch(const IORPC rpc)
 {
@@ -350,27 +243,17 @@ IOMemoryDescriptor::_Dispatch(IOMemoryDescriptor * self, const IORPC rpc)
 kern_return_t
 IOMemoryDescriptor::MetaClass::Dispatch(const IORPC rpc)
 {
-#else /* KERNEL */
-kern_return_t
-IOMemoryDescriptorMetaClass::Dispatch(const IORPC rpc)
-{
-#endif /* !KERNEL */
-
     kern_return_t ret = kIOReturnUnsupported;
     IORPCMessage * msg = IORPCMessageFromMach(rpc.message, false);
 
     switch (msg->msgid)
     {
-#if KERNEL
         case IOMemoryDescriptor_CreateSubMemoryDescriptor_ID:
             ret = IOMemoryDescriptor::CreateSubMemoryDescriptor_Invoke(rpc, &IOMemoryDescriptor::CreateSubMemoryDescriptor_Impl);
             break;
-#endif /* !KERNEL */
-#if KERNEL
         case IOMemoryDescriptor_CreateWithMemoryDescriptors_ID:
             ret = IOMemoryDescriptor::CreateWithMemoryDescriptors_Invoke(rpc, &IOMemoryDescriptor::CreateWithMemoryDescriptors_Impl);
             break;
-#endif /* !KERNEL */
 
         default:
             ret = OSMetaClassBase::Dispatch(rpc);
@@ -379,6 +262,7 @@ IOMemoryDescriptorMetaClass::Dispatch(const IORPC rpc)
 
     return (ret);
 }
+#endif /* KERNEL */
 
 kern_return_t
 IOMemoryDescriptor::_CopyState(
@@ -412,9 +296,9 @@ IOMemoryDescriptor::_CopyState(
 
     msg->__object__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    if (supermethod) ret = supermethod((OSObject *)this, rpc);
-    else             ret = ((OSObject *)this)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    if (supermethod) ret = supermethod((OSObject *)this, _rpc);
+    else             ret = ((OSObject *)this)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -431,6 +315,30 @@ IOMemoryDescriptor::_CopyState(
         if (state) *state = rpl->content.state;
     }
 
+    return (ret);
+}
+
+kern_return_t
+IOMemoryDescriptor::_CopyState_Invoke(const IORPC _rpc,
+        OSMetaClassBase * target,
+        _CopyState_Handler func)
+{
+    IOMemoryDescriptor__CopyState_Invocation rpc = { _rpc };
+    kern_return_t ret;
+
+    if (IOMemoryDescriptor__CopyState_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
+
+    ret = (*func)(target,
+        &rpc.reply->content.state);
+
+    if (kIOReturnSuccess != ret) return (ret);
+
+    rpc.reply->content.__hdr.msgid = IOMemoryDescriptor__CopyState_ID;
+    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
+    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
+    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
+    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
+    rpc.reply->content.__hdr.objectRefs = IOMemoryDescriptor__CopyState_Rpl_ObjRefs;
 
     return (ret);
 }
@@ -482,9 +390,9 @@ IOMemoryDescriptor::CreateMapping(
 
     msg->content.alignment = alignment;
 
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    if (supermethod) ret = supermethod((OSObject *)this, rpc);
-    else             ret = ((OSObject *)this)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    if (supermethod) ret = supermethod((OSObject *)this, _rpc);
+    else             ret = ((OSObject *)this)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -502,6 +410,36 @@ IOMemoryDescriptor::CreateMapping(
         if (rpl->content.map && !*map) ret = kIOReturnBadArgument;
     }
 
+    return (ret);
+}
+
+kern_return_t
+IOMemoryDescriptor::CreateMapping_Invoke(const IORPC _rpc,
+        OSMetaClassBase * target,
+        CreateMapping_Handler func)
+{
+    IOMemoryDescriptor_CreateMapping_Invocation rpc = { _rpc };
+    kern_return_t ret;
+
+    if (IOMemoryDescriptor_CreateMapping_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
+
+    ret = (*func)(target,
+        rpc.message->content.options,
+        rpc.message->content.address,
+        rpc.message->content.offset,
+        rpc.message->content.length,
+        rpc.message->content.alignment,
+        (IOMemoryMap **)&rpc.reply->content.map);
+
+    if (kIOReturnSuccess != ret) return (ret);
+
+    rpc.reply->content.__hdr.msgid = IOMemoryDescriptor_CreateMapping_ID;
+    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
+    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
+    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
+    rpc.reply->mach.msgh_body.msgh_descriptor_count = 1;
+    rpc.reply->content.__hdr.objectRefs = IOMemoryDescriptor_CreateMapping_Rpl_ObjRefs;
+    rpc.reply->map__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
 
     return (ret);
 }
@@ -541,17 +479,17 @@ IOMemoryDescriptor::CreateSubMemoryDescriptor(
 
     msg->__object__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
 
+    msg->ofDescriptor__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
+    msg->content.ofDescriptor = (OSObjectRef) ofDescriptor;
+
     msg->content.memoryDescriptorCreateOptions = memoryDescriptorCreateOptions;
 
     msg->content.offset = offset;
 
     msg->content.length = length;
 
-    msg->ofDescriptor__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
-    msg->content.ofDescriptor = (OSObjectRef) ofDescriptor;
-
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    ret = OSMTypeID(IOMemoryDescriptor)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    ret = OSMTypeID(IOMemoryDescriptor)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -569,6 +507,36 @@ IOMemoryDescriptor::CreateSubMemoryDescriptor(
         if (rpl->content.memory && !*memory) ret = kIOReturnBadArgument;
     }
 
+    return (ret);
+}
+
+kern_return_t
+IOMemoryDescriptor::CreateSubMemoryDescriptor_Invoke(const IORPC _rpc,
+        CreateSubMemoryDescriptor_Handler func)
+{
+    IOMemoryDescriptor_CreateSubMemoryDescriptor_Invocation rpc = { _rpc };
+    kern_return_t ret;
+    IOMemoryDescriptor * ofDescriptor;
+
+    if (IOMemoryDescriptor_CreateSubMemoryDescriptor_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
+    ofDescriptor = OSDynamicCast(IOMemoryDescriptor, (OSObject *) rpc.message->content.ofDescriptor);
+    if (!ofDescriptor && rpc.message->content.ofDescriptor) return (kIOReturnBadArgument);
+
+    ret = (*func)(rpc.message->content.memoryDescriptorCreateOptions,
+        rpc.message->content.offset,
+        rpc.message->content.length,
+        ofDescriptor,
+        (IOMemoryDescriptor **)&rpc.reply->content.memory);
+
+    if (kIOReturnSuccess != ret) return (ret);
+
+    rpc.reply->content.__hdr.msgid = IOMemoryDescriptor_CreateSubMemoryDescriptor_ID;
+    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
+    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
+    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
+    rpc.reply->mach.msgh_body.msgh_descriptor_count = 1;
+    rpc.reply->content.__hdr.objectRefs = IOMemoryDescriptor_CreateSubMemoryDescriptor_Rpl_ObjRefs;
+    rpc.reply->memory__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
 
     return (ret);
 }
@@ -607,16 +575,18 @@ IOMemoryDescriptor::CreateWithMemoryDescriptors(
 
     msg->__object__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
 
+    for (unsigned int __i = 0; __i < 32; __i++)
+    {
+        msg->withDescriptors__descriptor[__i].type = MACH_MSG_PORT_DESCRIPTOR;
+        msg->content.__withDescriptors[__i] = (OSObjectRef) withDescriptors[__i];
+    }
+
     msg->content.memoryDescriptorCreateOptions = memoryDescriptorCreateOptions;
 
     msg->content.withDescriptorsCount = withDescriptorsCount;
 
-    for (unsigned int idx = 0; idx < 32; idx++) msg->withDescriptors__descriptor[idx].type = MACH_MSG_PORT_DESCRIPTOR;
-    if (withDescriptorsCount > (sizeof(msg->content.__withDescriptors) / sizeof(msg->content.__withDescriptors[0]))) return kIOReturnOverrun;
-    bcopy(withDescriptors, &msg->content.__withDescriptors[0], withDescriptorsCount * sizeof(msg->content.__withDescriptors[0]));
-
-    IORPC rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
-    ret = OSMTypeID(IOMemoryDescriptor)->Invoke(rpc);
+    IORPC _rpc = { .message = &buf.msg.mach, .reply = &buf.rpl.rpl.mach, .sendSize = sizeof(buf.msg), .replySize = sizeof(buf.rpl) };
+    ret = OSMTypeID(IOMemoryDescriptor)->Invoke(_rpc);
 
     if (kIOReturnSuccess == ret)
     do {
@@ -634,94 +604,6 @@ IOMemoryDescriptor::CreateWithMemoryDescriptors(
         if (rpl->content.memory && !*memory) ret = kIOReturnBadArgument;
     }
 
-
-    return (ret);
-}
-
-kern_return_t
-IOMemoryDescriptor::_CopyState_Invoke(const IORPC _rpc,
-        OSMetaClassBase * target,
-        _CopyState_Handler func)
-{
-    IOMemoryDescriptor__CopyState_Invocation rpc = { _rpc };
-    kern_return_t ret;
-
-    if (IOMemoryDescriptor__CopyState_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
-
-    ret = (*func)(target,
-        &rpc.reply->content.state);
-
-    if (kIOReturnSuccess != ret) return (ret);
-
-    rpc.reply->content.__hdr.msgid = IOMemoryDescriptor__CopyState_ID;
-    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
-    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
-    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
-    rpc.reply->mach.msgh_body.msgh_descriptor_count = 0;
-    rpc.reply->content.__hdr.objectRefs = IOMemoryDescriptor__CopyState_Rpl_ObjRefs;
-
-    return (ret);
-}
-
-kern_return_t
-IOMemoryDescriptor::CreateMapping_Invoke(const IORPC _rpc,
-        OSMetaClassBase * target,
-        CreateMapping_Handler func)
-{
-    IOMemoryDescriptor_CreateMapping_Invocation rpc = { _rpc };
-    kern_return_t ret;
-
-    if (IOMemoryDescriptor_CreateMapping_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
-
-    ret = (*func)(target,
-        rpc.message->content.options,
-        rpc.message->content.address,
-        rpc.message->content.offset,
-        rpc.message->content.length,
-        rpc.message->content.alignment,
-        (IOMemoryMap **)&rpc.reply->content.map);
-
-    if (kIOReturnSuccess != ret) return (ret);
-
-    rpc.reply->content.__hdr.msgid = IOMemoryDescriptor_CreateMapping_ID;
-    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
-    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
-    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
-    rpc.reply->mach.msgh_body.msgh_descriptor_count = 1;
-    rpc.reply->content.__hdr.objectRefs = IOMemoryDescriptor_CreateMapping_Rpl_ObjRefs;
-    rpc.reply->map__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
-
-    return (ret);
-}
-
-kern_return_t
-IOMemoryDescriptor::CreateSubMemoryDescriptor_Invoke(const IORPC _rpc,
-        CreateSubMemoryDescriptor_Handler func)
-{
-    IOMemoryDescriptor_CreateSubMemoryDescriptor_Invocation rpc = { _rpc };
-    kern_return_t ret;
-    IOMemoryDescriptor * ofDescriptor;
-
-    if (IOMemoryDescriptor_CreateSubMemoryDescriptor_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
-    ofDescriptor = OSDynamicCast(IOMemoryDescriptor, (OSObject *) rpc.message->content.ofDescriptor);
-    if (!ofDescriptor && rpc.message->content.ofDescriptor) return (kIOReturnBadArgument);
-
-    ret = (*func)(        rpc.message->content.memoryDescriptorCreateOptions,
-        rpc.message->content.offset,
-        rpc.message->content.length,
-        ofDescriptor,
-        (IOMemoryDescriptor **)&rpc.reply->content.memory);
-
-    if (kIOReturnSuccess != ret) return (ret);
-
-    rpc.reply->content.__hdr.msgid = IOMemoryDescriptor_CreateSubMemoryDescriptor_ID;
-    rpc.reply->content.__hdr.flags = kIORPCMessageOneway;
-    rpc.reply->mach.msgh.msgh_id   = kIORPCVersion190615Reply;
-    rpc.reply->mach.msgh.msgh_size = sizeof(*rpc.reply);
-    rpc.reply->mach.msgh_body.msgh_descriptor_count = 1;
-    rpc.reply->content.__hdr.objectRefs = IOMemoryDescriptor_CreateSubMemoryDescriptor_Rpl_ObjRefs;
-    rpc.reply->memory__descriptor.type = MACH_MSG_PORT_DESCRIPTOR;
-
     return (ret);
 }
 
@@ -731,19 +613,17 @@ IOMemoryDescriptor::CreateWithMemoryDescriptors_Invoke(const IORPC _rpc,
 {
     IOMemoryDescriptor_CreateWithMemoryDescriptors_Invocation rpc = { _rpc };
     kern_return_t ret;
-    uint32_t withDescriptorsCount = (sizeof(rpc.message->content.__withDescriptors) / sizeof(rpc.message->content.__withDescriptors[0]));
     IOMemoryDescriptor ** withDescriptors;
 
     if (IOMemoryDescriptor_CreateWithMemoryDescriptors_Msg_ObjRefs != rpc.message->content.__hdr.objectRefs) return (kIOReturnIPCError);
     withDescriptors = (IOMemoryDescriptor **) &rpc.message->content.__withDescriptors[0];
-    for (unsigned int idx = 0; idx < withDescriptorsCount; idx++)
+    for (unsigned int __i = 0; __i < 32; __i++)
     {
-        if (withDescriptors[idx] && !OSDynamicCast(IOMemoryDescriptor, withDescriptors[idx])) return (kIOReturnBadArgument);
+        if (withDescriptors[__i] && !OSDynamicCast(IOMemoryDescriptor, withDescriptors[__i])) return (kIOReturnBadArgument);
     }
-    if (withDescriptorsCount > rpc.message->content.withDescriptorsCount) withDescriptorsCount = rpc.message->content.withDescriptorsCount;
 
-    ret = (*func)(        rpc.message->content.memoryDescriptorCreateOptions,
-        withDescriptorsCount,
+    ret = (*func)(rpc.message->content.memoryDescriptorCreateOptions,
+        rpc.message->content.withDescriptorsCount,
         withDescriptors,
         (IOMemoryDescriptor **)&rpc.reply->content.memory);
 
@@ -759,6 +639,4 @@ IOMemoryDescriptor::CreateWithMemoryDescriptors_Invoke(const IORPC _rpc,
 
     return (ret);
 }
-
-
 

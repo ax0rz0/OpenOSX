@@ -125,6 +125,11 @@ retry:
 				VM_PROT_DEFAULT, VM_PROT_ALL, VM_INHERIT_DEFAULT);
 	}
 	if (kr) {
+		vm_addr = vm_page_quanta_size;
+		kr = mach_vm_allocate(mach_task_self(), &vm_addr, allocation_size,
+				VM_FLAGS_ANYWHERE | VM_MAKE_TAG(vm_page_label));
+	}
+	if (kr) {
 		malloc_zone_error(debug_flags, false, "can't allocate region\n:"
 				"*** mach_vm_map(size=%lu, flags: %x) failed (error code=%d)\n",
 				size, debug_flags, kr);

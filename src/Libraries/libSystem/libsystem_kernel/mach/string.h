@@ -26,8 +26,8 @@
  * @APPLE_OSREFERENCE_LICENSE_HEADER_END@
  */
 
-#ifndef _STRING_H_
-#define _STRING_H_
+#ifndef _MACH_STRING_H_
+#define _MACH_STRING_H_
 
 #include <stdarg.h>
 #include <_types.h>
@@ -49,4 +49,4 @@ void *memcpy(void *dst0, const void *src0, size_t length);
 void *memset(void *dst0, int c0, size_t length);
 void bzero(void *dst0, size_t length);
 
-#endif /* _STRING_H_ */
+#endif /* _MACH_STRING_H_ */

@@ -208,7 +208,24 @@ struct IOPCIAERRoot
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #undef super
+#if VTD_SUPPORT
 #include "vtd.c"
+#else
+// OpenOSX: VT-d is unimplemented (vtd.c needs balloc.c/rballoc.c, never imported).
+// Provide no-op AppleVTD entry points so the family still builds with ACPI/MSI
+// support enabled. Safe at runtime: without an IOMMU there is nothing to map.
+// vtd.c would normally pull in IOMapper.h (used by other ACPI_SUPPORT code below).
+#include <IOKit/IOMapper.h>
+class AppleVTD
+{
+public:
+	static void install(IOWorkLoop *, uint32_t, IOService *, const OSData *) {}
+	static void installInterrupts(void) {}
+	static void adjustDevice(IOService *) {}
+	static void removeDevice(IOService *) {}
+	static void relocateDevice(IOService *, bool) {}
+};
+#endif
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
@@ -509,7 +526,11 @@ IOReturn IOPCIBridge::configOp(IOService * device, uintptr_t op, void * result, 
             panic("!IOPCIConfigurator");
 
 #if ACPI_SUPPORT
-	    if (version_major < 17) IOPCIPlatformInitialize();
+	    // OpenOSX: on Darwin >= 17 Apple expects AppleACPIPlatform to provide the
+	    // messaged-interrupt (MSI) controller. OpenOSX has no such provider, so
+	    // always create the family's own MSI controller here, otherwise
+	    // gIOPCIMessagedInterruptController stays null and every PCI driver polls.
+	    IOPCIPlatformInitialize();
 	    AppleVTD::installInterrupts();
 #endif /* ACPI_SUPPORT */
 
@@ -3990,6 +4011,13 @@ IOReturn IOPCIBridge::resolveMSIInterrupts( IOService * provider, IOPCIDevice * 
                              (void *)&reserved->messagedInterruptController,
                              (void *)0, (void *)0);
     }
+
+    // OpenOSX: the platform expert does not implement
+    // GetMessagedInterruptController. The family's own MSI controller (created in
+    // IOPCIBridge::start and stashed in gIOPCIMessagedInterruptController) is the
+    // one to use for message-signalled interrupts on this x86 platform.
+    if (reserved && !reserved->messagedInterruptController)
+        reserved->messagedInterruptController = gIOPCIMessagedInterruptController;
 
 #if USE_MSI
 

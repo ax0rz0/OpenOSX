@@ -591,6 +591,18 @@ IOFindBSDRoot( char * rootName, unsigned int rootNameSize,
 
 	static int          mountAttempts = 0;
 
+	// OpenOSX: stock XNU retries waitForService() FOREVER in the loop
+	// below (by design, for real hardware where a bus can legitimately still
+	// be enumerating, e.g. slow USB). On a bring-up kernel that's a silent,
+	// indefinite hang: nothing distinguishes "still probing" from "will never
+	// match" (wrong storage interface for the machine type, no driver for the
+	// boot device, a misconfigured VM invocation, ...). Bound the wait and
+	// panic with the unmatched criteria dumped, so a misconfiguration fails
+	// fast and diagnosably instead of spinning silently at "Still waiting for
+	// root device" until the user gives up.
+#define PD_ROOT_WAIT_MAX_RETRIES 3
+	int                 rootWaitRetries = 0;
+
 	int xchar, dchar;
 
 	// stall here for anyone matching on the IOBSD resource to finish (filesystems)
@@ -745,7 +757,7 @@ IOFindBSDRoot( char * rootName, unsigned int rootNameSize,
 				if (uuidString) {
 					IOService::publishResource( "boot-uuid", uuidString );
 					uuidString->release();
-					IOLog( "\nWaiting for boot volume with UUID %s\n", uuid );
+					IOLog("\nWaiting for boot volume with UUID %s\n", uuid );
 					matching = IOUUIDMatching();
 					mediaProperty = "boot-uuid-media";
 				}
@@ -760,7 +772,7 @@ IOFindBSDRoot( char * rootName, unsigned int rootNameSize,
 		OSString * astring;
 		// Match any HFS media
 
-		matching = IOService::serviceMatching( "IOMedia" );
+		matching = IOService::serviceMatching("IOMedia");
 		astring = OSString::withCStringNoCopy("Apple_HFS");
 		if (astring) {
 			matching->setObject("Content", astring);
@@ -769,15 +781,15 @@ IOFindBSDRoot( char * rootName, unsigned int rootNameSize,
 	}
 
 	if (gIOKitDebug & kIOWaitQuietBeforeRoot) {
-		IOLog( "Waiting for matching to complete\n" );
+		IOLog("Waiting for matching to complete\n");
 		IOService::getPlatform()->waitQuiet();
 	}
 
 	if (true && matching) {
-		OSSerialize * s = OSSerialize::withCapacity( 5 );
+		OSSerialize *s = OSSerialize::withCapacity(5);
 
-		if (matching->serialize( s )) {
-			IOLog( "Waiting on %s\n", s->text());
+		if (matching->serialize(s)) {
+			IOLog("Waiting on %s\n", s->text());
 			s->release();
 		}
 	}
@@ -796,7 +808,7 @@ IOFindBSDRoot( char * rootName, unsigned int rootNameSize,
 		if ((!service) || (mountAttempts == 10)) {
 #if !XNU_TARGET_OS_OSX || !defined(__arm64__)
 			PE_display_icon( 0, "noroot");
-			IOLog( "Still waiting for root device\n" );
+			IOLog("Still waiting for root device\n");
 #endif
 
 			if (!debugInfoPrintedOnce) {
@@ -818,6 +830,22 @@ IOFindBSDRoot( char * rootName, unsigned int rootNameSize,
 			// The disk isn't found - have the user pick from recoveryOS+.
 			(void)IOSetRecoveryBoot(BSD_BOOTFAIL_MEDIA_MISSING, NULL, true);
 #endif
+
+			if (!service && ++rootWaitRetries >= PD_ROOT_WAIT_MAX_RETRIES) {
+				OSSerialize * failSerial = OSSerialize::withCapacity(5);
+				const char * critText = "(unavailable)";
+				if (failSerial) {
+					if (matching->serialize(failSerial)) {
+						critText = failSerial->text();
+					}
+				}
+				panic("IOFindBSDRoot: no matching root device after %d x %ds "
+				    "(criteria: %s), check that a driver for the boot "
+				    "device's storage interface is present/matches, and that "
+				    "the interface matches the machine type (e.g. AHCI vs IDE "
+				    "vs virtio for the VM's -M/-drive setup)",
+				    rootWaitRetries, (int)ROOTDEVICETIMEOUT, critText);
+			}
 		}
 	} while (!service);
 	matching->release();
@@ -842,7 +870,7 @@ IOFindBSDRoot( char * rootName, unsigned int rootNameSize,
 	if (service) {
 		len = kMaxPathBuf;
 		service->getPath( str, &len, gIOServicePlane );
-		IOLog( "Got boot device = %s\n", str );
+		IOLog("Got boot device = %s\n", str );
 
 		iostr = (OSString *) service->getProperty( kIOBSDNameKey );
 		if (iostr) {
@@ -861,12 +889,12 @@ IOFindBSDRoot( char * rootName, unsigned int rootNameSize,
 			flags |= 1;
 		}
 	} else {
-		IOLog( "Wait for root failed\n" );
+		IOLog("Wait for root failed\n" );
 		strlcpy( rootName, "en0", rootNameSize );
 		flags |= 1;
 	}
 
-	IOLog( "BSD root: %s", rootName );
+	IOLog("BSD root: %s", rootName );
 	if (mjr) {
 		IOLog(", major %d, minor %d\n", mjr, mnr );
 	} else {

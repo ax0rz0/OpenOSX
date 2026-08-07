@@ -183,8 +183,6 @@
 			<integer>30000</integer>
 			<key>IOProviderClass</key>
 			<string>IOMedia</string>
-			<key>IOResourceMatch</key>
-			<string>IOBSD</string>
 		</dict>
 	</dict>
 	<key>NSHumanReadableCopyright</key>

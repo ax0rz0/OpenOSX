@@ -166,6 +166,12 @@ static uint32_t devfs_nmountplanes = 0; /* The first plane is not used for a mou
 #define DEVFS_NOCREATE  FALSE
 #define DEVFS_CREATE    TRUE
 
+int
+devfs_is_ready(void)
+{
+	return devfs_ready;
+}
+
 /*
  * Set up the root directory node in the backing plane
  * This is happenning before the vfs system has been

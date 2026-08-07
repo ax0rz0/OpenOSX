@@ -1,0 +1,6 @@
+#ifndef OPENOSX_COMPAT_SYSTEM_KERN_CS_BLOBS_H
+#define OPENOSX_COMPAT_SYSTEM_KERN_CS_BLOBS_H
+
+#include <kern/cs_blobs.h>
+
+#endif /* OPENOSX_COMPAT_SYSTEM_KERN_CS_BLOBS_H */

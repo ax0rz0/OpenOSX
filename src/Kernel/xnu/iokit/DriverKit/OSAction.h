@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from OSAction.iig */
+/* iig-lite generated from OSAction.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* OSAction.iig:1-38 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -39,11 +38,6 @@ typedef void (^OSActionAbortedHandler)(void);
 struct OSActionWaitToken;
 class OSString;
 
-/* source class OSAction OSAction.iig:39-170 */
-
-#if __DOCUMENTATION__
-#define KERNEL IIG_KERNEL
-
 /*!
  * @class OSAction
  *
@@ -64,6 +58,11 @@ class OSString;
  * through the 'action' parameter with a +1 retain count to be released by the caller. See IOReturn.h for
  * error codes.
  */
+
+/* source class OSAction OSAction.iig:60-171 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
 
 class NATIVE KERNEL OSAction : public OSObject
 {
@@ -181,11 +180,11 @@ public:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class OSAction OSAction.iig:39-170 */
+/* generated class OSAction OSAction.iig:60-171 */
 
-#define OSAction_Create_ID            0xaa1fc3ce85ce5497ULL
-#define OSAction_CreateWithTypeName_ID            0xa0c5b3ed5a8ea283ULL
-#define OSAction_Aborted_ID            0xbfb95094c657d68fULL
+#define OSAction_Create_ID            0xffa30ab92dcd261fULL
+#define OSAction_CreateWithTypeName_ID            0x810ec40af95e3553ULL
+#define OSAction_Aborted_ID            0x1d00fd5919e5f8cbULL
 
 #define OSAction_Create_Args \
         OSObject * target, \
@@ -267,10 +266,10 @@ protected:\
     /* _Impl methods */\
 \
     static kern_return_t\
-    Create_Call(OSAction_Create_Args);\
+    Create_Impl(OSAction_Create_Args);\
 \
     static kern_return_t\
-    CreateWithTypeName_Call(OSAction_CreateWithTypeName_Args);\
+    CreateWithTypeName_Impl(OSAction_CreateWithTypeName_Args);\
 \
     void\
     Aborted_Impl(OSAction_Aborted_Args);\
@@ -289,7 +288,7 @@ public:\
     CreateWithTypeName_Invoke(const IORPC rpc,\
         CreateWithTypeName_Handler func);\
 \
-    typedef void (*Aborted_Handler)(OSMetaClassBase * targetOSAction_Aborted_Args);\
+    typedef void (*Aborted_Handler)(OSMetaClassBase * target);\
     static kern_return_t\
     Aborted_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
@@ -301,12 +300,6 @@ public:\
 \
 protected:\
     /* _Impl methods */\
-\
-    static kern_return_t\
-    Create_Impl(OSAction_Create_Args);\
-\
-    static kern_return_t\
-    CreateWithTypeName_Impl(OSAction_CreateWithTypeName_Args);\
 \
 
 
@@ -380,8 +373,9 @@ OSAction_DECLARE_IVARS
     OSAction_VirtualMethods
 };
 
+
 #endif /* !__DOCUMENTATION__ */
 
-/* OSAction.iig:172- */
+
 
 #endif /* ! _IOKIT_OSACTION_H */

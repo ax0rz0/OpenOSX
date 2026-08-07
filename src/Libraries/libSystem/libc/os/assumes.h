@@ -29,6 +29,7 @@
 __BEGIN_DECLS
 
 #include <Availability.h>
+#include <os/availability.h>
 #include <TargetConditionals.h>
 #include <stdlib.h>
 #include <stdint.h>

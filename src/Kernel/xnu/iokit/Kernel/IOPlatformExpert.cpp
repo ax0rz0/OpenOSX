@@ -2244,8 +2244,17 @@ bool
 IOPlatformDevice::compareName( OSString * name,
     OSString ** matched ) const
 {
-	return ((IOPlatformExpert *)getProvider())->
-	       compareNubName( this, name, matched );
+	/*
+	 * See IOPlatformDevice::getResources: on this split-platform-expert port a
+	 * nub's provider may be the root IOPlatformExpertDevice rather than an
+	 * IOPlatformExpert, so guard the cast and fall back to the plain name
+	 * comparison instead of dispatching through the wrong vtable.
+	 */
+	IOPlatformExpert *platform = OSDynamicCast( IOPlatformExpert, getProvider() );
+	if (platform == NULL) {
+		return super::compareName( name, matched );
+	}
+	return platform->compareNubName( this, name, matched );
 }
 
 IOService *
@@ -2257,7 +2266,20 @@ IOPlatformDevice::matchLocation( IOService * /* client */ )
 IOReturn
 IOPlatformDevice::getResources( void )
 {
-	return ((IOPlatformExpert *)getProvider())->getNubResources( this );
+	/*
+	 * Apple platforms guarantee an IOPlatformExpert provider here, but this
+	 * port splits the root nub (IOPlatformExpertDevice) from the concrete
+	 * platform expert (PDArmPlatformExpert).  Nubs parented directly under the
+	 * root (e.g. the NVRAM "options" node) therefore have a provider that is
+	 * not an IOPlatformExpert; casting and dispatching getNubResources through
+	 * it lands on the wrong vtable slot and faults.  Such nubs simply have no
+	 * platform-expert-resolved resources.
+	 */
+	IOPlatformExpert *platform = OSDynamicCast( IOPlatformExpert, getProvider() );
+	if (platform == NULL) {
+		return kIOReturnSuccess;
+	}
+	return platform->getNubResources( this );
 }
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */

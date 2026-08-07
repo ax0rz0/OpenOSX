@@ -35,6 +35,8 @@
 #include <pexpert/protos.h>
 #include <pexpert/pexpert.h>
 
+extern void vc_serial_record_early(char c);
+
 struct pe_serial_functions {
 	void            (*uart_init) (void);
 	void            (*uart_set_baud_rate) (int unit, uint32_t baud_rate);
@@ -64,16 +66,27 @@ static unsigned uart_baud_rate = DEFAULT_UART_BAUD_RATE;
 // Legacy UART support using IO transactions to COM1 or COM2
 // =============================================================================
 
-#define LEGACY_UART_PORT_ADDR   COM1_PORT_ADDR
 #define LEGACY_UART_CLOCK       1843200   /* 1.8432 MHz clock */
-
-#define IO_WRITE(r, v)  outb(LEGACY_UART_PORT_ADDR + UART_##r, v)
-#define IO_READ(r)      inb(LEGACY_UART_PORT_ADDR + UART_##r)
 
 enum {
 	COM1_PORT_ADDR = 0x3f8,
-	COM2_PORT_ADDR = 0x2f8
+	COM2_PORT_ADDR = 0x2f8,
+	COM3_PORT_ADDR = 0x3e8,
+	COM4_PORT_ADDR = 0x2e8
 };
+
+/*
+ * I/O base of the legacy 16550 UART.  Runtime-settable (not a compile-time
+ * constant) so the port can be selected without a rebuild.  Defaults to COM1
+ * (0x3f8) -- the port real hardware here actually exposes and what QEMU's
+ * default -serial wires up; override with the "comport=" boot-arg (e.g.
+ * comport=0x3e8 for COM3).
+ */
+static uint16_t legacy_uart_port_addr = COM1_PORT_ADDR;
+#define LEGACY_UART_PORT_ADDR   legacy_uart_port_addr
+
+#define IO_WRITE(r, v)  outb(LEGACY_UART_PORT_ADDR + UART_##r, v)
+#define IO_READ(r)      inb(LEGACY_UART_PORT_ADDR + UART_##r)
 
 enum {
 	UART_RBR = 0, /* receive buffer Register   (R) */
@@ -581,6 +594,14 @@ int
 serial_init( void )
 {
 	unsigned new_uart_baud_rate = 0;
+	unsigned new_comport = 0;
+
+	/* Select the legacy UART I/O base (defaults to COM3 above). */
+	if (PE_parse_boot_argn("comport", &new_comport, sizeof(new_comport))) {
+		if (new_comport != 0) {
+			legacy_uart_port_addr = (uint16_t)new_comport;
+		}
+	}
 
 	if (PE_parse_boot_argn("serialbaud", &new_uart_baud_rate, sizeof(new_uart_baud_rate))) {
 		/* Valid divisor? */
@@ -637,6 +658,14 @@ void
 serial_putc( char c )
 {
 	uart_putc(c);
+
+	/*
+	 * Every serial write funnels through here, including kprintf's early
+	 * bypass straight to pal_serial_putc(), so this is the only point that
+	 * sees output emitted before the graphics console exists. It is recorded
+	 * and replayed onto the screen when the console comes up.
+	 */
+	//vc_serial_record_early(c);
 }
 
 int

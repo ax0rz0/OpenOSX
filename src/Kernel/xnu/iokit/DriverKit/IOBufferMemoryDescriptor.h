@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IOBufferMemoryDescriptor.iig */
+/* iig-lite generated from IOBufferMemoryDescriptor.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IOBufferMemoryDescriptor.iig:1-40 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -41,11 +40,6 @@
 
 #include <DriverKit/IOMemoryDescriptor.h>  /* .iig include */
 
-/* source class IOBufferMemoryDescriptor IOBufferMemoryDescriptor.iig:41-96 */
-
-#if __DOCUMENTATION__
-#define KERNEL IIG_KERNEL
-
 /*!
  * @class IOBufferMemoryDescriptor
  *
@@ -56,6 +50,11 @@
  * To allocate memory for I/O or sharing, use IOBufferMemoryDescriptor::Create().
  * IOBufferMemoryDescriptor can be handed to any API that expects an IOMemoryDescriptor.
  */
+
+/* source class IOBufferMemoryDescriptor IOBufferMemoryDescriptor.iig:52-97 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
 
 class KERNEL IOBufferMemoryDescriptor : public IOMemoryDescriptor
 {
@@ -107,10 +106,10 @@ public:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IOBufferMemoryDescriptor IOBufferMemoryDescriptor.iig:41-96 */
+/* generated class IOBufferMemoryDescriptor IOBufferMemoryDescriptor.iig:52-97 */
 
-#define IOBufferMemoryDescriptor_Create_ID            0xb78de684e17d5a4bULL
-#define IOBufferMemoryDescriptor_SetLength_ID            0xc115230c191a6a9aULL
+#define IOBufferMemoryDescriptor_Create_ID            0x82afa374b5ad59f7ULL
+#define IOBufferMemoryDescriptor_SetLength_ID            0x5a15ffbfa9311d8fULL
 
 #define IOBufferMemoryDescriptor_Create_Args \
         uint64_t options, \
@@ -197,22 +196,6 @@ public:\
 
 #if !KERNEL
 
-extern OSMetaClass          * gIOBufferMemoryDescriptorMetaClass;
-extern const OSClassLoadInformation IOBufferMemoryDescriptor_Class;
-
-class IOBufferMemoryDescriptorMetaClass : public OSMetaClass
-{
-public:
-    virtual kern_return_t
-    New(OSObject * instance) override;
-    virtual kern_return_t
-    Dispatch(const IORPC rpc) override;
-};
-
-#endif /* !KERNEL */
-
-#if !KERNEL
-
 class IOBufferMemoryDescriptorInterface : public OSInterface
 {
 public:
@@ -223,41 +206,22 @@ struct IOBufferMemoryDescriptor_LocalIVars;
 
 class IOBufferMemoryDescriptor : public IOMemoryDescriptor, public IOBufferMemoryDescriptorInterface
 {
-#if !KERNEL
-    friend class IOBufferMemoryDescriptorMetaClass;
-#endif /* !KERNEL */
-
-#if !KERNEL
 public:
-#ifdef IOBufferMemoryDescriptor_DECLARE_IVARS
-IOBufferMemoryDescriptor_DECLARE_IVARS
-#else /* IOBufferMemoryDescriptor_DECLARE_IVARS */
     union
     {
         IOBufferMemoryDescriptor_IVars * ivars;
         IOBufferMemoryDescriptor_LocalIVars * lvars;
     };
-#endif /* IOBufferMemoryDescriptor_DECLARE_IVARS */
-#endif /* !KERNEL */
-
-#if !KERNEL
-    static OSMetaClass *
-    sGetMetaClass() { return gIOBufferMemoryDescriptorMetaClass; };
-#endif /* KERNEL */
-
     using super = IOMemoryDescriptor;
 
-#if !KERNEL
     IOBufferMemoryDescriptor_Methods
     IOBufferMemoryDescriptor_VirtualMethods
-#endif /* !KERNEL */
-
 };
-#endif /* !KERNEL */
 
+#endif /* !KERNEL */
 
 #endif /* !__DOCUMENTATION__ */
 
-/* IOBufferMemoryDescriptor.iig:98- */
+
 
 #endif /* ! _IOKIT_UIOBUFFERMEMORYDESCRIPTOR_H */

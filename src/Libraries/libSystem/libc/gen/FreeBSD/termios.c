@@ -89,12 +89,17 @@ int
 tcsetpgrp(int fd, pid_t pgrp)
 {
 	int s;
+	int ret;
 
 	if (isatty(fd) == 0)
 		return (-1);
 
 	s = pgrp;
-	return (_ioctl(fd, TIOCSPGRP, &s));
+	ret = _ioctl(fd, TIOCSPGRP, &s);
+	if (ret < 0 && (errno == ENOTTY || errno == EINVAL || errno == ENOSYS))
+		return (0);
+
+	return (ret);
 }
 
 pid_t
@@ -106,8 +111,11 @@ tcgetpgrp(fd)
 	if (isatty(fd) == 0)
 		return ((pid_t)-1);
 
-	if (_ioctl(fd, TIOCGPGRP, &s) < 0)
+	if (_ioctl(fd, TIOCGPGRP, &s) < 0) {
+		if (errno == ENOTTY || errno == EINVAL || errno == ENOSYS)
+			return (getpgrp());
 		return ((pid_t)-1);
+	}
 
 	return ((pid_t)s);
 }

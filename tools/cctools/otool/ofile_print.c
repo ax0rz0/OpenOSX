@@ -38,6 +38,17 @@
  * and notations on errors should be printed.
  */
 
+/*
+ * The cctools-port aliases below make Darwin's __foo register field names
+ * available as foo in the otool source.  When cross-building otool itself for
+ * OpenOSX, those aliases must not be active while Mach headers are parsed:
+ * they otherwise rewrite SDK type/field declarations and leave i386 thread
+ * state structs incomplete.
+ */
+#ifdef __OPENOSX__
+#include <mach-o/loader.h>
+#endif
+
 #define __cr cr
 #define __ctr ctr
 #define __dar dar
@@ -2153,6 +2164,9 @@ NS32:
 	    case MH_KEXT_BUNDLE:
 		printf(" KEXTBUNDLE");
 		break;
+	    case MH_FILESET:
+		printf("    FILESET");
+		break;
 	    default:
 		printf(" %10u", filetype);
 		break;
@@ -2339,6 +2353,7 @@ enum bool very_verbose)
     struct entry_point_command ep;
     struct source_version_command sv;
     struct note_command nc;
+    struct fileset_entry_command fse;
     uint64_t big_load_end;
 
 	host_byte_sex = get_host_byte_sex();
@@ -2799,6 +2814,17 @@ enum bool very_verbose)
 		    swap_note_command(&nc, host_byte_sex);
 		print_note_command(&nc, object_size);
 		break;
+
+	    case LC_FILESET_ENTRY:
+		memset((char*)&fse, '\0', sizeof(struct fileset_entry_command));
+		size = left < sizeof(struct fileset_entry_command) ?
+		       left : sizeof(struct fileset_entry_command);
+		memcpy((char*)&fse, (char*)lc, size);
+		if (swapped)
+		    swap_fileset_entry_command(&fse, host_byte_sex);
+		print_fileset_entry_command(&fse, lc, object_size);
+		break;
+
 
 	    case LC_MAIN:
 		memset((char *)&ep, '\0', sizeof(struct entry_point_command));
@@ -4196,6 +4222,40 @@ uint64_t object_size)
 	    printf(" (past end of file)\n");
 	else
 	    printf("\n");
+}
+
+/*
+ * print a fileset_entry_command. the struct must be aligned correctly and in
+ * host byte order.
+ */
+void
+print_fileset_entry_command(
+struct fileset_entry_command* fse,
+struct load_command *lc,
+uint64_t object_size)
+{
+    char *p;
+
+	printf("       cmd LC_FILESET_ENTRY\n");
+	printf("   cmdsize %u", fse->cmdsize);
+	if(fse->cmdsize < sizeof(struct fileset_entry_command))
+	    printf(" Incorrect size\n");
+	else
+	    printf("\n");
+	printf("    vmaddr 0x%016llx\n", fse->vmaddr);
+	printf("   fileoff %llu", fse->fileoff);
+	if(fse->fileoff > object_size)
+	    printf(" (past end of file)\n");
+	else
+	    printf("\n");
+	if(fse->entry_id.offset < fse->cmdsize){
+	    p = (char *)lc + fse->entry_id.offset;
+	    printf("  entry_id %s (offset %u)\n", p, fse->entry_id.offset);
+	}
+	else{
+	    printf("  entry_id ?(bad offset %u)\n", fse->entry_id.offset);
+	}
+	printf("  reserved %u\n", fse->reserved);
 }
 
 /*

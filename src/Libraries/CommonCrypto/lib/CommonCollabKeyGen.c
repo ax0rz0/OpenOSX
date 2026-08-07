@@ -196,7 +196,7 @@ CCCKGContributorFinish(CCCollabKeyGenContributorRef contrib,
 
     CCCryptorStatus retval;
     ccec_pub_ctx_decl_cp(contrib->ctx->cp, P);
-    ccec_ctx_init(contrib->ctx->cp, P);
+    ccec_ctx_init(contrib->ctx->cp, ccec_ctx_pub(P));
 
     int rv = ccckg_contributor_finish(contrib->ctx, shareLen, share, openingLen, opening, P, sharedKeyLen, sharedKey);
     if (rv != kCCSuccess) {
@@ -224,7 +224,7 @@ CCCKGOwnerFinish(CCCollabKeyGenOwnerRef owner,
 
     CCCryptorStatus retval;
     ccec_full_ctx_decl_cp(owner->ctx->cp, P);
-    ccec_ctx_init(owner->ctx->cp, P);
+    ccec_ctx_init(owner->ctx->cp, ccec_ctx_pub(P));
 
     int rv = ccckg_owner_finish(owner->ctx, openingLen, opening, P, sharedKeyLen, sharedKey);
     if (rv != kCCSuccess) {

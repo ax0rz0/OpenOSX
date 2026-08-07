@@ -253,7 +253,7 @@ mmap(proc_t p, struct mmap_args *uap, user_addr_t *retval)
 	    MAP_ANON |
 	    MAP_RESILIENT_CODESIGN |
 	    MAP_RESILIENT_MEDIA |
-#if XNU_TARGET_OS_OSX
+#if XNU_TARGET_OS_OSX && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
 	    MAP_32BIT |
 #endif
 	    MAP_TRANSLATED_ALLOW_EXECUTE |
@@ -658,7 +658,7 @@ mmap(proc_t p, struct mmap_args *uap, user_addr_t *retval)
 		alloc_flags |= VM_FLAGS_RESILIENT_MEDIA;
 	}
 
-#if XNU_TARGET_OS_OSX
+#if XNU_TARGET_OS_OSX && defined(__MAC_OS_X_VERSION_MIN_REQUIRED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101500
 	/* macOS-specific MAP_32BIT flag handling */
 	if (flags & MAP_32BIT) {
 		vmk_flags.vmkf_32bit_map_va = TRUE;

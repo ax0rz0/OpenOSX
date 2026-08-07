@@ -381,7 +381,7 @@ CCCryptorStatus CCECCryptorExportKey(CCECKeyExternalFormat format, void *keyPack
     
     switch(format) {
         case kCCImportKeyBinary: {
-            size_t len = ccec_x963_export_size(keyType == ccECKeyPrivate, ccec_ctx_public(key->ecKey.private));
+            size_t len = ccec_x963_export_size(keyType == ccECKeyPrivate, key->ecKey.private);
             
             if(len > *keyPackageLen) {
                 *keyPackageLen = len;
@@ -397,7 +397,7 @@ CCCryptorStatus CCECCryptorExportKey(CCECKeyExternalFormat format, void *keyPack
                 return kCCUnimplemented;
             }
 
-            size_t len = ccec_compact_export_size(0, key->ecKey.public);
+            size_t len = ccec_compact_export_size(0, (ccec_full_ctx_t)key->ecKey.public);
 
             if (len > *keyPackageLen) {
                 *keyPackageLen = len;

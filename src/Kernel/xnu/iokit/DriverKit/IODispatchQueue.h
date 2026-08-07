@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IODispatchQueue.iig */
+/* iig-lite generated from IODispatchQueue.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IODispatchQueue.iig:1-41 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -42,11 +41,6 @@ typedef void (*IODispatchFunction)(void * context);
 typedef void (^IODispatchQueueCancelHandler)(void);
 
 
-/* source class IODispatchQueue IODispatchQueue.iig:42-134 */
-
-#if __DOCUMENTATION__
-#define KERNEL IIG_KERNEL
-
 /*!
  * @class IODispatchQueue
  *
@@ -57,6 +51,11 @@ typedef void (^IODispatchQueueCancelHandler)(void);
  * All blocks submitted to dispatch queues are dequeued in FIFO order.
  * By default the queue is serial and will execute one block at a time.
  */
+
+/* source class IODispatchQueue IODispatchQueue.iig:53-135 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
 
 class NATIVE KERNEL IODispatchQueue : public OSObject
 {
@@ -145,16 +144,16 @@ public:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IODispatchQueue IODispatchQueue.iig:42-134 */
+/* generated class IODispatchQueue IODispatchQueue.iig:53-135 */
 
-#define IODispatchQueue_SetPort_ID            0xc437e970b5609767ULL
-#define IODispatchQueue_Create_ID            0xac000428df2a91d0ULL
+#define IODispatchQueue_SetPort_ID            0x3903c97d61e69ec8ULL
+#define IODispatchQueue_Create_ID            0x22a0fc42ad35124bULL
 
 #define IODispatchQueue_SetPort_Args \
         mach_port_t port
 
 #define IODispatchQueue_Create_Args \
-        const char * name, \
+        const IODispatchQueueName name, \
         uint64_t options, \
         uint64_t priority, \
         IODispatchQueue ** queue
@@ -176,7 +175,7 @@ public:\
 \
     static kern_return_t\
     Create(\
-        const IODispatchQueueName name,\
+        const char * name,\
         uint64_t options,\
         uint64_t priority,\
         IODispatchQueue ** queue);\
@@ -221,7 +220,7 @@ protected:\
     /* _Impl methods */\
 \
     static kern_return_t\
-    Create_Call(IODispatchQueue_Create_Args);\
+    Create_Impl(IODispatchQueue_Create_Args);\
 \
 \
 public:\
@@ -247,9 +246,6 @@ protected:\
 \
     kern_return_t\
     SetPort_Impl(IODispatchQueue_SetPort_Args);\
-\
-    static kern_return_t\
-    Create_Impl(IODispatchQueue_Create_Args);\
 \
 
 
@@ -327,12 +323,30 @@ IODispatchQueue_DECLARE_IVARS
     IODispatchQueue_VirtualMethods
 };
 
+
 #endif /* !__DOCUMENTATION__ */
 
-/* IODispatchQueue.iig:136-137 */
+
 
 #if DRIVERKIT_PRIVATE
-/* IODispatchQueue.iig:144- */
+/* source class IODispatchQueuePrivate IODispatchQueue.iig:138-143 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
+
+class EXTENDS (IODispatchQueue) IODispatchQueuePrivate
+{
+	virtual kern_return_t
+	SetPort(
+		mach_port_t port PORTMAKESEND);
+};
+
+#undef KERNEL
+#else /* __DOCUMENTATION__ */
+
+#endif /* !__DOCUMENTATION__ */
+
+
 #endif
 
 #endif /* ! _IOKIT_UIODISPATCH_H */

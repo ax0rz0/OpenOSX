@@ -120,6 +120,10 @@ struct mach_header_64 {
 #define	MH_DSYM		0xa		/* companion file with only debug */
 					/*  sections */
 #define	MH_KEXT_BUNDLE	0xb		/* x86_64 kexts */
+#define	MH_FILESET	0xc		/* a file composed of other Mach-Os to
+					   be run in the same userspace sharing
+					   a single linkedit (e.g. a kernel
+					   collection) */
 
 /* Constants for the flags field of the mach_header */
 #define	MH_NOUNDEFS	0x1		/* the object file has no undefined
@@ -322,6 +326,7 @@ struct load_command {
 #define LC_BUILD_VERSION 0x32 /* build for platform min OS version */
 #define LC_DYLD_EXPORTS_TRIE (0x33 | LC_REQ_DYLD) /* used with linkedit_data_command, payload is trie */
 #define LC_DYLD_CHAINED_FIXUPS (0x34 | LC_REQ_DYLD) /* used with linkedit_data_command */
+#define LC_FILESET_ENTRY (0x35 | LC_REQ_DYLD) /* used with fileset_entry_command */
 
 /*
  * A variable length string in a load command is represented by an lc_str
@@ -1572,6 +1577,21 @@ struct note_command {
     char	data_owner[16];	/* owner name for this LC_NOTE */
     uint64_t	offset;		/* file offset of this data */
     uint64_t	size;		/* length of data region */
+};
+
+/*
+ * LC_FILESET_ENTRY commands describe constituent Mach-O files that are part
+ * of a fileset. In one implementation, entries are dylibs with individual
+ * mach headers and repositionable text and data segments. Each entry is
+ * further described by its own mach header.
+ */
+struct fileset_entry_command {
+    uint32_t     cmd;        /* LC_FILESET_ENTRY */
+    uint32_t     cmdsize;    /* includes entry_id string */
+    uint64_t     vmaddr;     /* memory address of the entry */
+    uint64_t     fileoff;    /* file offset of the entry */
+    union lc_str entry_id;   /* contained entry id */
+    uint32_t     reserved;   /* reserved */
 };
 
 #endif /* _MACHO_LOADER_H_ */

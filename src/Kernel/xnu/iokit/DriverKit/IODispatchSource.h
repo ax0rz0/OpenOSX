@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IODispatchSource.iig */
+/* iig-lite generated from IODispatchSource.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IODispatchSource.iig:1-36 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -37,17 +36,17 @@
 
 typedef void (^IODispatchSourceCancelHandler)(void);
 
-/* source class IODispatchSource IODispatchSource.iig:37-66 */
-
-#if __DOCUMENTATION__
-#define KERNEL IIG_KERNEL
-
 /*!
  * @class IODispatchSource
 
  * @abstract
  * IODispatchSource common base class for dispatch sources.
  */
+
+/* source class IODispatchSource IODispatchSource.iig:44-67 */
+
+#if __DOCUMENTATION__
+#define KERNEL IIG_KERNEL
 
 class NATIVE KERNEL IODispatchSource : public OSObject
 {
@@ -77,12 +76,12 @@ public:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IODispatchSource IODispatchSource.iig:37-66 */
+/* generated class IODispatchSource IODispatchSource.iig:44-67 */
 
-#define IODispatchSource_Cancel_ID            0xd963bb196f70bb93ULL
-#define IODispatchSource_SetEnableWithCompletion_ID            0xbb42c489fe4dee8eULL
-#define IODispatchSource_CheckForWork_ID            0xef19d38d4f945fd0ULL
-#define IODispatchSource_SetEnable_ID            0xbbc036b4c2a26c45ULL
+#define IODispatchSource_Cancel_ID            0x84ed17e4aed37a80ULL
+#define IODispatchSource_SetEnableWithCompletion_ID            0x96f484b56253d6e9ULL
+#define IODispatchSource_CheckForWork_ID            0x8947862d86982f27ULL
+#define IODispatchSource_SetEnable_ID            0x087f6cb1d2342744ULL
 
 #define IODispatchSource_Cancel_Args \
         IODispatchSourceCancelHandler handler
@@ -171,6 +170,15 @@ public:\
 protected:\
     /* _Impl methods */\
 \
+    kern_return_t\
+    Cancel_Impl(IODispatchSource_Cancel_Args);\
+\
+    kern_return_t\
+    SetEnableWithCompletion_Impl(IODispatchSource_SetEnableWithCompletion_Args);\
+\
+    kern_return_t\
+    CheckForWork_Impl(IODispatchSource_CheckForWork_Args);\
+\
 
 
 #define IODispatchSource_VirtualMethods \
@@ -247,8 +255,9 @@ IODispatchSource_DECLARE_IVARS
     IODispatchSource_VirtualMethods
 };
 
+
 #endif /* !__DOCUMENTATION__ */
 
-/* IODispatchSource.iig:68- */
+
 
 #endif /* ! _IOKIT_UIODISPATCHSOURCE_H */

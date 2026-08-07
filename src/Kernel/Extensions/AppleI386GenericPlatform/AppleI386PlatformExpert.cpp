@@ -17,7 +17,7 @@
  * Please see the License for the specific language governing rights and
  * limitations under the License.
  *
- * This file was modified by William Kent in 2017 to support the PureDarwin
+ * This file was modified by William Kent in 2017 to support the OpenOSX
  * project. This notice is included in support of clause 2.2(b) of the License.
  */
 
@@ -25,6 +25,8 @@
 #include <IOKit/assert.h>
 #include <IOKit/system.h>
 #include <IOKit/IORegistryEntry.h>
+#include <IOKit/IODeviceTreeSupport.h>   // gIODTPlane
+#include <IOKit/IOKitKeys.h>             // kIOPlatformUUIDKey
 #include <IOKit/platform/ApplePlatformExpert.h>
 #include <libkern/c++/OSContainers.h>
 #include <libkern/c++/OSUnserialize.h>
@@ -35,7 +37,12 @@ extern "C" {
 #include <pexpert/i386/protos.h>
 }
 
+#include "../AppleAPIC/PICShared.h"
 #include "AppleI386PlatformExpert.h"
+
+// kprintf writes straight to the serial console, bypassing os_log (which drops
+// IOLog output from prelinked kexts that aren't fully OSKext-registered).
+extern "C" void kprintf(const char *fmt, ...);
 
 enum {
 	kIRQAvailable   = 0,
@@ -79,8 +86,8 @@ IOService *AppleI386PlatformExpert::probe(IOService *provider, SInt32 *score) {
 	return this;
 }
 
-bool AppleI386PlatformExpert::init(OSDictionary *properties) {
-	if (!super::init()) return false;
+bool AppleI386PlatformExpert::init(OSDictionary *properties) {\
+	if (!super::init(properties)) return false;
 
 	OSString *name = (OSString *)getProperty("InterruptControllerName");
 	if (name == 0) name = OSString::withCStringNoCopy("AppleI386CPUInterruptController");
@@ -89,12 +96,236 @@ bool AppleI386PlatformExpert::init(OSDictionary *properties) {
 	return true;
 }
 
+/*
+ * Publish IOPlatformUUID.
+ *
+ * IOBSDGetPlatformUUID() answers gethostuuid() by doing
+ * waitForService(resourceMatching(kIOPlatformUUIDKey)), and CFPreferences asks
+ * with an infinite timeout - so until that resource exists, anything touching
+ * preferences (or hw.uuid) blocks forever at 0% CPU rather than failing.
+ *
+ * On x86_64 stock XNU only publishes it from
+ * IOPlatformExpert::registerNVRAMController(), because on a real Mac the UUID
+ * comes out of NVRAM. OpenOSX has no IONVRAMController, so that path never
+ * runs; xnu-loader instead puts the 16-byte "platform-uuid" property (from
+ * SMBIOS, falling back to the boot volume UUID) on the device-tree /options
+ * node, and we publish it here.
+ */
+void AppleI386PlatformExpert::publishPlatformUUIDFromDeviceTree(void) {
+	IORegistryEntry *options = IORegistryEntry::fromPath("/options", gIODTPlane);
+	if (options == 0) {
+		IOLog("AppleI386PlatformExpert: no /options node, IOPlatformUUID unavailable\n");
+		return;
+	}
+
+	OSData *data = OSDynamicCast(OSData, options->getProperty("platform-uuid"));
+	if (data == 0 || data->getLength() != sizeof(uuid_t)) {
+		IOLog("AppleI386PlatformExpert: /options has no usable platform-uuid, "
+		      "IOPlatformUUID unavailable\n");
+		options->release();
+		return;
+	}
+
+	uuid_string_t uuid;
+	uuid_unparse((const unsigned char *)data->getBytesNoCopy(), uuid);
+	options->release();
+
+	OSString *string = OSString::withCString(uuid);
+	if (string == 0) return;
+
+	/* Both are needed: the property answers IOKit lookups and the sysctl, the
+	 * resource is what waitForService() in IOBSDGetPlatformUUID() blocks on. */
+	setProperty(kIOPlatformUUIDKey, string);
+	publishResource(kIOPlatformUUIDKey, string);
+	IOLog("AppleI386PlatformExpert: published IOPlatformUUID %s\n", uuid);
+	string->release();
+}
+
+UInt16 AppleI386PlatformExpert::sPM1aControlPort = 0;
+UInt16 AppleI386PlatformExpert::sPM1bControlPort = 0;
+UInt8  AppleI386PlatformExpert::sS5SleepTypeA = 0;
+UInt8  AppleI386PlatformExpert::sS5SleepTypeB = 0;
+bool   AppleI386PlatformExpert::sACPIPowerOffReady = false;
+
+/* Map a physical range long enough to read a table out of it. ACPI tables sit
+ * in EFI reclaim memory, which is normal RAM by the time we run. */
+static void *pd_acpi_map(UInt64 phys, UInt32 length, IOMemoryMap **mapOut) {
+	IOMemoryDescriptor *md = IOMemoryDescriptor::withPhysicalAddress(
+	    (IOPhysicalAddress)phys, length, kIODirectionIn);
+	if (md == 0) return 0;
+	IOMemoryMap *map = md->map();
+	md->release();
+	if (map == 0) return 0;
+	*mapOut = map;
+	return (void *)map->getVirtualAddress();
+}
+
+static bool pd_acpi_parse_s5(const UInt8 *dsdt, UInt32 length,
+                             UInt8 *typA, UInt8 *typB) {
+	if (dsdt == 0 || length < 8) return false;
+	for (UInt32 i = 0; i + 8 < length; i++) {
+		if (dsdt[i] != '_' || dsdt[i + 1] != 'S' ||
+		    dsdt[i + 2] != '5' || dsdt[i + 3] != '_') continue;
+
+		const UInt8 *p = dsdt + i + 4;
+		if (*p != 0x12) continue;          // PackageOp
+		p++;
+		p += ((*p & 0xC0) >> 6) + 1;       // skip PkgLength
+		if (p >= dsdt + length) return false;
+		if (*p < 2) return false;          // need at least two elements
+		p++;
+
+		/* Each element is either a byte-prefixed integer (0x0A <val>) or a
+		 * bare Zero/One/Ones constant. */
+		if (*p == 0x0A) p++;
+		if (p >= dsdt + length) return false;
+		*typA = *p++;
+		if (*p == 0x0A) p++;
+		if (p >= dsdt + length) return false;
+		*typB = *p;
+		return true;
+	}
+	return false;
+}
+
+void AppleI386PlatformExpert::cacheACPIPowerOffFromDeviceTree(void) {
+	IORegistryEntry *cfg =
+	    IORegistryEntry::fromPath("/efi/configuration-table", gIODTPlane);
+	if (cfg == 0) {
+		IOLog("AppleI386PlatformExpert: no /efi/configuration-table, "
+		      "ACPI power off unavailable\n");
+		return;
+	}
+
+	/* Prefer the ACPI 2.0 entry: its RSDP carries the 64-bit XSDT. */
+	UInt64 rsdpPhys = 0;
+	bool haveV2 = false;
+	OSIterator *children = cfg->getChildIterator(gIODTPlane);
+	if (children != 0) {
+		while (OSObject *next = children->getNextObject()) {
+			IORegistryEntry *child = OSDynamicCast(IORegistryEntry, next);
+			if (child == 0) continue;
+			OSData *alias = OSDynamicCast(OSData, child->getProperty("alias"));
+			OSData *table = OSDynamicCast(OSData, child->getProperty("table"));
+			if (alias == 0 || table == 0 || table->getLength() < 8) continue;
+			const char *a = (const char *)alias->getBytesNoCopy();
+			bool isV2 = (strncmp(a, "ACPI_20", 7) == 0);
+			if (!isV2 && strncmp(a, "ACPI", 4) != 0) continue;
+			if (haveV2 && !isV2) continue;
+			rsdpPhys = *(const UInt64 *)table->getBytesNoCopy();
+			haveV2 = isV2;
+		}
+		children->release();
+	}
+	cfg->release();
+
+	if (rsdpPhys == 0) {
+		IOLog("AppleI386PlatformExpert: no ACPI RSDP in the device tree, "
+		      "ACPI power off unavailable\n");
+		return;
+	}
+
+	IOMemoryMap *rsdpMap = 0;
+	const UInt8 *rsdp = (const UInt8 *)pd_acpi_map(rsdpPhys, 36, &rsdpMap);
+	if (rsdp == 0) return;
+
+	UInt8 revision = rsdp[15];
+	UInt64 sdtPhys = 0;
+	bool useXsdt = false;
+	if (revision >= 2) {
+		sdtPhys = *(const UInt64 *)(rsdp + 24);   // XsdtAddress
+		useXsdt = (sdtPhys != 0);
+	}
+	if (!useXsdt) sdtPhys = *(const UInt32 *)(rsdp + 16);  // RsdtAddress
+	rsdpMap->release();
+	if (sdtPhys == 0) return;
+
+	/* Read the header first for the real length, then remap the whole table. */
+	IOMemoryMap *sdtHdrMap = 0;
+	const UInt8 *sdtHdr = (const UInt8 *)pd_acpi_map(sdtPhys, 36, &sdtHdrMap);
+	if (sdtHdr == 0) return;
+	UInt32 sdtLen = *(const UInt32 *)(sdtHdr + 4);
+	sdtHdrMap->release();
+	if (sdtLen < 36 || sdtLen > (1u << 20)) return;
+
+	IOMemoryMap *sdtMap = 0;
+	const UInt8 *sdt = (const UInt8 *)pd_acpi_map(sdtPhys, sdtLen, &sdtMap);
+	if (sdt == 0) return;
+
+	UInt64 fadtPhys = 0;
+	UInt32 entrySize = useXsdt ? 8 : 4;
+	UInt32 entries = (sdtLen - 36) / entrySize;
+	for (UInt32 i = 0; i < entries && fadtPhys == 0; i++) {
+		const UInt8 *e = sdt + 36 + (i * entrySize);
+		UInt64 tablePhys = useXsdt ? *(const UInt64 *)e : *(const UInt32 *)e;
+		if (tablePhys == 0) continue;
+		IOMemoryMap *hdrMap = 0;
+		const UInt8 *hdr = (const UInt8 *)pd_acpi_map(tablePhys, 36, &hdrMap);
+		if (hdr == 0) continue;
+		if (strncmp((const char *)hdr, "FACP", 4) == 0) fadtPhys = tablePhys;
+		hdrMap->release();
+	}
+	sdtMap->release();
+
+	if (fadtPhys == 0) {
+		IOLog("AppleI386PlatformExpert: no FACP table, "
+		      "ACPI power off unavailable\n");
+		return;
+	}
+
+	IOMemoryMap *fadtMap = 0;
+	const UInt8 *fadt = (const UInt8 *)pd_acpi_map(fadtPhys, 244, &fadtMap);
+	if (fadt == 0) return;
+
+	sPM1aControlPort = (UInt16)*(const UInt32 *)(fadt + 64);   // PM1a_CNT_BLK
+	sPM1bControlPort = (UInt16)*(const UInt32 *)(fadt + 68);   // PM1b_CNT_BLK
+	UInt64 dsdtPhys = *(const UInt32 *)(fadt + 40);            // DSDT
+	fadtMap->release();
+
+	if (sPM1aControlPort == 0) {
+		IOLog("AppleI386PlatformExpert: FACP has no PM1a control block, "
+		      "ACPI power off unavailable\n");
+		return;
+	}
+
+	/* Sleep type defaults to 0, which is what QEMU's \_S5 uses; a DSDT parse
+	 * only has to correct it on hardware that differs. */
+	if (dsdtPhys != 0) {
+		IOMemoryMap *dsdtHdrMap = 0;
+		const UInt8 *dsdtHdr =
+		    (const UInt8 *)pd_acpi_map(dsdtPhys, 36, &dsdtHdrMap);
+		if (dsdtHdr != 0) {
+			UInt32 dsdtLen = *(const UInt32 *)(dsdtHdr + 4);
+			dsdtHdrMap->release();
+			if (dsdtLen >= 36 && dsdtLen <= (1u << 22)) {
+				IOMemoryMap *dsdtMap = 0;
+				const UInt8 *dsdt =
+				    (const UInt8 *)pd_acpi_map(dsdtPhys, dsdtLen, &dsdtMap);
+				if (dsdt != 0) {
+					(void)pd_acpi_parse_s5(dsdt, dsdtLen,
+					    &sS5SleepTypeA, &sS5SleepTypeB);
+					dsdtMap->release();
+				}
+			}
+		}
+	}
+
+	sACPIPowerOffReady = true;
+	IOLog("AppleI386PlatformExpert: ACPI power off via PM1a 0x%x "
+	      "(PM1b 0x%x), S5 type %u/%u\n", sPM1aControlPort, sPM1bControlPort,
+	      sS5SleepTypeA, sS5SleepTypeB);
+}
+
 bool AppleI386PlatformExpert::start(IOService *provider) {
 	setBootROMType(kBootROMTypeNewWorld);
 
-	if (!super::start(provider)) return false;
+	bool superOK = super::start(provider);
+	if (!superOK) return false;
 	PE_halt_restart = handlePEHaltRestart;
 	registerService();
+
+	publishPlatformUUIDFromDeviceTree();
+	cacheACPIPowerOffFromDeviceTree();
 
 	// Hack: Initialize AppleI386CPU ourself because no one else will.
 	bootCPU = new AppleI386CPU;
@@ -115,15 +346,45 @@ bool AppleI386PlatformExpert::configure(IOService *provider) {
 	topLevel = OSDynamicCast(OSArray, getProperty("top-level"));
 
 	if (topLevel) {
-		while ((dict = OSDynamicCast(OSDictionary, topLevel->getObject(0)))) {
-			dict->retain();
-			topLevel->removeObject(0);
-			nub = createNub(dict);
-			if (nub == 0) continue;
+		unsigned int count = topLevel->getCount();
+		for (unsigned int i = 0; i < count; i++) {
+			dict = OSDynamicCast(OSDictionary, topLevel->getObject(i));
+			if (dict == 0) continue;
 
-			dict->release();
+			nub = createNub(dict);
+			if (nub == 0) { kprintf(">>>   createNub -> NULL\n"); continue; }
+
 			nub->attach(this);
+
+			/*
+			 * Also root the nub in the IODeviceTree plane, under the
+			 * device-tree entry that plane hangs off.
+			 *
+			 * attach() above places the nub in the service plane only.
+			 * These nubs are synthesised from the "top-level" array
+			 * rather than read out of a real device tree, so nothing
+			 * else ever put them in gIODTPlane - which left every
+			 * descendant detached from the plane's root. IOPCIFamily
+			 * then attaches each IOPCIDevice under its bridge's DT
+			 * entry (IOPCIConfigurator's attachToParent(dtBridge,
+			 * gIODTPlane)), so a PCI device ended up *in* the plane,
+			 * with a parent, but with no path back to the root.
+			 *
+			 * IORegistryEntry::getPath() walks up until it reaches
+			 * gRegistryRoot's child in the plane and fails if it hits
+			 * NULL first, so IORegistryEntryGetPath(entry,
+			 * kIODeviceTreePlane, ...) failed for everything under
+			 * PCI while inPlane() and getNameInPlane() - neither of
+			 * which consults the root - happily succeeded.
+			 */
+			if (provider && !nub->attachToParent(provider, gIODTPlane)) {
+				kprintf(">>>   nub '%s': attachToParent(gIODTPlane) failed\n",
+				        nub->getName());
+			}
+
 			nub->registerService();
+			kprintf(">>>   registered nub '%s'\n", nub->getName());
+			nub->release();
 		}
 	}
 
@@ -154,6 +415,10 @@ IOService *AppleI386PlatformExpert::createNub(OSDictionary *from) {
 			setupBIOS(nub);
 		} else if (strcmp(name, "8259-pic") == 0) {
 			setupPIC(nub);
+		} else if (strcmp(name, "ps2controller") == 0) {
+			// ApplePS2Controller calls registerInterrupt(1/12) on this nub,
+			// so it needs the same legacy-IRQ specifier table as the PIC.
+			setupPIC(nub);
 		}
 	}
 
@@ -166,7 +431,6 @@ void AppleI386PlatformExpert::setupPIC(IOService *nub) {
 	OSArray *controller;
 	OSArray *specifier;
 	OSData *tmpData;
-	long tmpLong;
 
 	propTable = nub->getPropertyTable();
 
@@ -178,9 +442,14 @@ void AppleI386PlatformExpert::setupPIC(IOService *nub) {
 	assert(specifier);
 
 	for (i = 0; i < kSystemIRQCount; i++) {
-		tmpLong = i;
-		tmpData = OSData::withBytes(&tmpLong, sizeof(tmpLong));
+		UInt32 spec[2];
+		spec[0] = i;
+		spec[1] = kInterruptTriggerModeEdge |
+		    kInterruptPolarityHigh |
+		    kInterruptNotShareable;
+		tmpData = OSData::withBytes(spec, sizeof(spec));
 		specifier->setObject(tmpData);
+		tmpData->release();
 	}
 
 	controller = OSArray::withCapacity(kSystemIRQCount);
@@ -203,7 +472,20 @@ void AppleI386PlatformExpert::setupBIOS(IOService *nub) {
 }
 
 bool AppleI386PlatformExpert::getMachineName(char *name, int maxLength) {
-	strncpy(name, "x86", maxLength);
+	if (!name || maxLength <= 0) {
+		return false;
+	}
+
+#if defined(__x86_64__)
+	const char *machineName = "x86_64";
+#elif defined(__i386__)
+	const char *machineName = "i386";
+#else
+	const char *machineName = "x86";
+#endif
+
+	strncpy(name, machineName, maxLength);
+	name[maxLength - 1] = '\0';
 	return true;
 }
 
@@ -242,6 +524,32 @@ int AppleI386PlatformExpert::handlePEHaltRestart(unsigned int type) {
 			break;
 
 		case kPEHaltCPU:
+			/* ACPI soft-off: write SLP_TYP|SLP_EN to the PM1 control
+			 * register(s). Without this the caller (halt_all_cpus) just spins
+			 * in a while(1), so the machine never actually powers down. */
+			if (sACPIPowerOffReady) {
+				outw(sPM1aControlPort,
+				    (UInt16)((sS5SleepTypeA << 10) | 0x2000));
+				if (sPM1bControlPort != 0) {
+					outw(sPM1bControlPort,
+					    (UInt16)((sS5SleepTypeB << 10) | 0x2000));
+				}
+				/* Power removal is not instantaneous; give it a moment before
+				 * admitting failure to the caller. */
+				for (temporary_sum = 0; temporary_sum < 100000; temporary_sum++) {
+					outb(0x80, 0);
+				}
+			}
+
+			IOLog("AppleI386PlatformExpert: ACPI power off unavailable, "
+			      "resetting instead\n");
+			outb(0xCF9, 0x02);
+			temporary_sum = 2;
+			temporary_sum += 2;
+			outb(0xCF9, 0x04);
+			ret = -1;
+			break;
+
 		default:
 			ret = -1;
 			break;
@@ -266,7 +574,17 @@ bool AppleI386PlatformExpert::setNubInterruptVectors(IOService *nub, const UInt3
 	if (!specifier || !controller) goto done;
 
 	for (UInt32 i = 0; i < vectorCount; i++) {
-		OSData *data = OSData::withBytes(&vectors[i], sizeof(vectors[i]));
+		// The interrupt specifier must be an 8-byte blob: word[0] = vector/IRQ
+		// number (IOAPIC input pin), word[1] = interrupt flags.  AppleAPIC's
+		// IOAPIC controller (AppleAPICInterruptController::getInterruptType)
+		// rejects any specifier shorter than sizeof(UInt64), which is why a
+		// bare 4-byte UInt32 caused every device interrupt registration to
+		// fail with kIOReturnNotFound.  Legacy ISA IRQs (e.g. IDE 14/15) are
+		// edge-triggered, active-high, non-shareable -> flags = 0.
+		UInt32 spec[2];
+		spec[0] = vectors[i];
+		spec[1] = 0;  // kInterruptTriggerModeEdge | kInterruptPolarityHigh | kInterruptNotShareable
+		OSData *data = OSData::withBytes(spec, sizeof(spec));
 		specifier->setObject(data);
 		controller->setObject(_interruptControllerName);
 		if (data) data->release();
@@ -304,6 +622,26 @@ IOReturn AppleI386PlatformExpert::callPlatformFunction(const OSSymbol *functionN
 		if (ok == false) releaseSystemInterrupt(nub, vectors[0], exclusive);
 
 		return ok ? kIOReturnSuccess : kIOReturnNoMemory;
+	} else if (functionName->isEqualTo("GetMessagedInterruptAddress")) {
+		// Build the x86 MSI message for a message-signalled interrupt targeting
+		// the boot CPU's local APIC. Called (via provider-chain propagation) by
+		// IOPCIMessagedInterruptController::allocateDeviceInterrupts.
+		//   param3 = interrupt vector (already includes the controller vector base)
+		//   param4 = uint32_t message[3] out: { addr-lo, addr-hi, data }
+		uint32_t   vector  = (uint32_t)((UInt64)param3);
+		uint32_t * message = (uint32_t *)param4;
+		if (message == 0) return kIOReturnBadArgument;
+
+		// Destination = boot CPU local APIC ID (0), matching the io-apic nub's
+		// "Destination APIC ID" personality. Physical destination mode, no
+		// redirection hint. Data: fixed delivery mode, edge triggered, vector.
+		const uint32_t destAPICID = 0;
+		message[0] = 0xFEE00000U | (destAPICID << 12);  // MSI address low
+		message[1] = 0;                                 // MSI address high
+		message[2] = vector & 0xFFU;                    // MSI data
+		kprintf("AppleI386PlatformExpert: MSI msg vector=0x%x addr=0x%08x data=0x%x\n",
+			vector, message[0], message[2]);
+		return kIOReturnSuccess;
 	} else if (functionName->isEqualTo("SetBusClockRateMHz")) {
 		UInt32 rateMHz = (UInt32)((UInt64)param1);
 		gPEClockFrequencyInfo.bus_clock_rate_hz = rateMHz * 1000000;
@@ -357,4 +695,156 @@ void AppleI386PlatformExpert::releaseSystemInterrupt(IOService *client, UInt32 v
 	}
 
 	IOLockUnlock(ResourceLock);
+}
+
+#define CMOS_ADDR_PORT  0x70
+#define CMOS_DATA_PORT  0x71
+
+#define RTC_SECONDS     0x00
+#define RTC_MINUTES     0x02
+#define RTC_HOURS       0x04
+#define RTC_DAY_OF_MONTH 0x07
+#define RTC_MONTH       0x08
+#define RTC_YEAR        0x09
+#define RTC_STATUS_A    0x0A
+#define RTC_STATUS_B    0x0B
+
+#define RTC_STATUS_A_UPDATE_IN_PROGRESS 0x80
+
+#define RTC_STATUS_B_24_HOUR    0x02
+#define RTC_STATUS_B_BINARY     0x04
+
+static uint8_t
+rtcRead(uint8_t reg)
+{
+	outb(CMOS_ADDR_PORT, reg);
+	return inb(CMOS_DATA_PORT);
+}
+
+static void
+rtcWrite(uint8_t reg, uint8_t value)
+{
+	outb(CMOS_ADDR_PORT, reg);
+	outb(CMOS_DATA_PORT, value);
+}
+
+#define BCD_TO_BIN(val) (((val) & 0x0F) + ((val) >> 4) * 10)
+#define BIN_TO_BCD(val) ((((val) / 10) << 4) | ((val) % 10))
+
+static bool
+isLeapYear(int year)
+{
+	return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
+}
+
+/*
+ * Days-since-epoch civil-calendar conversion (proleptic Gregorian, matches
+ * the algorithm POSIX gmtime/timegm use) -- self-contained since kernel code
+ * can't call libc's mktime/timegm.
+ */
+static long
+daysFromEpoch(int year, int month, int day)
+{
+	static const int cumulativeDays[12] = { 0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334 };
+	long days = (year - 1970) * 365 + cumulativeDays[month - 1] + (day - 1);
+
+	for (int y = 1970; y < year; y++) {
+		if (isLeapYear(y)) days++;
+	}
+	if (month > 2 && isLeapYear(year)) days++;
+
+	return days;
+}
+
+long
+AppleI386PlatformExpert::getGMTTimeOfDay(void)
+{
+	uint8_t sec, min, hour, day, month, year, statusB;
+
+	/* Skip an in-progress update rather than reading a torn value. */
+	while (rtcRead(RTC_STATUS_A) & RTC_STATUS_A_UPDATE_IN_PROGRESS) {
+		;
+	}
+
+	sec = rtcRead(RTC_SECONDS);
+	min = rtcRead(RTC_MINUTES);
+	hour = rtcRead(RTC_HOURS);
+	day = rtcRead(RTC_DAY_OF_MONTH);
+	month = rtcRead(RTC_MONTH);
+	year = rtcRead(RTC_YEAR);
+	statusB = rtcRead(RTC_STATUS_B);
+
+	if (!(statusB & RTC_STATUS_B_BINARY)) {
+		sec = BCD_TO_BIN(sec);
+		min = BCD_TO_BIN(min);
+		hour = BCD_TO_BIN(hour & 0x7F);
+		day = BCD_TO_BIN(day);
+		month = BCD_TO_BIN(month);
+		year = BCD_TO_BIN(year);
+	}
+	if (!(statusB & RTC_STATUS_B_24_HOUR) && (hour & 0x80)) {
+		hour = ((hour & 0x7F) % 12) + 12;
+	}
+
+	/* CMOS only stores a 2-digit year; assume 2000-2099, same as every
+	 * other PC RTC driver (real Darwin's AppleRTC has the same
+	 * assumption baked in for the same hardware). */
+	int fullYear = 2000 + year;
+
+	long days = daysFromEpoch(fullYear, month, day);
+	return days * 86400 + hour * 3600 + min * 60 + sec;
+}
+
+void
+AppleI386PlatformExpert::setGMTTimeOfDay(long secs)
+{
+	long days = secs / 86400;
+	long remainder = secs % 86400;
+	if (remainder < 0) {
+		remainder += 86400;
+		days--;
+	}
+
+	int hour = (int)(remainder / 3600);
+	int min = (int)((remainder % 3600) / 60);
+	int sec = (int)(remainder % 60);
+
+	int year = 1970;
+	for (;;) {
+		int daysInYear = isLeapYear(year) ? 366 : 365;
+		if (days < daysInYear) break;
+		days -= daysInYear;
+		year++;
+	}
+
+	static const int monthLengths[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+	int month = 0;
+	while (true) {
+		int len = monthLengths[month];
+		if (month == 1 && isLeapYear(year)) len = 29;
+		if (days < len) break;
+		days -= len;
+		month++;
+	}
+	int day = (int)days + 1;
+
+	uint8_t statusB = rtcRead(RTC_STATUS_B);
+	bool binary = statusB & RTC_STATUS_B_BINARY;
+
+	uint8_t bSec = binary ? (uint8_t)sec : BIN_TO_BCD(sec);
+	uint8_t bMin = binary ? (uint8_t)min : BIN_TO_BCD(min);
+	uint8_t bHour = binary ? (uint8_t)hour : BIN_TO_BCD(hour);
+	uint8_t bDay = binary ? (uint8_t)day : BIN_TO_BCD(day);
+	uint8_t bMonth = binary ? (uint8_t)(month + 1) : BIN_TO_BCD(month + 1);
+	uint8_t bYear = binary ? (uint8_t)(year - 2000) : BIN_TO_BCD(year - 2000);
+
+	/* Halt updates while writing so we don't race the RTC's own tick. */
+	rtcWrite(RTC_STATUS_B, statusB | 0x80);
+	rtcWrite(RTC_SECONDS, bSec);
+	rtcWrite(RTC_MINUTES, bMin);
+	rtcWrite(RTC_HOURS, bHour);
+	rtcWrite(RTC_DAY_OF_MONTH, bDay);
+	rtcWrite(RTC_MONTH, bMonth);
+	rtcWrite(RTC_YEAR, bYear);
+	rtcWrite(RTC_STATUS_B, statusB);
 }

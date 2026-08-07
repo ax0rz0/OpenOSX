@@ -144,6 +144,6 @@ void
 usage(void)
 {
 	fprintf(stderr, "Usage: %s <dst> <new> <contents> <...>\n",
-	    getprogname());
+	    "replacecontents");
 	exit(EX_USAGE);
 }

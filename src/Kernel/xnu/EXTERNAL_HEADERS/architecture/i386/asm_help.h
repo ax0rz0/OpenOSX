@@ -268,8 +268,16 @@ name:
  */
 
 #if defined(__DYNAMIC__)
+/*
+ * OpenOSX fix: load the ADDRESS of var, not its contents.  The original
+ * `movq var(%rip),%rdx` dereferenced the target, so BRANCH_EXTERN/CALL_EXTERN
+ * jumped/called through the first 8 bytes of the callee's code when the symbol
+ * resolved locally (e.g. cerror inside dyld), producing a non-canonical RIP.
+ * leaq yields &var; the downstream `jmpq *%rdx` / `movq (%rdx),%rdx` then
+ * behave correctly.
+ */
 #define PICIFY(var)					\
-	movq	var(%rip),%rdx
+	leaq	var(%rip),%rdx
 
 #define CALL_EXTERN_AGAIN(func)	\
 	PICIFY(func)		; \

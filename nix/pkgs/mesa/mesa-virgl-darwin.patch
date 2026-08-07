@@ -1,0 +1,84 @@
+diff -ruN a/src/gallium/drivers/virgl/meson.build b/src/gallium/drivers/virgl/meson.build
+--- a/src/gallium/drivers/virgl/meson.build	2026-07-31 16:30:52.855428039 -0400
++++ b/src/gallium/drivers/virgl/meson.build	2026-07-31 16:31:27.914349893 -0400
+@@ -21,11 +21,11 @@
+   [ files_libvirgl ],
+   gnu_symbol_visibility : 'hidden',
+   include_directories : [inc_include, inc_src, inc_gallium, inc_gallium_aux, inc_virtio],
+-  dependencies : [dep_libdrm, idep_mesautil, idep_xmlconfig, idep_nir],
++  dependencies : [idep_mesautil, idep_xmlconfig, idep_nir],
+ )
+ 
+ virgl_deps = [libvirgl]
+-if not with_platform_windows
++if not with_platform_windows and host_machine.system() != 'darwin'
+   virgl_deps += libvirgldrm
+   virgl_deps += libvirglvtest
+ endif
+diff -ruN a/src/gallium/drivers/virgl/virgl_context.c b/src/gallium/drivers/virgl/virgl_context.c
+--- a/src/gallium/drivers/virgl/virgl_context.c	2026-07-31 16:33:50.281303304 -0400
++++ b/src/gallium/drivers/virgl/virgl_context.c	2026-07-31 16:33:50.292628569 -0400
+@@ -22,7 +22,7 @@
+  */
+ 
+ #include <string.h>
+-#ifndef _WIN32
++#if !defined(_WIN32) && !defined(__APPLE__)
+ #include <libsync.h>
+ #endif
+ 
+diff -ruN a/src/gallium/drivers/virgl/virgl_screen.c b/src/gallium/drivers/virgl/virgl_screen.c
+--- a/src/gallium/drivers/virgl/virgl_screen.c	2026-07-31 16:30:52.847347847 -0400
++++ b/src/gallium/drivers/virgl/virgl_screen.c	2026-07-31 17:16:42.992188009 -0400
+@@ -781,9 +781,16 @@
+    struct virgl_resource *vres = virgl_resource(res);
+    struct virgl_context *vctx = virgl_context(ctx);
+ 
++   /* The xlib GLX present path (xm_st.c) passes ctx==NULL when no state
++    * tracker context is current, and both virgl_flush_eq() and vctx->cbuf
++    * dereference it (softpipe tolerates a NULL ctx here). Guard those two uses
++    * only - the present itself must still happen, or nothing ever reaches the
++    * window. */
+    if (vws->flush_frontbuffer) {
+-      virgl_flush_eq(vctx, vctx, NULL);
+-      vws->flush_frontbuffer(vws, vctx->cbuf, vres->hw_res, level, layer, winsys_drawable_handle,
++      if (vctx)
++         virgl_flush_eq(vctx, vctx, NULL);
++      vws->flush_frontbuffer(vws, vctx ? vctx->cbuf : NULL, vres->hw_res, level, layer,
++                             winsys_drawable_handle,
+                              nboxes == 1 ? sub_box : NULL);
+    }
+ }
+diff -ruN a/src/gallium/meson.build b/src/gallium/meson.build
+--- a/src/gallium/meson.build	2026-07-31 16:30:52.864881107 -0400
++++ b/src/gallium/meson.build	2026-07-31 16:31:27.914424083 -0400
+@@ -170,7 +170,7 @@
+ endif
+ if with_gallium_virgl
+   subdir('winsys/virgl/common')
+-  if not with_platform_windows
++  if not with_platform_windows and host_machine.system() != 'darwin'
+     subdir('winsys/virgl/drm')
+     subdir('winsys/virgl/vtest')
+   endif
+diff -ruN a/src/mesa/state_tracker/st_manager.c b/src/mesa/state_tracker/st_manager.c
+--- a/src/mesa/state_tracker/st_manager.c	2026-07-31 16:30:52.873047864 -0400
++++ b/src/mesa/state_tracker/st_manager.c	2026-07-31 16:31:27.914498754 -0400
+@@ -940,6 +940,17 @@
+    struct gl_config mode, *mode_ptr = &mode;
+    bool no_error = false;
+ 
++   /* A frontend whose screen creation failed still reaches here with a NULL
++    * screen: sw_screen_create_named() returns NULL when the driver named by
++    * GALLIUM_DRIVER was not linked into this target, and the GLX frontend does
++    * not check before calling in. Report the failure rather than faulting on
++    * screen->context_create.
++    */
++   if (fscreen == NULL || fscreen->screen == NULL) {
++      *error = ST_CONTEXT_ERROR_NO_MEMORY;
++      return NULL;
++   }
++
+    _mesa_initialize(attribs->options.mesa_extension_override);
+ 
+    /* Create a hash table for the framebuffer interface objects

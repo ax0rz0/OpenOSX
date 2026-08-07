@@ -1,3 +1,7 @@
+#ifndef __APPLE__
+#define _GNU_SOURCE
+#endif
+
 /*
  * Copyright (c) 2012 Apple, Inc. All rights reserved.
  *
@@ -29,44 +33,68 @@
 #include <err.h>
 #include <sysexits.h>
 
+#include <fcntl.h>
 #include <sys/stat.h>
-#include <sys/fcntl.h>
 #include <sys/param.h>
 #include <sys/time.h>
+#include <string.h>
 
+#ifdef __APPLE__
 #include <copyfile.h>
+#include <sys/types.h>
+#else
+#include <sys/sendfile.h>
+#endif
 
 void usage(void);
 
-int
-main(int argc, char * argv[])
-{
+#ifndef __APPLE__
+// Linux fallback: copy using sendfile or read/write
+int copy_file(int srcfd, int dstfd, off_t size) {
+	off_t offset = 0;
+	ssize_t sent;
+
+	while (offset < size) {
+		sent = sendfile(dstfd, srcfd, &offset, size - offset);
+		if (sent <= 0) {
+			if (errno == EINTR || errno == EAGAIN)
+				continue;
+			return -1;
+		}
+	}
+	return 0;
+}
+#endif
+
+int main(int argc, char *argv[]) {
 	struct stat sb;
-	void *mset;
-	mode_t mode;
+	mode_t mode = 0;
 	bool gotmode = false;
 	int ch;
 	int ret;
 	int srcfd, dstfd;
 	const char *src = NULL;
 	const char *dst = NULL;
-	char dsttmpname[MAXPATHLEN];
+	char *dsttmpname = NULL;
 
 	while ((ch = getopt(argc, argv, "cSm:")) != -1) {
 		switch (ch) {
 		case 'c':
 		case 'S':
-			/* ignored for compatibility */
+			// ignored for compatibility
 			break;
 		case 'm':
 			gotmode = true;
-			mset = setmode(optarg);
-			if (!mset) {
-				errx(EX_USAGE, "Unrecognized mode %s", optarg);
+#ifdef __APPLE__
+			{
+				void *mset = setmode(optarg);
+				if (!mset) errx(EX_USAGE, "Unrecognized mode %s", optarg);
+				mode = getmode(mset, 0);
+				free(mset);
 			}
-
-			mode = getmode(mset, 0);
-			free(mset);
+#else
+			mode = strtol(optarg, NULL, 8); // Linux: parse as octal
+#endif
 			break;
 		case '?':
 		default:
@@ -84,60 +112,41 @@ main(int argc, char * argv[])
 	src = argv[0];
 	dst = argv[1];
 
-	srcfd = open(src, O_RDONLY, 0);
-	if (srcfd < 0) {
-		err(EX_NOINPUT, "open(%s)", src);
-	}
+	srcfd = open(src, O_RDONLY);
+	if (srcfd < 0) err(EX_NOINPUT, "open(%s)", src);
 
 	ret = fstat(srcfd, &sb);
-	if (ret < 0) {
-		err(EX_NOINPUT, "fstat(%s)", src);
+	if (ret < 0) err(EX_NOINPUT, "fstat(%s)", src);
+
+	if (!S_ISREG(sb.st_mode)) err(EX_USAGE, "%s is not a regular file", src);
+
+	if (asprintf(&dsttmpname, "%s.XXXXXX", dst) < 0) {
+		err(EX_UNAVAILABLE, "asprintf(%s)", dst);
 	}
-
-	if (!S_ISREG(sb.st_mode)) {
-		err(EX_USAGE, "%s is not a regular file", src);
-	}
-
-	snprintf(dsttmpname, sizeof(dsttmpname), "%s.XXXXXX", dst);
-
 	dstfd = mkstemp(dsttmpname);
-	if (dstfd < 0) {
-		err(EX_UNAVAILABLE, "mkstemp(%s)", dsttmpname);
-	}
+	if (dstfd < 0) err(EX_UNAVAILABLE, "mkstemp(%s)", dsttmpname);
 
-	ret = fcopyfile(srcfd, dstfd, NULL,
-	    COPYFILE_DATA);
-	if (ret < 0) {
-		err(EX_UNAVAILABLE, "fcopyfile(%s, %s)", src, dsttmpname);
-	}
+#ifdef __APPLE__
+	ret = fcopyfile(srcfd, dstfd, NULL, COPYFILE_DATA);
+#else
+	ret = copy_file(srcfd, dstfd, sb.st_size);
+#endif
+	if (ret < 0) err(EX_UNAVAILABLE, "file copy failed (%s -> %s)", src, dsttmpname);
 
 	ret = futimes(dstfd, NULL);
-	if (ret < 0) {
-		err(EX_UNAVAILABLE, "futimes(%s)", dsttmpname);
-	}
+	if (ret < 0) err(EX_UNAVAILABLE, "futimes(%s)", dsttmpname);
 
 	if (gotmode) {
 		ret = fchmod(dstfd, mode);
-		if (ret < 0) {
-			err(EX_NOINPUT, "fchmod(%s, %ho)", dsttmpname, mode);
-		}
+		if (ret < 0) err(EX_NOINPUT, "fchmod(%s, %o)", dsttmpname, mode);
 	}
 
 	ret = rename(dsttmpname, dst);
-	if (ret < 0) {
-		err(EX_NOINPUT, "rename(%s, %s)", dsttmpname, dst);
-	}
+	if (ret < 0) err(EX_NOINPUT, "rename(%s, %s)", dsttmpname, dst);
 
-	ret = close(dstfd);
-	if (ret < 0) {
-		err(EX_NOINPUT, "close(dst)");
-	}
-
-	ret = close(srcfd);
-	if (ret < 0) {
-		err(EX_NOINPUT, "close(src)");
-	}
-
+	close(dstfd);
+	close(srcfd);
+	free(dsttmpname);
 	return 0;
 }
 
@@ -145,6 +154,6 @@ void
 usage(void)
 {
 	fprintf(stderr, "Usage: %s [-c] [-S] [-m <mode>] <src> <dst>\n",
-	    getprogname());
+	    "installfile");
 	exit(EX_USAGE);
 }

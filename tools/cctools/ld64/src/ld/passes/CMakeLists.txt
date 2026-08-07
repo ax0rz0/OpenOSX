@@ -29,5 +29,6 @@ target_include_directories(host_ld_libpasses PRIVATE
     ../../3rd
     ../../..
 )
-set_property(TARGET host_ld_libpasses PROPERTY CXX_STANDARD 11)
+set_property(TARGET host_ld_libpasses PROPERTY CXX_STANDARD 17)
+target_compile_options(host_ld_libpasses PRIVATE -fblocks)
 suppress_all_warnings(host_ld_libpasses)

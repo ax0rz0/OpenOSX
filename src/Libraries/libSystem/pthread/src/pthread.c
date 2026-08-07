@@ -51,6 +51,8 @@
 
 #include "internal.h"
 
+extern void _simple_dprintf(int __fd, const char *__fmt, ...);
+
 #include <stdlib.h>
 #include <errno.h>
 #include <signal.h>
@@ -133,14 +135,15 @@ _pthread_lock _pthread_list_lock = _PTHREAD_LOCK_INITIALIZER;
 
 uint32_t _main_qos;
 
-#if VARIANT_DYLD
+#if VARIANT_DYLD || PD_PTHREAD_MERGED_INTO_LIBSYSTEM
 // The main thread's pthread_t
 struct pthread_s _main_thread OS_ALIGNED(64);
-#else // VARIANT_DYLD
+#endif
+#if !VARIANT_DYLD
 pthread_t _main_thread_ptr;
 void *(*_pthread_malloc)(size_t);
 void (*_pthread_free)(void *);
-#endif // VARIANT_DYLD
+#endif // !VARIANT_DYLD
 
 #if PTHREAD_DEBUG_LOG
 #include <fcntl.h>
@@ -198,9 +201,9 @@ static mach_vm_address_t __pthread_stack_hint = 0x30000000;
 static inline void _pthread_struct_init(pthread_t t, const pthread_attr_t *attrs,
 		void *stack, size_t stacksize, void *freeaddr, size_t freesize);
 
-#if VARIANT_DYLD
+#if VARIANT_DYLD || PD_PTHREAD_MERGED_INTO_LIBSYSTEM
 static void _pthread_set_self_dyld(void);
-#endif // VARIANT_DYLD
+#endif // VARIANT_DYLD || PD_PTHREAD_MERGED_INTO_LIBSYSTEM
 static inline void _pthread_set_self_internal(pthread_t);
 
 static inline void __pthread_started_thread(pthread_t t);
@@ -1527,16 +1530,16 @@ OS_NOINLINE
 void
 _pthread_set_self(pthread_t p)
 {
-#if VARIANT_DYLD
+#if VARIANT_DYLD || PD_PTHREAD_MERGED_INTO_LIBSYSTEM
 	if (os_likely(!p)) {
 		return _pthread_set_self_dyld();
 	}
-#endif // VARIANT_DYLD
+#endif // VARIANT_DYLD || PD_PTHREAD_MERGED_INTO_LIBSYSTEM
 	_pthread_set_self_internal(p);
 	_thread_set_tsd_base(&p->tsd[0]);
 }
 
-#if VARIANT_DYLD
+#if VARIANT_DYLD || PD_PTHREAD_MERGED_INTO_LIBSYSTEM
 // _pthread_set_self_dyld is noinline+noexport to allow the option for
 // static libsyscall to adopt this as the entry point from mach_init if
 // desired
@@ -1544,7 +1547,16 @@ OS_NOINLINE
 static void
 _pthread_set_self_dyld(void)
 {
-	pthread_t p = main_thread();
+	pthread_t p = &_main_thread;
+#if !VARIANT_DYLD
+	/* OpenOSX: this dylib merges pthread into the same single image as
+	 * libc (see PD_PTHREAD_MERGED_INTO_LIBSYSTEM in pthread/CMakeLists.txt),
+	 * so unlike real Apple's dyld-vs-libpthread.dylib split, there's no
+	 * separate later stage to discover this seed thread via
+	 * _pthread_self_direct() and stash it - main_thread()/_main_thread_ptr
+	 * needs to already be consistent right now. */
+	_main_thread_ptr = p;
+#endif
 	p->thread_id = __thread_selfid();
 
 	if (os_unlikely(p->thread_id == -1ull)) {
@@ -1559,8 +1571,33 @@ _pthread_set_self_dyld(void)
 	_pthread_tsd_slot(p, PTHREAD_SELF) = p;
 	_pthread_tsd_slot(p, ERRNO) = &p->err_no;
 	_thread_set_tsd_base(&p->tsd[0]);
+
+	/* OpenOSX: real Darwin's __pthread_init() (compiled out here, see the
+	 * `#if !VARIANT_DYLD` around it - that full init lives only in the
+	 * separate, non-VARIANT_DYLD libsystem_pthread.dylib on real Darwin, not
+	 * in this minimal copy statically linked into dyld/libSystem) is what
+	 * normally signs the main thread's pthread_t via _pthread_init_signature()
+	 * shortly after this function runs. Since we never call it, pthread_self()
+	 * would otherwise return an unsigned (sig == 0) struct and the very first
+	 * _pthread_validate_signature() check (e.g. inside pthread_mutex_lock)
+	 * aborts with "pthread_t was corrupted". Sign it here instead - with
+	 * _pthread_ptr_munge_token at its default 0 value, this is self-consistent
+	 * even though it's not the real kernel-supplied token. */
+	_pthread_init_signature(p);
+
+	/* OpenOSX: __pthread_init() being compiled out also means its call to
+	 * _pthread_main_thread_init(thread) never happens, so MACH_THREAD_SELF
+	 * (along with MIG_REPLY/MACH_SPECIAL_REPLY/SEMAPHORE_CACHE and the
+	 * __pthread_head list registration) was never populated for the main
+	 * thread. pthread_kill(pthread_self(), sig) reads MACH_THREAD_SELF as the
+	 * kernel port to signal; left at 0, __pthread_kill's port_name_to_thread()
+	 * silently fails (ESRCH, ignored by abort()/raise()), so every abort()
+	 * fell through both pthread_kill attempts straight to __builtin_trap()
+	 * (observed as a bare "#UD -> SIGILL" instead of a real SIGABRT). Run the
+	 * same main-thread init real __pthread_init() would have. */
+	_pthread_main_thread_init(p);
 }
-#endif // VARIANT_DYLD
+#endif // VARIANT_DYLD || PD_PTHREAD_MERGED_INTO_LIBSYSTEM
 
 OS_ALWAYS_INLINE
 static inline void
@@ -1722,7 +1759,14 @@ parse_ptr_munge_params(const char *envp[], const char *apple[])
 	}
 
 	if (!token) {
-		PTHREAD_INTERNAL_CRASH(token, "Token from the kernel is 0");
+		/* OpenOSX: real Darwin's kernel always supplies "ptr_munge" in the
+		 * apple[] vector at exec time; this from-scratch XNU/exec path does
+		 * not populate it yet. Rather than crash the whole boot on a missing
+		 * kernel-security-hardening value that has no equivalent threat model
+		 * here, self-generate a token. This only affects _OS_PTR_MUNGE/
+		 * _OS_PTR_UNMUNGE XOR obfuscation of internal pointers, not real
+		 * authentication -- safe to synthesize locally. */
+		token = (uintptr_t)arc4random() | 1;
 	}
 #endif // !DEBUG
 
@@ -1967,6 +2011,13 @@ pthread_stack_frame_decode_np(uintptr_t frame_addr, uintptr_t *return_addr)
 #pragma mark pthread workqueue support routines
 
 void
+_pd_pthread_register(void)
+{
+	struct _pthread_registration_data data;
+	_pthread_bsdthread_init(&data);
+}
+
+void
 _pthread_bsdthread_init(struct _pthread_registration_data *data)
 {
 	bzero(data, sizeof(*data));
@@ -1979,7 +2030,6 @@ _pthread_bsdthread_init(struct _pthread_registration_data *data)
 
 	int rv = __bsdthread_register(thread_start, start_wqthread, (int)PTHREAD_SIZE,
 			(void*)data, (uintptr_t)sizeof(*data), data->dispatch_queue_offset);
-
 	if (rv > 0) {
 		int required_features =
 				PTHREAD_FEATURE_FINEPRIO |
@@ -2550,7 +2600,7 @@ _pthread_introspection_thread_destroy(pthread_t t)
 }
 
 #pragma mark libplatform shims
-#if !VARIANT_DYLD
+#if !VARIANT_DYLD && !PD_PTHREAD_MERGED_INTO_LIBSYSTEM
 
 #include <platform/string.h>
 
@@ -2584,4 +2634,4 @@ memcpy(void* a, const void* b, unsigned long s)
 	return _platform_memmove(a, b, s);
 }
 
-#endif // !VARIANT_DYLD
+#endif // !VARIANT_DYLD && !PD_PTHREAD_MERGED_INTO_LIBSYSTEM

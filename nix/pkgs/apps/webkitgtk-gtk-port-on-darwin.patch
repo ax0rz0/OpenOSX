@@ -1,0 +1,472 @@
+--- a/Source/WTF/wtf/CMakeLists.txt
++++ b/Source/WTF/wtf/CMakeLists.txt
+@@ -700,7 +700,7 @@
+         win/SoftLinking.h
+         win/Win32Handle.h
+     )
+-elseif (APPLE)
++elseif (APPLE AND "${PORT}" STREQUAL "Mac")
+     list(APPEND WTF_SOURCES
+         darwin/OSLogPrintStream.mm
+     )
+@@ -760,6 +760,33 @@
+     )
+ endif ()
+ 
++# A non-Mac port on Darwin still compiles every OS(DARWIN) branch, so it needs
++# the plain-Darwin SPI headers even though the Cocoa/CF ones above are Mac-only.
++# wtf/Assertions.h includes ReasonSPI.h under #if OS(DARWIN), unconditionally
++# of PLATFORM().
++if (APPLE AND NOT "${PORT}" STREQUAL "Mac")
++    list(APPEND WTF_PUBLIC_HEADERS
++        spi/darwin/CodeSignSPI.h
++        spi/darwin/DataVaultSPI.h
++        spi/darwin/OSVariantSPI.h
++        spi/darwin/ProcessMemoryFootprint.h
++        spi/darwin/ReasonSPI.h
++        spi/darwin/SandboxSPI.h
++        spi/darwin/XPCSPI.h
++        spi/darwin/dyldSPI.h
++
++        darwin/DispatchExtras.h
++        darwin/DispatchOSObject.h
++        darwin/NetworkOSObject.h
++        darwin/OSLogPrintStream.h
++        darwin/WeakLinking.h
++        darwin/XPCExtras.h
++        darwin/LibraryPathDiagnostics.h
++        darwin/TypeCastsOSObject.h
++        darwin/XPCObjectPtr.h
++    )
++endif ()
++
+ set(WTF_PRIVATE_INCLUDE_DIRECTORIES
+     "${CMAKE_BINARY_DIR}"
+     "${WTF_DERIVED_SOURCES_DIR}"
+--- a/Source/WTF/wtf/PlatformHave.h
++++ b/Source/WTF/wtf/PlatformHave.h
+@@ -224,7 +224,10 @@
+ #define HAVE_PTHREAD_SETNAME_NP 1
+ #endif
+ 
+-#if OS(DARWIN)
++// The jsc shell gets readline from libedit, which shell/CMakeLists.txt links
++// only when WTF_OS_MACOS - i.e. for the Mac port. A GTK port on Darwin has no
++// libedit, so keying this off OS(DARWIN) declares readline and never links it.
++#if OS(DARWIN) && PLATFORM(COCOA)
+ #define HAVE_READLINE 1
+ #endif
+ 
+--- a/Source/cmake/WebKitCommon.cmake
++++ b/Source/cmake/WebKitCommon.cmake
+@@ -141,7 +141,7 @@
+     # Determine the operating system
+     # -----------------------------------------------------------------------------
+     if (UNIX)
+-        if (APPLE)
++        if (APPLE AND "${PORT}" STREQUAL "Mac")
+             set(WTF_OS_MACOS 1)
+         elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
+             set(WTF_OS_LINUX 1)
+--- a/Source/cmake/WebKitMacros.cmake
++++ b/Source/cmake/WebKitMacros.cmake
+@@ -266,7 +266,7 @@
+     endif ()
+     foreach (framework IN LISTS _public_frameworks)
+         # FIXME: https://bugs.webkit.org/show_bug.cgi?id=231774
+-        if (APPLE)
++        if ("${PORT}" STREQUAL "Mac")
+             list(APPEND ${_target_name}_PRIVATE_LIBRARIES WebKit::${framework})
+         else ()
+             list(APPEND ${_target_name}_LIBRARIES WebKit::${framework})
+--- a/Source/WebCore/CMakeLists.txt
++++ b/Source/WebCore/CMakeLists.txt
+@@ -3096,7 +3096,7 @@
+ 
+ WEBKIT_FRAMEWORK(WebCore)
+ 
+-if (APPLE)
++if ("${PORT}" STREQUAL "Mac")
+     set_target_properties(WebCore PROPERTIES LINK_FLAGS "-weak-lxslt -sub_library libobjc -umbrella WebKit -allowable_client WebCoreTestSupport -allowable_client WebKit2 -allowable_client WebKitLegacy")
+ endif ()
+ 
+--- a/Source/WebCore/bindings/js/BindingsJSTZoneImpls.cpp
++++ b/Source/WebCore/bindings/js/BindingsJSTZoneImpls.cpp
+@@ -28,8 +28,10 @@
+ #include "CachedScriptSourceProvider.h"
+ #include "DOMPromiseProxy.h"
+ #include "ScriptBufferSourceProvider.h"
++#if ENABLE(WEBASSEMBLY)
+ #include "WebAssemblyCachedScriptSourceProvider.h"
+ #include "WebAssemblyScriptBufferSourceProvider.h"
++#endif
+ #include <wtf/TZoneMallocInlines.h>
+ 
+ namespace WebCore {
+@@ -37,8 +39,13 @@
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(CachedScriptSourceProvider);
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMPromiseDeferredBase);
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(ScriptBufferSourceProvider);
++// Both classes are defined only under ENABLE(WEBASSEMBLY) - their own headers
++// are guarded - so instantiating their allocators unconditionally does not
++// compile in a build with WebAssembly disabled.
++#if ENABLE(WEBASSEMBLY)
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(WebAssemblyCachedScriptSourceProvider);
+ WTF_MAKE_TZONE_ALLOCATED_IMPL(WebAssemblyScriptBufferSourceProvider);
++#endif
+ 
+ #define TZONE_TEMPLATE_PARAMS
+ #define TZONE_TYPE DOMPromiseProxy<IDLUndefined>
+--- a/Source/WebCore/loader/DocumentLoader.cpp
++++ b/Source/WebCore/loader/DocumentLoader.cpp
+@@ -53,6 +53,7 @@
+ #include "DocumentWriter.h"
+ #include "ElementChildIteratorInlines.h"
+ #include "Event.h"
++#include "EventLoop.h"
+ #include "EventNames.h"
+ #include "ExtensionStyleSheets.h"
+ #include "FormSubmission.h"
+--- a/Source/WebCore/platform/generic/ScrollbarsControllerGeneric.h
++++ b/Source/WebCore/platform/generic/ScrollbarsControllerGeneric.h
+@@ -37,7 +37,7 @@
+ namespace WebCore {
+ 
+ class ScrollbarsControllerGeneric : public ScrollbarsController, public CanMakeCheckedPtr<ScrollbarsControllerGeneric> {
+-    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ScrollbarsControllerGeneric);
++    WTF_MAKE_TZONE_ALLOCATED(ScrollbarsControllerGeneric);
+     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ScrollbarsControllerGeneric);
+ public:
+     explicit ScrollbarsControllerGeneric(ScrollableArea&);
+--- a/Source/WebCore/platform/generic/ScrollbarsControllerGeneric.cpp
++++ b/Source/WebCore/platform/generic/ScrollbarsControllerGeneric.cpp
+@@ -32,6 +32,7 @@
+ #include "ScrollbarsControllerGeneric.h"
+ 
+ #include "ScrollAnimationKinetic.h"
++#include <wtf/TZoneMallocInlines.h>
+ #include "ScrollAnimationSmooth.h"
+ #include "ScrollableArea.h"
+ #include "ScrollbarTheme.h"
+@@ -39,6 +40,8 @@
+ 
+ namespace WebCore {
+ 
++WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollbarsControllerGeneric);
++
+ static const Seconds overflowScrollbarsAnimationDuration { 1_s };
+ static const Seconds overflowScrollbarsAnimationHideDelay { 2_s };
+ 
+--- a/Source/WebKit/CMakeLists.txt
++++ b/Source/WebKit/CMakeLists.txt
+@@ -1130,7 +1130,7 @@
+     endif ()
+ endif ()
+ 
+-if (APPLE)
++if ("${PORT}" STREQUAL "Mac")
+     WEBKIT_ADD_TARGET_CXX_FLAGS(WebKit -fobjc-weak)
+ endif ()
+ 
+--- a/Source/WebKit/Platform/IPC/Attachment.h
++++ b/Source/WebKit/Platform/IPC/Attachment.h
+@@ -26,7 +26,7 @@
+ 
+ #pragma once
+ 
+-#if OS(DARWIN)
++#if PLATFORM(COCOA)
+ #include <wtf/MachSendRight.h>
+ #endif
+ 
+@@ -43,7 +43,12 @@
+ 
+ // IPC::Attachment is a type representing objects that cannot be transferred as data,
+ // rather they are transferred via operating system cross-process communication primitives.
+-#if OS(DARWIN)
++// A Mach send right is how the Cocoa port passes attachments, not how every
++// Darwin port does. This chain tested OS(DARWIN) before USE(UNIX_DOMAIN_SOCKETS),
++// so a GTK build on Darwin got Attachment = MachSendRight even though its IPC is
++// unix domain sockets - and MachSendRight is only forward-declared here, so it
++// failed as an incomplete type inside std::optional<Attachment>.
++#if PLATFORM(COCOA)
+ using Attachment = MachSendRight;
+ #elif OS(WINDOWS)
+ struct Attachment { }; // Windows does not need attachments at the moment.
+--- a/Source/WebKit/Platform/IPC/Connection.h
++++ b/Source/WebKit/Platform/IPC/Connection.h
+@@ -73,7 +73,14 @@
+ #include <wtf/android/RefPtrAndroid.h>
+ #endif
+ 
+-#if OS(DARWIN)
++// Mach-port/XPC IPC, and the OSObject smart pointers it needs. This is the
++// Cocoa port's transport: a port that USE(UNIX_DOMAIN_SOCKETS) - as the GTK one
++// does - never touches it. Keying it off OS(DARWIN) drags in DispatchOSObject.h,
++// which reaches wtf/cf/TypeCastsCF.h and <objc/runtime.h>, so a GTK build on
++// Darwin fails on CoreFoundation headers it has no business needing.
++// The two #elif OS(DARWIN) arms further down are already unreachable here,
++// because #if USE(UNIX_DOMAIN_SOCKETS) precedes them in the same chain.
++#if PLATFORM(COCOA)
+ #include <mach/mach_port.h>
+ #include <wtf/darwin/DispatchOSObject.h>
+ #include <wtf/darwin/XPCObjectPtr.h>
+@@ -81,7 +88,7 @@
+ #if HAVE(XPC_API)
+ #include <xpc/xpc.h>
+ #endif
+-#endif // OS(DARWIN)
++#endif // PLATFORM(COCOA)
+ 
+ #if USE(GLIB)
+ #include <wtf/glib/GSocketMonitor.h>
+@@ -341,7 +348,7 @@
+ #endif
+     };
+ 
+-#if OS(DARWIN)
++#if PLATFORM(COCOA)
+     xpc_connection_t xpcConnection() const { return m_xpcConnection.get(); }
+     XPCObjectPtr<xpc_connection_t> protectedXPCConnection() const { return xpcConnection(); }
+     std::optional<audit_token_t> getAuditToken();
+--- a/Source/WebKit/Platform/IPC/ConnectionHandle.serialization.in
++++ b/Source/WebKit/Platform/IPC/ConnectionHandle.serialization.in
+@@ -28,7 +28,12 @@
+ #if OS(WINDOWS)
+     Win32Handle m_handle;
+ #endif
+-#if OS(DARWIN)
++# These are independent #if blocks, not a chain, so a port that is both
++# USE(UNIX_DOMAIN_SOCKETS) and OS(DARWIN) - the GTK one here - emits two
++# m_handle members and fails as a duplicate. The matching C++ header uses a
++# proper #if USE(UNIX_DOMAIN_SOCKETS) / #elif OS(DARWIN) chain, so a Mach
++# send right is the Cocoa port's handle; this description just did not say so.
++#if PLATFORM(COCOA)
+     MachSendRight m_handle;
+ #endif
+ }
+--- a/Source/WebKit/Shared/WebCoreArgumentCoders.serialization.in
++++ b/Source/WebKit/Shared/WebCoreArgumentCoders.serialization.in
+@@ -2578,7 +2578,7 @@
+ #if USE(UNIX_DOMAIN_SOCKETS)
+ headers: <wtf/unix/UnixFileDescriptor.h> "ArgumentCodersUnix.h"
+ #endif
+-#if OS(DARWIN)
++#if PLATFORM(COCOA)
+ header: <wtf/MachSendRight.h>
+ #endif
+ 
+@@ -2586,7 +2586,12 @@
+ #if USE(UNIX_DOMAIN_SOCKETS)
+     [Validator='!!m_handle && *m_handle'] UnixFileDescriptor m_handle;
+ #endif
+-#if OS(DARWIN)
++# These are independent #if blocks, not a chain, so a port that is both
++# USE(UNIX_DOMAIN_SOCKETS) and OS(DARWIN) - the GTK one here - emits two
++# m_handle members and fails as a duplicate. The matching C++ header uses a
++# proper #if USE(UNIX_DOMAIN_SOCKETS) / #elif OS(DARWIN) chain, so a Mach
++# send right is the Cocoa port's handle; this description just did not say so.
++#if PLATFORM(COCOA)
+     [Validator='!!m_handle && *m_handle'] MachSendRight m_handle;
+ #endif
+ #if OS(WINDOWS)
+--- a/Source/WebKit/NetworkProcess/NetworkProcess.cpp
++++ b/Source/WebKit/NetworkProcess/NetworkProcess.cpp
+@@ -1780,7 +1780,10 @@
+         if (connection->sessionID() != sessionID || activeWebProcesses.contains(identifier))
+             continue;
+ 
+-#if OS(DARWIN)
++// remoteProcessID()/getAuditToken()/xpcConnection() are the Cocoa port's
++// XPC connection accessors; a GTK port on Darwin only has the GLib
++// static remoteProcessID(GSocket*) overload.
++#if PLATFORM(COCOA)
+         Ref ipcConnection = connection->connection();
+         auto remoteProcessID = ipcConnection->remoteProcessID();
+         // Connection is not available.
+--- a/Source/WebKit/UIProcess/WebProcessProxy.cpp
++++ b/Source/WebKit/UIProcess/WebProcessProxy.cpp
+@@ -1325,7 +1325,10 @@
+ 
+ void WebProcessProxy::didClose(IPC::Connection& connection)
+ {
+-#if OS(DARWIN)
++// remoteProcessID()/getAuditToken()/xpcConnection() are the Cocoa port's
++// XPC connection accessors; a GTK port on Darwin only has the GLib
++// static remoteProcessID(GSocket*) overload.
++#if PLATFORM(COCOA)
+     WEBPROCESSPROXY_RELEASE_LOG_ERROR(Process, "didClose: (web process %d crash)", connection.remoteProcessID());
+ #else
+     WEBPROCESSPROXY_RELEASE_LOG_ERROR(Process, "didClose (web process crash)");
+--- a/Source/WebKit/UIProcess/Network/NetworkProcessProxy.cpp
++++ b/Source/WebKit/UIProcess/Network/NetworkProcessProxy.cpp
+@@ -490,7 +490,10 @@
+ 
+ void NetworkProcessProxy::didClose(IPC::Connection& connection)
+ {
+-#if OS(DARWIN)
++// remoteProcessID()/getAuditToken()/xpcConnection() are the Cocoa port's
++// XPC connection accessors; a GTK port on Darwin only has the GLib
++// static remoteProcessID(GSocket*) overload.
++#if PLATFORM(COCOA)
+     RELEASE_LOG_ERROR(Process, "%p - NetworkProcessProxy::didClose (Network Process %d crash)", this, connection.remoteProcessID());
+ #else
+     RELEASE_LOG_ERROR(Process, "%p - NetworkProcessProxy::didClose (Network Process crash)", this);
+--- a/Source/bmalloc/bmalloc/ProcessCheck.h
++++ b/Source/bmalloc/bmalloc/ProcessCheck.h
+@@ -25,6 +25,8 @@
+ 
+ #pragma once
+ 
++#include <stdlib.h>
++
+ #ifdef __cplusplus
+ 
+ #include "BPlatform.h"
+@@ -41,11 +43,18 @@
+ inline bool gigacageEnabledForProcess() { return true; }
+ #endif
+ 
+-#if BOS(DARWIN)
++// These are implemented in ProcessCheck.mm, which only the Cocoa port builds -
++// the GTK release tarball does not ship it at all. Keying them off BOS(DARWIN)
++// means a non-Cocoa port on Darwin declares them and never defines them, and
++// the link fails on bmalloc::processNameString/shouldAllowMiniMode. Both have
++// portable answers: the process name from getprogname(), and mini mode is
++// allowed by default everywhere else.
++#if BOS(DARWIN) && BPLATFORM(COCOA)
+ const char* processNameString();
+ 
+ bool shouldAllowMiniMode();
+ #else
++inline const char* processNameString() { return getprogname(); }
+ inline bool shouldAllowMiniMode() { return true; }
+ #endif
+ 
+--- a/Source/JavaScriptCore/runtime/Options.cpp
++++ b/Source/JavaScriptCore/runtime/Options.cpp
+@@ -49,7 +49,12 @@
+ #include <wtf/text/StringBuilder.h>
+ #include <wtf/threads/Signals.h>
+ 
+-#if OS(DARWIN)
++// OSLogPrintStream lives in wtf/darwin/OSLogPrintStream.mm, which only the
++// Cocoa port builds - the GTK release tarball ships the header and not the
++// implementation. USE(OS_LOG) is WebKit's own name for "os_log is usable"
++// and PlatformUse.h already defines it as PLATFORM(COCOA), so it is the
++// guard these sites want; OS(DARWIN) is true for any Darwin port.
++#if USE(OS_LOG)
+ #include <wtf/darwin/OSLogPrintStream.h>
+ #endif
+ 
+@@ -317,7 +322,7 @@
+     return result;
+ }
+ 
+-#if OS(DARWIN)
++#if USE(OS_LOG)
+ static os_log_type_t asDarwinOSLogType(OSLogType type)
+ {
+     switch (type) {
+@@ -347,7 +352,7 @@
+     // Make sure no one jumped here for nefarious reasons...
+     RELEASE_ASSERT(Options::useOSLog() != OSLogType::None);
+ }
+-#endif // OS(DARWIN)
++#endif // USE(OS_LOG)
+ 
+ static ASCIILiteral asString(OSLogType type)
+ {
+@@ -957,7 +962,7 @@
+         FOR_EACH_JSC_EXPERIMENTAL_OPTION(DISABLE_TIERS);
+     }
+ 
+-#if OS(DARWIN)
++#if USE(OS_LOG)
+     if (useOSLogOptionHasChanged) {
+         initializeDatafileToUseOSLog();
+         useOSLogOptionHasChanged = false;
+--- a/Source/JavaScriptCore/tools/Integrity.cpp
++++ b/Source/JavaScriptCore/tools/Integrity.cpp
+@@ -36,7 +36,12 @@
+ #include "VMManager.h"
+ #include <wtf/DataLog.h>
+ 
+-#if OS(DARWIN)
++// OSLogPrintStream lives in wtf/darwin/OSLogPrintStream.mm, which only the
++// Cocoa port builds - the GTK release tarball ships the header and not the
++// implementation. USE(OS_LOG) is WebKit's own name for "os_log is usable"
++// and PlatformUse.h already defines it as PLATFORM(COCOA), so it is the
++// guard these sites want; OS(DARWIN) is true for any Darwin port.
++#if USE(OS_LOG)
+ #include <wtf/darwin/OSLogPrintStream.h>
+ #endif
+ 
+@@ -49,7 +54,7 @@
+ 
+ PrintStream& logFile()
+ {
+-#if OS(DARWIN)
++#if USE(OS_LOG)
+     static PrintStream* s_file;
+     static std::once_flag once;
+     std::call_once(once, [] {
+--- a/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
++++ b/Source/WebKit/UIProcess/API/glib/WebKitWebContext.cpp
+@@ -59,7 +59,9 @@
+ #include <WebCore/ResourceLoaderIdentifier.h>
+ #include <cstdlib>
+ #include <glib/gi18n-lib.h>
++#if !OS(DARWIN)
+ #include <libintl.h>
++#endif
+ #include <memory>
+ #include <pal/HysteresisActivity.h>
+ #include <wtf/DateMath.h>
+@@ -519,8 +521,13 @@
+ 
+     GObjectClass* gObjectClass = G_OBJECT_CLASS(webContextClass);
+ 
++    // WebKit calls these unconditionally because on glibc they live in libc.
++    // This port has no NLS catalogues, and glib's gi18n headers here define the
++    // gettext family as no-ops, which collides with a real <libintl.h>.
++#if !OS(DARWIN)
+     bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+     bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
++#endif
+ 
+     s_serviceWorkerNotificationProvider = makeUnique<WebKitNotificationProvider>(&WebNotificationManagerProxy::serviceWorkerManagerSingleton(), nullptr);
+ 
+--- a/Source/WebKit/WebProcess/gtk/WebProcessMainGtk.cpp
++++ b/Source/WebKit/WebProcess/gtk/WebProcessMainGtk.cpp
+@@ -29,7 +29,9 @@
+ 
+ #include "AuxiliaryProcessMain.h"
+ #include "WebProcess.h"
++#if !OS(DARWIN)
+ #include <libintl.h>
++#endif
+ #include <locale.h>
+ 
+ #if !USE(GTK4) && USE(CAIRO)
+@@ -91,8 +93,10 @@
+         if (!setlocale(LC_ALL, ""))
+             g_warning("Locale not supported by C library.\n\tUsing the fallback 'C' locale.");
+ 
++#if !OS(DARWIN)
+         bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
+         bind_textdomain_codeset(GETTEXT_PACKAGE, "UTF-8");
++#endif
+ 
+         return true;
+     }
+--- a/Source/ThirdParty/skia/CMakeLists.txt
++++ b/Source/ThirdParty/skia/CMakeLists.txt
+@@ -189,6 +189,7 @@
+     src/core/SkPath.cpp
+     src/core/SkPathBuilder.cpp
+     src/core/SkPathData.cpp
++    src/core/SkPathDump.cpp
+     src/core/SkPathEffect.cpp
+     src/core/SkPathIter.cpp
+     src/core/SkPathMeasure.cpp

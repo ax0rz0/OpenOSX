@@ -20,5 +20,6 @@ target_include_directories(host_ld_libparsers PRIVATE
     ..
 )
 target_link_libraries(host_ld_libparsers PRIVATE host_ld_helper)
-set_property(TARGET host_ld_libparsers PROPERTY CXX_STANDARD 11)
+set_property(TARGET host_ld_libparsers PROPERTY CXX_STANDARD 17)
+target_compile_options(host_ld_libparsers PRIVATE -fblocks)
 suppress_all_warnings(host_ld_libparsers)

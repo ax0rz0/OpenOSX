@@ -39,7 +39,7 @@ _preempt:
 	pushq	%rax
 	pushq	%rcx
 	pushq	%r11
-	movl	$(SYSCALL_CONSTRUCT_MACH(58)),%eax	/* 58 = pfz_exit */
+	movl	$0x0100003a,%eax	/* Mach syscall 58 = pfz_exit */
 	xorl	%ebx,%ebx
 	syscall
 	popq	%r11

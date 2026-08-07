@@ -144,6 +144,7 @@ extern boolean_t dtrace_handle_trap(int, x86_saved_state_t *);
 
 #ifdef MACH_BSD
 extern char *   proc_name_address(void *p);
+extern int      proc_pid(struct proc *p);
 #endif /* MACH_BSD */
 
 extern boolean_t pmap_smep_enabled;
@@ -1038,6 +1039,55 @@ user_trap(
 
 	case T_INVALID_OPCODE:
 		if (fpUDflt(rip) == 1) {
+			/* Same diagnostic as the fatal #PF path: ud2 is how abort()/
+			 * malloc_zone_error()/__builtin_trap() surface in userland, and
+			 * with no debugger in the guest this serial line is the only
+			 * way to find out where. */
+			printf("PD-DIAG: FATAL user #UD -> SIGILL: proc=%s pid=%d rip=0x%llx\n",
+			    thread->task->bsd_info ? proc_name_address(thread->task->bsd_info) : "?",
+			    thread->task->bsd_info ? proc_pid(thread->task->bsd_info) : -1,
+			    (unsigned long long)rip);
+			{
+				uint8_t insn[16];
+				int ok = 1;
+				for (int i = 0; i < 16; i++) {
+					if (copyin((user_addr_t)(rip + (uint64_t)i), (char *)&insn[i], 1) != 0) {
+						ok = 0;
+						break;
+					}
+				}
+				if (ok) {
+					printf("PD-DIAG: insn bytes at rip:");
+					for (int i = 0; i < 16; i++) {
+						printf(" %02x", insn[i]);
+					}
+					printf("\n");
+				} else {
+					printf("PD-DIAG: insn bytes at rip: <unreadable>\n");
+				}
+			}
+			if (is_saved_state64(saved_state)) {
+				/* Walk the rbp frame-pointer chain: [rbp] = caller rbp,
+				 * [rbp+8] = return address. Darwin userland keeps frame
+				 * pointers, so this yields a real backtrace. */
+				uint64_t urbp = saved_state64(saved_state)->rbp;
+				printf("PD-DIAG: rbp-chain backtrace:");
+				for (int i = 0; i < 32 && urbp != 0; i++) {
+					uint64_t frame[2] = { 0, 0 };
+					if (copyin((user_addr_t)urbp, (char *)frame, 16) != 0) {
+						break;
+					}
+					if (frame[1] < 0x1000ULL || frame[1] > 0x800000000000ULL) {
+						break;
+					}
+					printf(" 0x%llx", (unsigned long long)frame[1]);
+					if (frame[0] <= urbp) {
+						break;
+					}
+					urbp = frame[0];
+				}
+				printf("\n");
+			}
 			exc = EXC_BAD_INSTRUCTION;
 			code = EXC_I386_INVOP;
 		}
@@ -1090,6 +1140,44 @@ user_trap(
 		 * EXC_BAD_INSTRUCTION which is more accurate. We just can't
 		 * win!
 		 */
+		printf("PD-DIAG: user #GP -> SIGSEGV: proc=%s pid=%d rip=0x%llx err=0x%x rsp=0x%llx (non-canonical deref?)\n",
+		    thread->task->bsd_info ? proc_name_address(thread->task->bsd_info) : "?",
+		    thread->task->bsd_info ? proc_pid(thread->task->bsd_info) : -1,
+		    (unsigned long long)rip, err,
+		    (unsigned long long)(is_saved_state64(saved_state) ? saved_state64(saved_state)->isf.rsp : 0));
+		if (is_saved_state64(saved_state)) {
+			uint64_t ursp = saved_state64(saved_state)->isf.rsp;
+			uint8_t insn[16];
+			int ok = 1;
+			for (int i = 0; i < 16; i++) {
+				if (copyin((user_addr_t)(rip + (uint64_t)i), (char *)&insn[i], 1) != 0) {
+					ok = 0;
+					break;
+				}
+			}
+			if (ok) {
+				printf("PD-DIAG: insn bytes at rip:");
+				for (int i = 0; i < 16; i++) {
+					printf(" %02x", insn[i]);
+				}
+				printf("\n");
+			} else {
+				printf("PD-DIAG: insn bytes at rip: <unreadable>\n");
+			}
+			printf("PD-DIAG: rsp=0x%llx user-stack code addrs:", (unsigned long long)ursp);
+			int shown = 0;
+			for (int i = 0; i < 2048 && shown < 24; i++) {
+				uint64_t w = 0;
+				if (copyin((user_addr_t)(ursp + (uint64_t)i * 8), (char *)&w, 8) != 0) {
+					continue;
+				}
+				if (w > 0x100000000ULL && w < 0x800000000000ULL) {
+					printf(" 0x%llx", (unsigned long long)w);
+					shown++;
+				}
+			}
+			printf("\n");
+		}
 		exc = EXC_BAD_ACCESS;
 		code = EXC_I386_GPFLT;
 		subcode = err;
@@ -1144,6 +1232,74 @@ user_trap(
 
 		/* PAL debug hook (empty on x86) */
 		pal_dbg_page_fault(thread, vaddr, kret);
+		printf("PD-DIAG: FATAL user #PF -> SIGSEGV: proc=%s pid=%d rip=0x%llx fault_addr=0x%llx err=0x%x kret=%d\n",
+		    thread->task->bsd_info ? proc_name_address(thread->task->bsd_info) : "?",
+		    thread->task->bsd_info ? proc_pid(thread->task->bsd_info) : -1,
+		    (unsigned long long)rip, (unsigned long long)vaddr, err, kret);
+		if (is_saved_state64(saved_state)) {
+			x86_saved_state64_t *r = saved_state64(saved_state);
+			printf("PD-DIAG: rax=0x%llx rbx=0x%llx rcx=0x%llx rdx=0x%llx rdi=0x%llx rsi=0x%llx rbp=0x%llx\n",
+			    (unsigned long long)r->rax, (unsigned long long)r->rbx,
+			    (unsigned long long)r->rcx, (unsigned long long)r->rdx,
+			    (unsigned long long)r->rdi, (unsigned long long)r->rsi,
+			    (unsigned long long)r->rbp);
+		}
+		{
+			uint8_t insn[16];
+			int ok = 1;
+			for (int i = 0; i < 16; i++) {
+				if (copyin((user_addr_t)(rip + (uint64_t)i), (char *)&insn[i], 1) != 0) {
+					ok = 0;
+					break;
+				}
+			}
+			if (ok) {
+				printf("PD-DIAG: insn bytes at rip:");
+				for (int i = 0; i < 16; i++) {
+					printf(" %02x", insn[i]);
+				}
+				printf("\n");
+			} else {
+				printf("PD-DIAG: insn bytes at rip: <unreadable>\n");
+			}
+		}
+		if (is_saved_state64(saved_state)) {
+			uint64_t urbp = saved_state64(saved_state)->rbp;
+			printf("PD-DIAG: rbp-chain backtrace:");
+			for (int i = 0; i < 32 && urbp != 0; i++) {
+				uint64_t frame[2] = { 0, 0 };
+				if (copyin((user_addr_t)urbp, (char *)frame, 16) != 0) {
+					break;
+				}
+				if (frame[1] < 0x1000ULL || frame[1] > 0x800000000000ULL) {
+					break;
+				}
+				printf(" 0x%llx", (unsigned long long)frame[1]);
+				if (frame[0] <= urbp) {
+					break;
+				}
+				urbp = frame[0];
+			}
+			printf("\n");
+			uint64_t ursp = saved_state64(saved_state)->isf.rsp;
+			printf("PD-DIAG: rsp=0x%llx user-stack code addrs:", (unsigned long long)ursp);
+			int shown = 0;
+			for (int i = 0; i < 2048 && shown < 24; i++) {
+				uint64_t w = 0;
+				/* rsp may sit just inside the protected guard region; skip
+				 * unreadable words rather than stopping, so we reach the valid
+				 * frames just above the accessible-stack boundary. */
+				if (copyin((user_addr_t)(ursp + (uint64_t)i * 8), (char *)&w, 8) != 0) {
+					continue;
+				}
+				/* print values that look like userland text return addresses */
+				if (w > 0x100000000ULL && w < 0x800000000000ULL) {
+					printf(" 0x%llx", (unsigned long long)w);
+					shown++;
+				}
+			}
+			printf("\n");
+		}
 		exc = EXC_BAD_ACCESS;
 		code = kret;
 		subcode = vaddr;

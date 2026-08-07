@@ -75,15 +75,15 @@ $(1)_KEXT_PLIST := $$(filter %/$(1).kext/Info.plist,$$(SYMROOT_INSTALL_KEXT_PLIS
 $(OBJPATH)/$(1).symbolset.plist: $$($(1)_KEXT_PLIST) $$($(1)_EXPORTS)
 	@$$(LOG_SYMBOLSETPLIST) "$(ColorF)$(1)$(Color0) ($(ColorLF)$(CURRENT_ARCH_CONFIG_LC)$(Color0))"
 	$(_v)$(SOURCE)/generate_symbolset_plist.sh	$$@ $$+ $(_vstdout)
-	$(_v)$(PLUTIL) -lint -s $$@
 endef
+#	$(_v)$(PLUTIL) -lint -s $$@
 
 $(foreach symbolset,$(SYMBOL_COMPONENT_LIST),$(eval $(call symbol_set_rule,$(symbolset))))
 $(foreach symbolset,$(SYMBOL_SET_PLIST_COMPONENT_LIST),$(eval $(call symbol_set_plist_rule,$(symbolset))))
 
 $(OBJPATH)/symbolsets.plist: $(SYMBOL_SET_PLIST_BUILD)
 	$(_v)$(SOURCE)/generate_combined_symbolsets_plist.sh $@ $^ $(_vstdout)
-	$(_v)$(PLUTIL) -convert binary1 -s $@
+#	$(_v)$(PLUTIL) -convert binary1 -s $@
 
 ifneq ($(RC_ProjectName),xnu_libraries)
 $(OBJPATH)/allsymbols: $(OBJPATH)/$(KERNEL_FILE_NAME)

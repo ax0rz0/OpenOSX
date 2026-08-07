@@ -1,0 +1,13 @@
+diff --git a/present/present_event.c b/present/present_event.c
+index d8f17de..b3dc44e 100644
+--- a/present/present_event.c
++++ b/present/present_event.c
+@@ -205,7 +205,7 @@ present_send_idle_notify(WindowPtr window, CARD32 serial, PixmapPtr pixmap, pres
+ }
+ 
+ int
+-present_select_input(ClientPtr client, XID eid, WindowPtr window, CARD32 mask)
++present_select_input(ClientPtr client, CARD32 eid, WindowPtr window, CARD32 mask)
+ {
+     present_window_priv_ptr window_priv;
+     present_event_ptr event;

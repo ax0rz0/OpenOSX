@@ -175,6 +175,15 @@ kern_return_t host_info(host_t host, host_flavor_t flavor,
 
         basic_info = (host_basic_info_t) host_info_out;
         memset(basic_info, 0x00, sizeof(*basic_info));
+#ifndef EMULATED_HOST_CPU_TYPE
+        // Never actually defined anywhere in this tree (checked); this
+        // host_info() stub is only reached on non-Apple hosts, where the
+        // "host" being described for host_info() is this host tool's own
+        // build machine, not a target - x86_64 is the only value that
+        // ever mattered here in practice.
+#define EMULATED_HOST_CPU_TYPE CPU_TYPE_X86_64
+#define EMULATED_HOST_CPU_SUBTYPE CPU_SUBTYPE_X86_64_ALL
+#endif
         basic_info->cpu_type = EMULATED_HOST_CPU_TYPE;
         basic_info->cpu_subtype = EMULATED_HOST_CPU_SUBTYPE;
     }

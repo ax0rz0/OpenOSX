@@ -13,8 +13,15 @@ add_custom_command(
     COMMENT "Creating VersionMap.h and for_dyld_priv.inc" VERBATIM
 )
 
+# Ensures custom_command is ran
+add_custom_target(generate_dyld_headers DEPENDS
+    ${CMAKE_CURRENT_BINARY_DIR}/include/dyld/VersionMap.h
+    ${CMAKE_CURRENT_BINARY_DIR}/include/dyld/for_dyld_priv.inc
+)
+
 add_darwin_object_library(dyld_availability_headers)
 target_include_directories(dyld_availability_headers INTERFACE ${CMAKE_CURRENT_BINARY_DIR}/include)
+add_dependencies(dyld_availability_headers generate_dyld_headers)
 target_sources(dyld_availability_headers PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/include/dyld/VersionMap.h
     ${CMAKE_CURRENT_BINARY_DIR}/include/dyld/for_dyld_priv.inc

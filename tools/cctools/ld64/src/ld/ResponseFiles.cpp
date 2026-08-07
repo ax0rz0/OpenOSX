@@ -32,6 +32,17 @@ extern void warning(const char* format, ...) __attribute__((format(printf, 1, 2)
 #include <sys/stat.h>
 #include <unistd.h>
 
+#ifndef __APPLE__
+// reallocf is a BSD/Darwin extension, not POSIX - realloc(), but frees the
+// original block on failure instead of leaving it dangling.
+static inline void* reallocf(void* ptr, size_t size) {
+    void* p = realloc(ptr, size);
+    if (p == NULL && size != 0)
+        free(ptr);
+    return p;
+}
+#endif
+
 enum expand_result {
   EXPAND_ERROR = -1,
   EXPAND_COMPLETE = 0,

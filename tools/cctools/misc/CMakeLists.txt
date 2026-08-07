@@ -44,3 +44,4 @@ add_executable(host_ranlib libtool.c)
 target_link_libraries(host_ranlib PRIVATE host_libmacho host_libstuff)
 target_include_directories(host_ranlib PRIVATE ../include ../include/foreign ../libstuff)
 target_compile_definitions(host_ranlib PRIVATE -D__DARWIN_UNIX03 -DRANLIB)
+

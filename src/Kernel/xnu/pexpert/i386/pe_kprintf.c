@@ -84,7 +84,13 @@ PE_init_kprintf(void)
 	 * call pal_serial_init() if our previous state was
 	 * not enabled */
 	if (!new_disable_serial_output && (!disable_serial_output || pal_serial_init())) {
-		PE_kputc = pal_serial_putc;
+		/* cnputc_unbuffered routes through the active console's cons_ops:
+		 * the serial UART directly during early boot (SERIAL_CONS_OPS), and
+		 * the video console after IOFramebuffer flips to VC_CONS_OPS - where
+		 * vcputc() now mirrors every character to serial. So kprintf reaches
+		 * serial on both, with exactly one serial write per char (no separate
+		 * pal_serial_putc mirror that would double it). */
+		PE_kputc = cnputc_unbuffered;
 	} else {
 		PE_kputc = cnputc_unbuffered;
 	}

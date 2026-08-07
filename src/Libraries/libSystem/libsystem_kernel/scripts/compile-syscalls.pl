@@ -70,6 +70,7 @@ chomp(my $CC = `xcrun -find cc`);
 my @CFLAGS = (
 	"-x assembler-with-cpp",
 	"-c",
+	"-DPRIVATE",
 );
 
 chomp(my $LIBTOOL = `xcrun -find libtool`);
@@ -87,7 +88,9 @@ for my $arch (@archs) {
 }
 
 # do each compile
-my $jobs = `sysctl -n hw.ncpu` + 2;
+my $ncpu = `sysctl -n hw.ncpu 2>/dev/null`;
+chomp($ncpu);
+my $jobs = (($ncpu =~ /^\d+$/) ? $ncpu : 1) + 2;
 
 for my $src (@sources) {
 	if ($jobs == 0) {

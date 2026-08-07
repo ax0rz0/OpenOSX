@@ -131,23 +131,26 @@ LEAF(pseudo, 0)					;\
 	movq	%rcx, %r10		;\
 	syscall
 
+/* On success %rdi must be preserved: custom wrappers (__pipe, __fork, ...)
+ * use their first argument after the syscall returns. Only the error path
+ * may move the errno value into %rdi for cerror. */
 #define UNIX_SYSCALL(name, nargs)						 \
 	.globl	cerror								;\
 LEAF(_##name, 0)								;\
 	movl	$ SYSCALL_CONSTRUCT_UNIX(SYS_##name), %eax			;\
 	UNIX_SYSCALL_SYSCALL							;\
-	jnb		2f							;\
+	jae	2f								;\
 	movq	%rax, %rdi							;\
-	BRANCH_EXTERN(_cerror)							;\
+	jmp	_cerror								;\
 2:
 
 #define UNIX_SYSCALL_NONAME(name, nargs, cerror)		 \
 	.globl	cerror								;\
 	movl	$ SYSCALL_CONSTRUCT_UNIX(SYS_##name), %eax			;\
 	UNIX_SYSCALL_SYSCALL							;\
-	jnb		2f							;\
+	jae	2f								;\
 	movq	%rax, %rdi							;\
-	BRANCH_EXTERN(_##cerror)						;\
+	jmp	_##cerror							;\
 2:
 
 #define PSEUDO(pseudo, name, nargs, cerror)			\
@@ -156,11 +159,11 @@ LEAF(pseudo, 0)					;\
 
 #define __SYSCALL2(pseudo, name, nargs, cerror) \
 	PSEUDO(pseudo, name, nargs, cerror)			;\
-	ret
+	ret ;
 
 #define __SYSCALL(pseudo, name, nargs)			\
 	PSEUDO(pseudo, name, nargs, cerror)			;\
-	ret
+	ret ;
 
 #elif defined(__arm__)
 
@@ -493,4 +496,3 @@ name:
 #else
 #error Unsupported architecture
 #endif
-

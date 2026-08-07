@@ -1,0 +1,20 @@
+--- a/opl/opl_internal.h	1969-12-31 19:00:01.000000000 -0500
++++ b/opl/opl_internal.h	2026-07-19 07:13:47.136764369 -0400
+@@ -55,16 +55,7 @@
+ extern unsigned int opl_sample_rate;
+ 
+ 
+-#if (defined(__i386__) || defined(__x86_64__)) && defined(HAVE_IOPERM)
+-extern opl_driver_t opl_linux_driver;
+-#endif
+-#if defined(HAVE_LIBI386) || defined(HAVE_LIBAMD64)
+-extern opl_driver_t opl_openbsd_driver;
+-#endif
+-#ifdef _WIN32
+-extern opl_driver_t opl_win32_driver;
+-#endif
+-extern opl_driver_t opl_sdl_driver;
++extern opl_driver_t opl_pd_driver;
+ 
+ 
+ #endif /* #ifndef OPL_INTERNAL_H */

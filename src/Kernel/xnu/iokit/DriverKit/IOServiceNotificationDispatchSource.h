@@ -1,6 +1,5 @@
-/* iig(DriverKit-187) generated from IOServiceNotificationDispatchSource.iig */
+/* iig-lite generated from IOServiceNotificationDispatchSource.iig - kernel-side subset; msgids are NOT Apple-ABI */
 
-/* IOServiceNotificationDispatchSource.iig:1-45 */
 /*
  * Copyright (c) 2019-2019 Apple Inc. All rights reserved.
  *
@@ -46,7 +45,7 @@ enum {
 	kIOServiceNotificationTypeNone       = 0xFFFFFFFF,
 };
 
-/* source class IOServiceNotificationDispatchSource IOServiceNotificationDispatchSource.iig:46-128 */
+/* source class IOServiceNotificationDispatchSource IOServiceNotificationDispatchSource.iig:46-129 */
 
 #if __DOCUMENTATION__
 #define KERNEL IIG_KERNEL
@@ -139,12 +138,12 @@ private:
 #undef KERNEL
 #else /* __DOCUMENTATION__ */
 
-/* generated class IOServiceNotificationDispatchSource IOServiceNotificationDispatchSource.iig:46-128 */
+/* generated class IOServiceNotificationDispatchSource IOServiceNotificationDispatchSource.iig:46-129 */
 
-#define IOServiceNotificationDispatchSource_Create_ID            0xb40d274e974e946aULL
-#define IOServiceNotificationDispatchSource_SetHandler_ID            0xca55c48f95fc6f8eULL
-#define IOServiceNotificationDispatchSource_ServiceNotificationReady_ID            0xfbaa85f2cdb990b4ULL
-#define IOServiceNotificationDispatchSource_CopyNextNotification_ID            0xca420abbda782780ULL
+#define IOServiceNotificationDispatchSource_Create_ID            0x074024b3a2caf3e4ULL
+#define IOServiceNotificationDispatchSource_SetHandler_ID            0x4e765a389a65b3ddULL
+#define IOServiceNotificationDispatchSource_ServiceNotificationReady_ID            0x310d19881189e278ULL
+#define IOServiceNotificationDispatchSource_CopyNextNotification_ID            0xa2ee1cbedecc2cf5ULL
 
 #define IOServiceNotificationDispatchSource_Create_Args \
         OSDictionary * matching, \
@@ -163,7 +162,6 @@ private:
         OSAction * action
 
 #define IOServiceNotificationDispatchSource_CheckForWork_Args \
-        const IORPC rpc, \
         bool synchronous
 
 #define IOServiceNotificationDispatchSource_ServiceNotificationReady_Args \
@@ -217,7 +215,7 @@ protected:\
     /* _Impl methods */\
 \
     static kern_return_t\
-    Create_Call(IOServiceNotificationDispatchSource_Create_Args);\
+    Create_Impl(IOServiceNotificationDispatchSource_Create_Args);\
 \
     kern_return_t\
     SetEnableWithCompletion_Impl(IODispatchSource_SetEnableWithCompletion_Args);\
@@ -227,6 +225,9 @@ protected:\
 \
     kern_return_t\
     CheckForWork_Impl(IODispatchSource_CheckForWork_Args);\
+\
+    void\
+    ServiceNotificationReady_Impl(IOServiceNotificationDispatchSource_ServiceNotificationReady_Args);\
 \
 \
 public:\
@@ -247,13 +248,13 @@ public:\
     static kern_return_t\
     ServiceNotificationReady_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
-        ServiceNotificationReady_Handler func,\
-        const OSMetaClass * targetActionClass);\
+        ServiceNotificationReady_Handler func);\
 \
     static kern_return_t\
     ServiceNotificationReady_Invoke(const IORPC rpc,\
         OSMetaClassBase * target,\
-        ServiceNotificationReady_Handler func);\
+        ServiceNotificationReady_Handler func,\
+        const OSMetaClass * targetActionClass);\
 \
     typedef kern_return_t (*CopyNextNotification_Handler)(OSMetaClassBase * target, IOServiceNotificationDispatchSource_CopyNextNotification_Args);\
     static kern_return_t\
@@ -267,9 +268,6 @@ public:\
 \
 protected:\
     /* _Impl methods */\
-\
-    static kern_return_t\
-    Create_Impl(IOServiceNotificationDispatchSource_Create_Args);\
 \
     kern_return_t\
     SetHandler_Impl(IOServiceNotificationDispatchSource_SetHandler_Args);\
@@ -353,8 +351,9 @@ IOServiceNotificationDispatchSource_DECLARE_IVARS
     IOServiceNotificationDispatchSource_VirtualMethods
 };
 
+
 #endif /* !__DOCUMENTATION__ */
 
-/* IOServiceNotificationDispatchSource.iig:130- */
+
 
 #endif /* ! _IOKIT_UIOSERVICEDISPATCHSOURCE_H */

@@ -26,6 +26,7 @@
 
 #include <sys/param.h>
 #include <sys/mman.h>
+#include <cstdint> // tapi 2.x headers use uint32_t/uint8_t without including it
 #include <tapi/tapi.h>
 #include <vector>
 #include <memory> // ld64-port
@@ -91,6 +92,9 @@ template <> bool File<x86_64>::useSimulatorVariant() { return true; }
 template <typename A> bool File<A>::useSimulatorVariant() { return false; }
 
 
+// tapi 2.x removed the tapi::Platform enum and LinkerInterfaceFile::getPlatform();
+// platforms only come back as Mach-O platform codes via getPlatformSet().
+#if TAPI_API_VERSION_MAJOR < 2
 static ld::VersionSet mapPlatform(tapi::Platform platform, bool useSimulatorVariant) {
 	ld::VersionSet platforms;
 	switch (platform) {
@@ -140,6 +144,7 @@ static ld::VersionSet mapPlatform(tapi::Platform platform, bool useSimulatorVari
 
 	return platforms;
 }
+#endif // TAPI_API_VERSION_MAJOR < 2
 
 template <typename A>
 File<A>::File(const char* path, const uint8_t* fileContent, uint64_t fileLength, const Options *opts,
@@ -260,7 +265,12 @@ void File<A>::init(tapi::LinkerInterfaceFile* file, const Options *opts, bool bu
 	} else
 #endif
 	{
+#if TAPI_API_VERSION_MAJOR < 2
 		lcPlatforms = mapPlatform(file->getPlatform(), useSimulatorVariant());
+#else
+		throwf("libtapi %d.%d claims an API version below 1.6 at runtime, which a 2.x build can no longer handle",
+			   tapi::APIVersion::getMajor(), tapi::APIVersion::getMinor());
+#endif
 	}
 
 	// check cross-linking

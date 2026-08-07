@@ -47,16 +47,8 @@ const struct crypto_functions pdcrypto_internal_functions = {
 	.cctdes_ecb_decrypt = &pdctdes_ecb_decrypt_dummy,
 	.cctdes_cbc_encrypt = &pdctdes_cbc_encrypt_dummy,
 	.cctdes_cbc_decrypt = &pdctdes_cbc_decrypt_dummy,
-	.ccrc4_info = &pdcrc4_info_dummy,
-	.ccblowfish_ecb_encrypt = &pdcblowfish_ecb_encrypt_dummy,
-	.ccblowfish_ecb_decrypt = &pdcblowfish_ecb_decrypt_dummy,
-	.cccast_ecb_encrypt = &pdccast_ecb_encrypt_dummy,
-	.cccast_ecb_decrypt = &pdccast_ecb_decrypt_dummy,
 	.ccdes_key_is_weak_fn = pdcdes_key_is_weak_fn_dummy,
 	.ccdes_key_set_odd_parity_fn = pdcdes_key_set_odd_parity_fn_dummy,
-	.ccpad_xts_encrypt_fn = pdcpad_xts_encrypt_fn_dummy,
-	.ccpad_xts_decrypt_fn = pdcpad_xts_decrypt_fn_dummy,
 
 	.ccrng_fn = ccrng
 };
-

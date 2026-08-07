@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>IOUSBFamily</string>
+	<key>CFBundleGetInfoString</key>
+	<string>OpenOSX reconstruction - base IOUSBController/IOUSBDevice/IOUSBInterface/IOUSBPipe classes.</string>
+	<key>CFBundleIconFile</key>
+	<string></string>
+	<key>CFBundleIdentifier</key>
+	<string>org.openosx.iokit.IOUSBFamily</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>I/O Kit USB Family</string>
+	<key>CFBundlePackageType</key>
+	<string>KEXT</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>1.0</string>
+	<key>IOKitPersonalities</key>
+	<dict>
+		<key>IOUSBFamily-ForceLoad</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>org.openosx.iokit.IOUSBFamily</string>
+			<key>IOClass</key>
+			<string>IOService</string>
+			<key>IOMatchCategory</key>
+			<string>org.openosx.iokit.IOUSBFamily-ForceLoad</string>
+			<key>IOProviderClass</key>
+			<string>IOResources</string>
+			<key>IOResourceMatch</key>
+			<string>IOKit</string>
+		</dict>
+		<key>IOUSBMassStorageClass</key>
+		<dict>
+			<key>CFBundleIdentifier</key>
+			<string>org.openosx.iokit.IOUSBFamily</string>
+			<key>IOClass</key>
+			<string>IOUSBMassStorageClass</string>
+			<key>IOProviderClass</key>
+			<string>IOUSBInterface</string>
+			<key>bInterfaceClass</key>
+			<integer>8</integer>
+			<key>bInterfaceSubClass</key>
+			<integer>6</integer>
+			<key>bInterfaceProtocol</key>
+			<integer>80</integer>
+			<key>IOProbeScore</key>
+			<integer>10000</integer>
+		</dict>
+	</dict>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright Apple Computer, Inc; PureDarwin reconstruction 2026.</string>
+	<key>OSBundleCompatibleVersion</key>
+	<string>1.0</string>
+	<key>OSBundleLibraries</key>
+	<dict>
+		<key>com.apple.kpi.iokit</key>
+		<string>8.0</string>
+		<key>com.apple.kpi.libkern</key>
+		<string>8.0</string>
+		<key>com.apple.kpi.mach</key>
+		<string>8.0</string>
+		<key>com.apple.kpi.private</key>
+		<string>8.0</string>
+		<key>com.apple.kpi.unsupported</key>
+		<string>8.0</string>
+	</dict>
+	<key>OSBundleRequired</key>
+	<string>Root</string>
+</dict>
+</plist>

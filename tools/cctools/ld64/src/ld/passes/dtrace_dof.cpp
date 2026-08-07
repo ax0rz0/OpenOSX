@@ -58,8 +58,8 @@ public:
 	virtual void							copyRawContent(uint8_t buffer[]) const
 																			{ memcpy(buffer, _content, _size); }
 	virtual void							setScope(Scope)					{ }
-	virtual ld::Fixup::iterator				fixupsBegin() const				{ return &_fixups[0]; }
-	virtual ld::Fixup::iterator				fixupsEnd() const				{ return &_fixups[_fixups.size()]; }
+	virtual ld::Fixup::iterator				fixupsBegin() const				{ return _fixups.data(); }
+	virtual ld::Fixup::iterator				fixupsEnd() const				{ return _fixups.data() + _fixups.size(); }
 
 protected:
 	friend class File;
