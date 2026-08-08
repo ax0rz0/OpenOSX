@@ -255,7 +255,17 @@ i386_lbr_init(i386_cpu_info_t *info_p, bool is_master)
 			return;
 
 		default:
-			panic("Unknown CPU family");
+			/*
+			 * Any CPU whose LBR scheme we do not implement, which
+			 * includes every AMD family: their branch-tracing MSRs
+			 * are laid out differently, so the Intel LBR_SELECT /
+			 * DEBUGCTL programming below does not apply. LBR is an
+			 * optional debug facility, so disable it and continue
+			 * rather than panicking during early boot.
+			 */
+			last_branch_support_enabled = false;
+			i386_lbr_disable();
+			return;
 		}
 	}
 
