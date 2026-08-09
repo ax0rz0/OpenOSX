@@ -1986,6 +1986,7 @@
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               xdpyinfo = pkgs.xorg.xdpyinfo;
+              utilmacros = pkgs.xorg.utilmacros;
               libX11 = xlibBuild;
               libxcb = xcbBuild;
               libXau = xvfbLibXauBuild;

@@ -3,6 +3,8 @@
 , requireFile
 , pkg-config
 , gnumake
+, autoreconfHook
+, utilmacros
 , darwinCrossToolchain
 , nativeLd
 , libSystem
@@ -52,9 +54,15 @@ stdenv.mkDerivation {
   inherit (xdpyinfo) version;
   src = xdpyinfo.src;
 
+  # Unlike xprop, nixpkgs carries xdpyinfo as a git checkout rather than a
+  # release tarball, so there is no generated ./configure to run.
+  # autoreconfHook makes one; utilmacros supplies the XORG_* m4 that xorg's
+  # configure.ac expects to find via ACLOCAL_PATH.
   nativeBuildInputs = [
     pkg-config
     gnumake
+    autoreconfHook
+    utilmacros
   ];
 
   buildInputs = xDeps;
