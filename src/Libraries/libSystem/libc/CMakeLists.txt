@@ -271,6 +271,15 @@ target_sources(libc_static PRIVATE
     string/FreeBSD/wcscat.c      # _wcscat
     string/FreeBSD/wcsrchr.c     # _wcsrchr
     string/FreeBSD/wcstok.c      # _wcstok
+    # Wide-char functions real macOS binaries import that nothing in our own
+    # userland happened to need. See docs/COMPAT_STATUS.md - these are five of
+    # The Powder Toy's fourteen missing libSystem symbols, and the sources were
+    # already sitting in the tree unused.
+    string/FreeBSD/wcscasecmp.c  # _wcscasecmp
+    string/FreeBSD/wcsncasecmp.c # _wcsncasecmp
+    string/FreeBSD/wcslcat.c     # _wcslcat
+    string/FreeBSD/wcslcpy.c     # _wcslcpy
+    string/FreeBSD/wcsstr.c      # _wcsstr
     locale/FreeBSD/wcstol.c      # _wcstol
     string/NetBSD/memset_s.c     # _memset_s
     gen/backtrace.c               # _backtrace/_backtrace_symbols/_backtrace_symbols_fd (dbus's execinfo.h use)

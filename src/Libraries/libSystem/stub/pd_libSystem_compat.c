@@ -1130,6 +1130,33 @@ __fixdfti(double a)
 }
 
 /*
+ * __powidf2: x raised to an integer power. Clang emits a call to this for
+ * pow(x, n) where n is a known integer, so it turns up in ordinary C++ that
+ * never mentions a builtin - The Powder Toy imports it. Same reason as the
+ * 128-bit helpers above: there is no prebuilt libclang_rt.builtins for this
+ * cross target, so the compiler-rt algorithm lives here.
+ *
+ * Exponentiation by squaring, matching compiler-rt exactly, including its
+ * treatment of a negative exponent as the reciprocal of the positive result
+ * rather than repeated division.
+ */
+double
+__powidf2(double a, int b)
+{
+    const int recip = b < 0;
+    double r = 1.0;
+    for (;;) {
+        if (b & 1)
+            r *= a;
+        b /= 2;
+        if (b == 0)
+            break;
+        a *= a;
+    }
+    return recip ? 1.0 / r : r;
+}
+
+/*
  * libplatform already implements these as _platform_memset_pattern*, and
  * libc/scripts/alias.list records the public names as aliases of them. Mirror
  * that here

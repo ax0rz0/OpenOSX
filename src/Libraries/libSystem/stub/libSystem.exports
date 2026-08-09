@@ -1972,3 +1972,17 @@ _frexpl
 _timegm
 _fdatasync
 _scalb
+_fmodf
+#
+# The rest of The Powder Toy's missing libSystem imports (docs/COMPAT_STATUS.md).
+# The wide-char five are FreeBSD sources that were in the tree but in no
+# target_sources list until now; the last two are compiler-rt and clang
+# @available helpers we have to provide ourselves, since there is no prebuilt
+# libclang_rt.builtins for this cross target.
+_wcscasecmp
+_wcsncasecmp
+_wcslcat
+_wcslcpy
+_wcsstr
+___powidf2
+__availability_version_check
