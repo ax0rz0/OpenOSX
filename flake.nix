@@ -1967,6 +1967,48 @@
               libSM = xvfbLibSMBuild;
               inherit (pkgs) xorgproto;
             };
+          # Small X utilities. xprop is what the desktop session polls to learn
+          # that the window manager has claimed the screen; the other two are
+          # for diagnosing the GOP framebuffer from inside the guest.
+          xpropBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xprop.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              xprop = pkgs.xorg.xprop;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              inherit (pkgs) xorgproto;
+            };
+          xdpyinfoBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xdpyinfo.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              xdpyinfo = pkgs.xorg.xdpyinfo;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              inherit (pkgs) xorgproto;
+            };
+          xsetrootBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xsetroot.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              xsetroot = pkgs.xorg.xsetroot;
+              libX11 = xlibBuild;
+              libxcb = xcbBuild;
+              libXau = xvfbLibXauBuild;
+              libXdmcp = xvfbLibXdmcpBuild;
+              libXext = xvfbLibXextBuild;
+              libXmu = xvfbLibXmuBuild;
+              libXt = xvfbLibXtBuild;
+              libICE = xvfbLibICEBuild;
+              libSM = xvfbLibSMBuild;
+              xbitmaps = pkgs.xorg.xbitmaps;
+              inherit (pkgs) xorgproto;
+            };
           xclockBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xclock.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -3083,7 +3125,8 @@
               startupNotificationBuild system systemConfigurationBuild systemStarterBuild tccBuild
               toyboxArm64Build toyboxBuild userlandBuild vteBuild xcalcBuild xcbBuild xcbCursorBuild
               xcbImageBuild xcbKeysymsBuild xcbRenderUtilBuild xcbUtilBuild xcbWmBuild xcbXrmBuild
-              xclockBuild xeyesBuild thunarBuild xfce4AppfinderBuild xfce4PanelBuild xfce4SessionBuild
+              xclockBuild xeyesBuild xpropBuild xdpyinfoBuild xsetrootBuild
+              thunarBuild xfce4AppfinderBuild xfce4PanelBuild xfce4SessionBuild
               xfce4SettingsBuild xfce4TerminalBuild xfconfBuild xfdesktopBuild xfwm4Build xinitBuild
               xkbcommonBuild xkbcompBuild xkeyboardConfigBuild xlibBuild xlibLocaleBuild xmessageBuild
               xnu-loader xnuHeadersBuild xorgBuild xwaylandBuild xrdbBuild xrandrBuild xtermBuild xvfbBuild xvfbFontsBuild xvfbPixmanBuild

@@ -429,18 +429,38 @@ else
     exec i3
 fi
 
-# Give xfwm4 a moment to claim the WM selection before anything asks it for a
-# frame, checking that it is still alive rather than sleeping blindly. This
-# would be better as a poll of _NET_SUPPORTING_WM_CHECK, but no xprop (or any
-# other X property tool) ships in the image yet, and a poll for a command that
-# does not exist is just a slower sleep.
-n=0
-while [ $n -lt 5 ]; do
-    kill -0 $WM 2>/dev/null || { echo "openosx-session: xfwm4 died"; exec i3; }
-    n=$((n + 1))
-    sleep 1
-done
-echo "openosx-session: window manager running (pid $WM)"
+# Wait until xfwm4 has actually claimed the screen, rather than for a fixed
+# interval. A window manager advertises itself by putting a window id in
+# _NET_SUPPORTING_WM_CHECK on the root window, so that property appearing is
+# the real signal. Everything rendered here is software rendered and slow, so a
+# fixed sleep is either too short - the panel starts first, blocks waiting for
+# a WM, and presents as a black screen with a cursor for minutes - or wastes
+# time on every boot.
+if command -v xprop >/dev/null 2>&1; then
+    n=0
+    while [ $n -lt 90 ]; do
+        if xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null | grep -q 'window id'; then
+            echo "openosx-session: window manager claimed the screen after ${n}s"
+            break
+        fi
+        kill -0 $WM 2>/dev/null || { echo "openosx-session: xfwm4 died"; exec i3; }
+        n=$((n + 1))
+        sleep 1
+    done
+    if [ $n -ge 90 ]; then
+        echo "openosx-session: WARNING: no _NET_SUPPORTING_WM_CHECK after ${n}s;"
+        echo "openosx-session:          starting the rest of the session anyway"
+    fi
+else
+    # Minimal images do not carry xprop. Fall back rather than fail.
+    echo "openosx-session: xprop unavailable, waiting a fixed 5s instead"
+    n=0
+    while [ $n -lt 5 ]; do
+        kill -0 $WM 2>/dev/null || { echo "openosx-session: xfwm4 died"; exec i3; }
+        n=$((n + 1))
+        sleep 1
+    done
+fi
 
 echo "openosx-session: starting settings daemon"
 xfsettingsd &
