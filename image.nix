@@ -440,7 +440,7 @@ if command -v xprop >/dev/null 2>&1; then
     n=0
     while [ $n -lt 90 ]; do
         if xprop -root _NET_SUPPORTING_WM_CHECK 2>/dev/null | grep -q 'window id'; then
-            echo "openosx-session: window manager claimed the screen after ${n}s"
+            echo "openosx-session: window manager claimed the screen after ''${n}s"
             break
         fi
         kill -0 $WM 2>/dev/null || { echo "openosx-session: xfwm4 died"; exec i3; }
@@ -448,7 +448,7 @@ if command -v xprop >/dev/null 2>&1; then
         sleep 1
     done
     if [ $n -ge 90 ]; then
-        echo "openosx-session: WARNING: no _NET_SUPPORTING_WM_CHECK after ${n}s;"
+        echo "openosx-session: WARNING: no _NET_SUPPORTING_WM_CHECK after ''${n}s;"
         echo "openosx-session:          starting the rest of the session anyway"
     fi
 else
