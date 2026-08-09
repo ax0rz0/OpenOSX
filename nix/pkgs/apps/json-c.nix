@@ -15,7 +15,7 @@ let
   targetInfo = import ../../lib/target-info.nix targetTriple;
   sdkTarball = requireFile {
     name = "MacOSX11.3.sdk.tar.xz";
-    sha256 = "9adc1373d3879e1973d28ad9f17c9051b02931674a3ec2a2498128989ece2cb1";
+    sha256 = "cd4f08a75577145b8f05245a2975f7c81401d75e9535dcffbb879ee1deefcbf4";
     message = "Register the local MacOSX11.3.sdk.tar.xz with nix-store.";
   };
 in
