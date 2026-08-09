@@ -413,24 +413,44 @@ for b in xfsettingsd xfwm4 xfce4-panel xfdesktop; do
     fi
 done
 
+# The window manager goes first and everything else waits for it.
+#
+# xfce4-panel and xfdesktop both want a running window manager: started before
+# one exists they sit blocked, and on a software-rendered framebuffer that
+# reads as a black screen with a cursor for minutes rather than as a failure.
+# Polling _NET_SUPPORTING_WM_CHECK is the cheap way to know xfwm4 has actually
+# claimed the screen, instead of guessing with sleep.
+if command -v xfwm4 >/dev/null 2>&1; then
+    echo "openosx-session: starting window manager (xfwm4)"
+    xfwm4 &
+    WM=$!
+else
+    echo "openosx-session: xfwm4 unavailable, falling back to i3"
+    exec i3
+fi
+
+# Give xfwm4 a moment to claim the WM selection before anything asks it for a
+# frame, checking that it is still alive rather than sleeping blindly. This
+# would be better as a poll of _NET_SUPPORTING_WM_CHECK, but no xprop (or any
+# other X property tool) ships in the image yet, and a poll for a command that
+# does not exist is just a slower sleep.
+n=0
+while [ $n -lt 5 ]; do
+    kill -0 $WM 2>/dev/null || { echo "openosx-session: xfwm4 died"; exec i3; }
+    n=$((n + 1))
+    sleep 1
+done
+echo "openosx-session: window manager running (pid $WM)"
+
 echo "openosx-session: starting settings daemon"
 xfsettingsd &
-sleep 2
-
 echo "openosx-session: starting panel"
 xfce4-panel &
 echo "openosx-session: starting desktop"
 xfdesktop &
-sleep 2
 
-# The window manager runs in the foreground: when it exits, the session ends.
-if command -v xfwm4 >/dev/null 2>&1; then
-    echo "openosx-session: starting window manager (xfwm4)"
-    exec xfwm4
-fi
-
-echo "openosx-session: xfwm4 unavailable, falling back to i3"
-exec i3
+# The session lasts as long as the window manager does.
+wait $WM
 EOF
     chmod 755 $staging/usr/libexec/openosx-xfce-session
 
@@ -596,6 +616,61 @@ EOF
     ${lib.optionalString (testAudioFile != null) ''
       cp ${testAudioFile} $staging/badapple.pcm
     ''}
+
+    # Desktop identity: the Dawn wallpaper, and the xfconf defaults that select
+    # it. Seeded here rather than left to the user, so a first boot looks like
+    # OpenOSX instead of like an unconfigured XFCE.
+    mkdir -p $staging/usr/share/backgrounds/openosx
+    cp ${./docs/branding/OpenOSX-Dawn-Wallpaper.png} \
+       $staging/usr/share/backgrounds/openosx/openosx-dawn.png
+    chmod 644 $staging/usr/share/backgrounds/openosx/openosx-dawn.png
+
+    # /etc/zprofile puts /etc/xdg on XDG_CONFIG_DIRS, which is where xfconfd
+    # looks for channel defaults. image-style 5 is "zoomed"; color-style 0 with
+    # a solid colour is the fallback if the image ever fails to load.
+    mkdir -p $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml
+    cat > $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-desktop" version="1.0">
+  <property name="backdrop" type="empty">
+    <property name="screen0" type="empty">
+      <property name="monitor0" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="color-style" type="int" value="0"/>
+          <property name="rgba1" type="array">
+            <value type="double" value="0.105882"/>
+            <value type="double" value="0.086275"/>
+            <value type="double" value="0.215686"/>
+            <value type="double" value="1.000000"/>
+          </property>
+          <property name="image-style" type="int" value="5"/>
+          <property name="last-image" type="string"
+                    value="/usr/share/backgrounds/openosx/openosx-dawn.png"/>
+        </property>
+      </property>
+      <!-- Xorg names the output from the driver, so the monitor key is not
+           always "monitor0". Repeat the settings under the names our GOP DDX
+           and a generic RandR setup produce, since an unmatched key silently
+           falls back to a plain colour. -->
+      <property name="monitordefault" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="image-style" type="int" value="5"/>
+          <property name="last-image" type="string"
+                    value="/usr/share/backgrounds/openosx/openosx-dawn.png"/>
+        </property>
+      </property>
+      <property name="monitorscreen" type="empty">
+        <property name="workspace0" type="empty">
+          <property name="image-style" type="int" value="5"/>
+          <property name="last-image" type="string"
+                    value="/usr/share/backgrounds/openosx/openosx-dawn.png"/>
+        </property>
+      </property>
+    </property>
+  </property>
+</channel>
+EOF
+    chmod 644 $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
 
     # Unmodified third-party macOS binaries, for the Tier 0 milestone in
     # docs/COMPAT_STATUS.md. Running one exercises the platform gate, dylib
