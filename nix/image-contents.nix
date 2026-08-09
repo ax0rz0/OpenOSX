@@ -721,6 +721,10 @@ let
         kc = kcBuild;
         xnuLoader = xnu-loader.packages.${system}.default;
         apfsprogs = pkgs.apfsprogs;
+        # The minimal image is the right place to run the compat corpus: it
+        # boots to a shell in seconds and shares no code with the desktop, so a
+        # third-party binary either works or fails for its own reasons.
+        inherit compatCorpus;
         imageFileName = "openosx-minimal.img";
         espMB = 64;
         rootMB = 384;
