@@ -59,7 +59,23 @@ That table is the strongest argument for the corpus ordering in
 slice of Cocoa; VLC is a full Cocoa application. Doing them in that order is
 the difference between a reachable milestone and an open-ended one.
 
-### Missing symbols: The Powder Toy (187)
+### Missing symbols: The Powder Toy (187 measured, 8 since closed)
+
+Of the 14 libSystem imports below, 8 are now exported and verified present in
+the built `libSystem.B.dylib`: `_fmodf`, `_wcscasecmp`, `_wcsncasecmp`,
+`_wcslcat`, `_wcslcpy`, `_wcsstr`, `___powidf2` and
+`__availability_version_check`. The five wide-char sources were in the tree but
+in no `target_sources` list; `_fmodf` only wanted an export line; the last two
+are new code, because there is no prebuilt `libclang_rt.builtins` for this
+cross target.
+
+The six CommonCrypto digests are deliberately still open. `CC_MD5` is
+duplicately defined in `pd_cc_digest_bridge.c` within the same archive, so
+force-referencing it can fail the link, and `ccdigest_init` copies
+`di->state_size` (88) bytes out of the 16-byte `ccmd4_initial_state`, a
+72-byte over-read that wants fixing before MD4 is exported at all.
+
+The table below is the original measurement, kept as the baseline.
 
 | Library | Missing | Kind |
 |---|---|---|
