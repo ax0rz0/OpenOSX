@@ -164,6 +164,49 @@ into a build-time link error rather than a runtime failure. A Homebrew bottle
 would be the first program to arrive with expectations we did not get to
 negotiate.
 
+## The third axis, finally measured: what SDL2 asks of Cocoa
+
+`objcscan.py` reads ObjC class metadata and the `LC_DYLD_INFO` bind opcodes
+straight out of a Mach-O, which turns "810 selectors, 7 superrefs" from a
+number into a named work list. Run against `libSDL2-2.0.0.dylib` (the Homebrew
+`sdl2` 2.28.3 big_sur bottle, which is the exact Cocoa layer The Powder Toy
+runs on; full output in [compat-sdl2-objc.json](compat-sdl2-objc.json)):
+
+| Base class | Subclasses | Methods declared on them |
+|---|---|---|
+| NSResponder | 1 (`Cocoa_WindowListener`) | **58** |
+| NSView | 3 (`SDLView`, `SDLTranslatorResponder`, `SDL_cocoametalview`) | 33 |
+| NSOpenGLContext | 1 (`SDLOpenGLContext`) | 12 |
+| NSWindow | 1 (`SDLWindow`) | 9 |
+| NSApplication | 1 (`SDLApplication`) | 2 |
+| NSObject | 10 (data holders) | 142 |
+
+656 distinct selectors sent, 133 of them Cocoa-shaped. SDL2 references 48
+framework classes in total, and `machoscan` attributes each to the framework it
+comes from: AppKit 48 symbols, CoreGraphics 38, Foundation 15, CoreVideo 7,
+Metal 7, Carbon 5.
+
+Two things fall out of this that were not previously obvious.
+
+**The real cost is being a base class, not answering messages.** Ten of the
+seventeen classes SDL2 defines derive from NSObject and are just data holders;
+those cost nothing. The five that derive from NSResponder, NSView, NSWindow,
+NSOpenGLContext and NSApplication are the whole problem, because a base class
+has to call its overrides at the right moments and in the right order. The 58
+methods on `Cocoa_WindowListener` are the event and window-state contract, and
+they must be *invoked*, not merely accepted.
+
+**Ivar layout is not the obstacle it was assumed to be.** Earlier notes here
+treated superrefs as expensive partly because subclassing needs a compatible
+ivar layout. Under the modern runtime it does not: ivars are non-fragile, and
+objc4's `reconcileInstanceVariables` slides a subclass's ivars to sit after
+whatever the superclass turns out to be at load time. Our NSView does not have
+to match Apple's instance size. It has to match Apple's behaviour.
+
+Metal is the one dependency worth calling out as optional: SDL2 probes for it
+and falls back, so `METAL_RenderData` and `METAL_TextureData` can go
+unimplemented without blocking a window.
+
 ## Corrections to earlier versions of this document
 
 Two claims that stood here were wrong, and both mattered:
