@@ -35,7 +35,9 @@ The supported build is **Nix**, on Linux or macOS (x86_64 or aarch64):
 
 ```sh
 # One-time: the Apple SDK tarball is proprietary and cannot be fetched by Nix.
-# Obtain MacOSX11.3.sdk.tar.xz and register it (Nix verifies its sha256):
+# Obtain MacOSX11.3.sdk.tar.xz and register it (Nix verifies its sha256).
+# The pinned hash is the tarball from github.com/phracker/MacOSX-SDKs 11.3.
+# Nix uses it at build time only; it never enters the repo or a CI cache.
 nix-store --add-fixed sha256 /path/to/MacOSX11.3.sdk.tar.xz
 
 # Build a bootable disk image (GPT: EFI system partition + root filesystem):

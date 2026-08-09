@@ -63,11 +63,21 @@ let
   nixDarwinHost = if isArm64 then "arm64-apple-darwin20.4" else "x86_64-apple-darwin20.4";
   sdkTarball = if isDarwinHost then null else requireFile {
     name = "MacOSX11.3.sdk.tar.xz";
-    sha256 = "9adc1373d3879e1973d28ad9f17c9051b02931674a3ec2a2498128989ece2cb1";
+    sha256 = "cd4f08a75577145b8f05245a2975f7c81401d75e9535dcffbb879ee1deefcbf4";
     message = ''
       MacOSX11.3.sdk.tar.xz (Apple SDK, proprietary - not fetchable/redistributable)
       is not yet in your Nix store. Register your local copy with:
         nix-store --add-fixed sha256 /path/to/MacOSX11.3.sdk.tar.xz
+
+      The pinned hash is the tarball published at
+        https://github.com/phracker/MacOSX-SDKs/releases/tag/11.3
+      which carries every path this build reads out of the SDK root:
+      usr/include, usr/include/libxml2, usr/lib/libxml2.tbd, usr/lib/libz.tbd,
+      System/Library/Frameworks and Python.framework.
+
+      Nix only ever consumes this at build time; it is never redistributed and
+      never enters the repo or a CI cache. Note that Apple's Xcode and SDKs
+      Agreement restricts use to Apple-branded hardware - see docs/research/legal.md.
     '';
   };
   # xar and ctfconvert are host tools, so they want the host's zlib/libxml2. The
