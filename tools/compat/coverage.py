@@ -107,10 +107,16 @@ def build_inventory(roots):
     syms, classes, libs = set(), set(), []
     seen = set()
     for root in roots:
-        if os.path.isfile(root):                       # an allow-list, not a tree
-            s, c = exported_list(root)
+        if os.path.isfile(root):
+            # A single file is either an allow-list or a Mach-O. Decide by
+            # extension, not by "it is a file": reading a dylib as text yields
+            # thousands of plausible-looking garbage "symbols" and a coverage
+            # report that is confidently wrong.
             if root.endswith('.exports'):
+                s, c = exported_list(root)
                 s |= REEXPORTED_FROM_LIBDYLD
+            else:
+                s, c = exported(root)
             libs.append({'path': root, 'symbols': len(s), 'classes': len(c)})
             syms |= s
             classes |= c
