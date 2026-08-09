@@ -11,6 +11,14 @@ apps" into a ranked list of named, finite work items.
   coverage.py inventory <dir-of-dylibs>... -o inventory.json
   coverage.py report <app-binary-or-.app> -i inventory.json [-o report.json]
 
+An inventory root may also be an ld64 `-exported_symbols_list` allow-list, such
+as src/Libraries/libSystem/stub/libSystem.exports. That file *is* the shipped
+libSystem's export surface - it is applied together with -dead_strip, so a
+symbol absent from it is discarded from the dylib even when its code was
+compiled and linked. Reading it directly makes coverage measurable straight
+from a source checkout, with no build, no image and no VM, which is what lets
+CI track this per-commit.
+
 Note the deliberate three axes. Symbol coverage alone overstates readiness
 badly, because Objective-C message sends are not symbols: a binary can link
 perfectly and still die on the first unimplemented selector.
@@ -71,16 +79,50 @@ def exported(path):
     return syms, classes
 
 
+# libSystem.B.dylib re-exports /usr/lib/system/libdyld.dylib
+# (-Wl,-reexport_library, see src/Libraries/libSystem/stub/CMakeLists.txt), so
+# libdyld's symbols resolve against libSystem without appearing in its own
+# allow-list. Only the ones a normal binary actually imports are listed here;
+# this is a floor, not libdyld's full surface.
+REEXPORTED_FROM_LIBDYLD = {
+    'dyld_stub_binder',          # every classic lazy-bound binary imports this
+}
+
+
+def exported_list(path):
+    """Symbols named by an ld64 -exported_symbols_list allow-list."""
+    syms, classes = set(), set()
+    with open(path, errors='replace') as fh:
+        for line in fh:
+            line = line.split('#', 1)[0].strip()
+            if not line:
+                continue
+            syms.add(line)
+            if line.startswith('_OBJC_CLASS_$_'):
+                classes.add(line[len('_OBJC_CLASS_$_'):])
+    return syms, classes
+
+
 def build_inventory(roots):
     syms, classes, libs = set(), set(), []
     seen = set()
     for root in roots:
-        for pat in ('**/*.dylib', '**/*.tbd', '**/lib*'):
+        if os.path.isfile(root):                       # an allow-list, not a tree
+            s, c = exported_list(root)
+            if root.endswith('.exports'):
+                s |= REEXPORTED_FROM_LIBDYLD
+            libs.append({'path': root, 'symbols': len(s), 'classes': len(c)})
+            syms |= s
+            classes |= c
+            continue
+        for pat in ('**/*.dylib', '**/*.tbd', '**/*.exports', '**/lib*'):
             for p in glob.glob(os.path.join(root, pat), recursive=True):
                 if not os.path.isfile(p) or p in seen:
                     continue
                 seen.add(p)
-                s, c = exported(p)
+                s, c = exported_list(p) if p.endswith('.exports') else exported(p)
+                if p.endswith('.exports'):
+                    s |= REEXPORTED_FROM_LIBDYLD
                 if s:
                     libs.append({'path': p, 'symbols': len(s), 'classes': len(c)})
                     syms |= s

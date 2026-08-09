@@ -1957,3 +1957,18 @@ _y0
 _y0f
 _y1
 _y1f
+_jn
+_jnf
+_yn
+_ynf
+#
+# Imported by unmodified third-party macOS binaries (see docs/COMPAT_STATUS.md).
+# All of these are already compiled into the link - openlibm is -force_load'ed
+# and fdatasync is a generated syscall stub - and were reaching the shipped
+# dylib only to be discarded by -dead_strip for want of an export line.
+_lgamma_r
+_lgammaf_r
+_frexpl
+_timegm
+_fdatasync
+_scalb

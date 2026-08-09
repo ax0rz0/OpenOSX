@@ -256,6 +256,7 @@ target_sources(libc_static PRIVATE
     stdtime/timezone_unix03.c    # _st_get_timezone / _st_set_timezone (strftime %z)
     libm/pd_libm_sincos_stret.c  # __sincos*_stret / __sincospi*_stret (Apple-only wrappers, not in openlibm; -fno-builtin below)
     libm/pd_libm_exp10.c         # __exp10 / __exp10f (Apple-only base-10 exp, not in openlibm)
+    libm/pd_libm_scalb.c         # _scalb / _scalbf (obsolete SVID scalbn, dropped by openlibm)
     gen/clock_gettime.c          # _clock_gettime / _clock_settime
     gen/FreeBSD/sethostname.c    # _sethostname
     net/FreeBSD/inet_ntoa.c      # _inet_ntoa

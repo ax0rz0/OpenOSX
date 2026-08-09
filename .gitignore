@@ -141,3 +141,6 @@ CMakeCache.txt
 */output.txt
 output.txt
 .openosx-*
+# Python bytecode from tools/
+__pycache__/
+*.pyc

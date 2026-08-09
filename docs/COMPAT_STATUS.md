@@ -12,6 +12,19 @@ python3 coverage.py inventory <openosx-lib-dirs>... -o inventory.json
 python3 bundlescan.py /path/to/Some.app -i inventory.json
 ```
 
+For anything that only imports libSystem, no build is needed at all. The
+shipped dylib's export surface *is*
+`src/Libraries/libSystem/stub/libSystem.exports`, because that file is passed
+to ld64 as `-exported_symbols_list` next to `-dead_strip`, so a symbol missing
+from it is discarded from the binary even when its code compiled and linked
+fine. Point the inventory straight at it and measure from a source checkout:
+
+```sh
+python3 fetchbottles.py lz4 tree gzip --target big_sur -o corpus/
+python3 coverage.py inventory ../../src/Libraries/libSystem/stub/libSystem.exports -o inv.json
+python3 coverage.py report corpus/lz4/1.9.4/bin/lz4 -i inv.json
+```
+
 Always use `bundlescan.py` for real apps. Scanning only `Contents/MacOS/<exe>`
 is misleading: VLC's executable is a 62-symbol launcher that dlopens libvlc,
 and the actual dependencies live in the bundle's own dylibs. `bundlescan`
@@ -88,16 +101,113 @@ layout and correct dispatch ordering, not merely the right method names.
   CoreServices, Security. For The Powder Toy that is 82 of the 187.
 - **Structural** - AppKit, CoreGraphics, CoreVideo, ApplicationServices,
   QuartzCore. These need the stack in [AQUA_UI_PLAN.md](AQUA_UI_PLAN.md), and
-  that is the multi-year part.
+  that is the multi-year part. None of the five exists anywhere in the tree.
 
-## The cheapest real milestone
+**The "incremental" label is doing too much work for Foundation.**
+CoreFoundation is genuine Apple code, the `swift-corelibs-foundation` fork of
+CF, vendored nearly whole: 95 of its 98 sources compile, including all of
+CFString, CFArray, CFDictionary, CFBundle, CFPreferences, CFRunLoop and
+CFPropertyList. Foundation is not that. It is a from-scratch reimplementation
+of **6 `.m` files, 443 lines and 8 classes** (NSString, NSCFString, NSArray,
+NSMutableArray, NSDictionary, NSMutableDictionary, NSURL, NSError), each a thin
+forwarding shim over the corresponding CF type. NSException, NSInvocation,
+NSNotificationCenter and NSFileManager do not exist.
 
-`CC_MD4_*`, `CC_MD5_*` and `__powidf2` are missing from libSystem even though
-CommonCrypto is in the tree. That smells like a linkage or re-export gap rather
-than absent code, and it is the sort of thing fixed in an afternoon.
+Toll-free bridging is also only half-built, and the missing half is the one
+apps use. CF objects get an ObjC `isa` stamped at creation so they can receive
+messages, but the reverse path is compiled out: `CF_OBJC_FUNCDISPATCHV` and
+`CF_OBJC_CALLV` expand to `do { } while (0)` and `(0)`, which disables all 231
+dispatch sites across 18 CF files. So a CF function handed an ObjC subclass
+will not call back into it.
 
-More broadly: closing the ~82 incremental symbols would not run a GUI app, but
-it would take a **Tier 0 command-line binary** from nearly-running to running,
-which validates the entire dyld and loader path against a real third-party
-Mach-O. That is a far nearer and more informative milestone than anything in
-the GUI stack, and it is the recommended next step.
+Read that against the Foundation numbers in the table above (86 missing symbols
+for VLC) and the split changes character: some of it really is one function per
+symbol over working CF, and the rest is new subsystem work that happens to be
+spelled with a Foundation prefix.
+
+## Tier 0: every measured CLI binary now links
+
+Eleven unmodified Homebrew x86_64 bottles, fetched with `fetchbottles.py` and
+diffed against `libSystem.exports`:
+
+| Binary | libSystem imports | Missing | Self-contained? |
+|---|---|---|---|
+| lz4 1.9.4 | 59 | **0** | yes |
+| tree 2.1.1 | 62 | **0** | yes |
+| gzip 1.13 | 92 | **0** | yes |
+| xz 5.4.4 | 66 | **0** | bundles liblzma |
+| zstd 1.5.5 | 82 | **0** | bundles libzstd, liblz4, liblzma |
+| jq 1.7 | 133 | **0** | bundles libonig |
+| nano 7.2 | 156 | **0** | bundles libncursesw, libintl |
+| lzmadec / lzmainfo / xzdec | 22 each | **0** | bundle liblzma |
+| pzstd | 57 | **0** | bundles libzstd, libc++ |
+
+Getting there took seven export lines and one 30-line source file, because
+almost everything was already compiled and merely unexported. `_lgamma_r`,
+`_lgammaf_r`, `_frexpl`, `_jn`, `_jnf`, `_yn`, `_ynf` and `_timegm` were sitting
+in the link (openlibm is `-force_load`ed) and being dead-stripped for want of an
+export line; `_fdatasync` is a generated syscall stub (`syscalls.master:278`)
+in the same position. Only `_scalb` was genuinely absent, openlibm having
+dropped the obsolete SVID spelling, and it is now
+`libc/libm/pd_libm_scalb.c` alongside the other functions openlibm omits.
+
+**lz4, tree and gzip are the Tier 0 targets**: single-dylib, no bundled
+dependencies, no code signature, no TLS. Running one exercises the platform
+gate, dylib resolution, two-level namespace binding, dyld startup and the
+syscall layer against a binary that knows nothing about us.
+
+The remaining risk is not symbols. It is that no genuinely foreign
+dynamically-linked binary has ever been executed on OpenOSX: every userland
+component, zsh and Python and XFCE included, is cross-built by this project's
+own toolchain and linked against this libSystem, which turns a missing export
+into a build-time link error rather than a runtime failure. A Homebrew bottle
+would be the first program to arrive with expectations we did not get to
+negotiate.
+
+## Corrections to earlier versions of this document
+
+Two claims that stood here were wrong, and both mattered:
+
+**"CommonCrypto is a linkage gap fixed in an afternoon."** Right that it is a
+linkage gap, wrong about the mechanism, and wrong about the cost. The
+commented-out `add_darwin_circular_library` blocks in
+`src/Libraries/CommonCrypto/CMakeLists.txt` and `libSystem/corecrypto/` are
+dead upstream scaffolding: they name ten sibling targets, nine of which have
+never existed in this tree, and `cmake/circular.cmake` has never once been
+executed here. Enabling them is neither necessary nor sufficient.
+`commoncrypto_static` is already linked into the shipped libSystem and
+`CommonDigest.c` already defines CC_MD4/MD5/SHA1 via its `DIGEST_SHIMS` macro.
+The real gate is the same export allow-list as everything else. Two hazards
+still block a one-line-per-symbol fix: `libcn/pd_cc_digest_bridge.c`
+independently defines all four `CC_MD5_*` symbols in the same archive, so
+force-referencing them can produce a duplicate-symbol failure; and
+`ccdigest_init` copies `di->state_size` (88) bytes out of the 16-byte
+`ccmd4_initial_state`, a 72-byte over-read that should be fixed before MD4 is
+exported. `__powidf2` is unrelated to any of this: there is no compiler-rt in
+the tree, and the established pattern is a hand-written builtin in
+`pd_libSystem_compat.c`, which already carries `__udivti3` and friends.
+
+**"dyld refuses a binary whose minimum OS is newer than the running system."**
+It does not. `MachOFile::builtForPlatform`
+(`src/Libraries/dyld/upstream/dyld3/MachOFile.cpp:482`) takes `minOS` and `sdk`
+as block parameters and then compares only the platform ID, and
+`loadableIntoProcess` is built on it. There is no version ceiling anywhere on
+the load path. Measured accordingly: Monterey bottles of tree, lz4 and jq
+(`minos 12.0`) also come out at zero missing symbols. Prefer older targets
+because they import less, not because newer ones are refused.
+
+## What dyld actually is, and why it is not the blocker
+
+`src/Libraries/dyld` is Apple's real dyld-832 (macOS 11.4), not a
+reimplementation, and it is built and shipped. Verified present and wired:
+two-level namespace ordinals, `dlopen`/`dlsym`/`dlclose`, weak imports and weak
+dylibs, `@rpath`/`@loader_path`/`@executable_path`, and chained fixups
+(`DYLD_CHAINED_PTR_64` and `_64_OFFSET` are the two formats compiled on
+x86_64). AMFI is stubbed fully permissive. The shared cache is optional, which
+forces the dyld2 loose-dylib-on-disk path, which is exactly what OpenOSX needs.
+
+Every bottle measured above uses classic bind opcodes rather than chained
+fixups, so that support is headroom rather than a dependency. `machoscan.py`
+now reports the fixup format, entry style, rpaths, code signature and TLS use,
+because those gates precede symbols entirely: a binary whose fixup format the
+loader does not implement cannot load no matter how complete the exports are.

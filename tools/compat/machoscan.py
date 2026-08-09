@@ -17,6 +17,11 @@ Pure-Python Mach-O reader: no otool, no nm, no macOS. Given an executable or a
                 overstates readiness; superrefs are the expensive ones, because
                 subclassing needs a compatible ivar layout, not just methods.
 
+  loader        How dyld is expected to fix the binary up: chained fixups vs the
+                classic bind opcodes, the entry-point style, @rpath use, TLS.
+                A binary whose fixup format we do not implement cannot load at
+                all, so this gate is independent of - and prior to - symbols.
+
 Usage:
   machoscan.py <path-to-binary-or-.app> [--json out.json]
 """
@@ -39,9 +44,81 @@ LC_LOAD_UPWARD_DYLIB = 0x80000023
 LC_VERSION_MIN_MACOSX = 0x24
 LC_BUILD_VERSION = 0x32
 
+LC_UNIXTHREAD = 0x05
+LC_DYLD_INFO = 0x22
+LC_DYLD_INFO_ONLY = 0x80000022
+LC_RPATH = 0x8000001c
+LC_CODE_SIGNATURE = 0x1d
+LC_ENCRYPTION_INFO_64 = 0x2c
+LC_MAIN = 0x80000028
+LC_DYLD_EXPORTS_TRIE = 0x80000033
+LC_DYLD_CHAINED_FIXUPS = 0x80000034
+
 CPU_TYPE_X86_64 = 0x01000007
 CPU_TYPE_ARM64 = 0x0100000c
 CPU_NAMES = {CPU_TYPE_X86_64: 'x86_64', CPU_TYPE_ARM64: 'arm64'}
+
+FILETYPES = {2: 'executable', 6: 'dylib', 8: 'bundle', 7: 'dylinker', 5: 'core'}
+
+# Header flags that change what the loader must do.
+MH_FLAGS = [
+    (0x00000004, 'DYLDLINK'), (0x00000080, 'TWOLEVEL'),
+    (0x00001000, 'WEAK_DEFINES'), (0x00002000, 'BINDS_TO_WEAK'),
+    (0x00200000, 'PIE'), (0x00800000, 'HAS_TLV_DESCRIPTORS'),
+    (0x80000000, 'DYLIB_IN_CACHE'),
+]
+
+# dyld_chained_starts_in_segment.pointer_format. Each is a distinct walker in
+# the loader, so knowing which one a binary uses is the whole implementation
+# question, not a detail.
+CHAINED_PTR_FORMATS = {
+    1: 'ARM64E', 2: '64', 3: '32', 4: '32_CACHE', 5: '32_FIRMWARE',
+    6: '64_OFFSET', 7: 'ARM64E_KERNEL', 8: '64_KERNEL_CACHE',
+    9: 'ARM64E_USERLAND', 10: 'ARM64E_FIRMWARE', 11: 'X86_64_KERNEL_CACHE',
+    12: 'ARM64E_USERLAND24',
+}
+CHAINED_IMPORT_FORMATS = {1: 'IMPORT', 2: 'IMPORT_ADDEND', 3: 'IMPORT_ADDEND64'}
+
+
+def _chained_detail(data, base, dataoff, datasize):
+    """Read dyld_chained_fixups_header and the per-segment pointer formats.
+
+    Reported because 'uses chained fixups' is not actionable on its own: the
+    loader needs the specific pointer format and import format to walk them.
+    """
+    out = {'imports': None, 'import_format': None, 'pointer_formats': []}
+    try:
+        (_ver, starts_off, _imp_off, _sym_off,
+         imports_count, imports_format, _sym_fmt) = struct.unpack_from(
+            '<7I', data, base + dataoff)
+    except struct.error:
+        return out
+    out['imports'] = imports_count
+    out['import_format'] = CHAINED_IMPORT_FORMATS.get(imports_format, imports_format)
+
+    try:
+        seg_count, = struct.unpack_from('<I', data, base + dataoff + starts_off)
+    except struct.error:
+        return out
+    fmts = []
+    for i in range(min(seg_count, 64)):
+        try:
+            seg_info_off, = struct.unpack_from(
+                '<I', data, base + dataoff + starts_off + 4 + i * 4)
+        except struct.error:
+            break
+        if seg_info_off == 0:                  # segment has no fixups
+            continue
+        try:
+            _size, _page_size, ptr_fmt = struct.unpack_from(
+                '<IHH', data, base + dataoff + starts_off + seg_info_off)
+        except struct.error:
+            continue
+        name = CHAINED_PTR_FORMATS.get(ptr_fmt, str(ptr_fmt))
+        if name not in fmts:
+            fmts.append(name)
+    out['pointer_formats'] = fmts
+    return out
 
 
 def find_binary(path):
@@ -79,13 +156,19 @@ def parse(data, base):
         'arch': None, 'platform': None, 'minos': None, 'sdk': None,
         'dylibs': [], 'weak_dylibs': [], 'undefined': [],
         'objc_selectors': [], 'objc_classrefs': 0, 'objc_superrefs': 0,
+        'filetype': None, 'flags': [], 'fixups': None, 'chained': None,
+        'entry': None, 'rpaths': [], 'code_signature': False,
+        'encrypted': False, 'tls': False,
     }
     cputype, = struct.unpack_from('<I', data, base + 4)
     out['arch'] = CPU_NAMES.get(cputype, hex(cputype))
-    ncmds, = struct.unpack_from('<I', data, base + 16)
+    filetype, ncmds, _sizeofcmds, flags = struct.unpack_from('<IIII', data, base + 12)
+    out['filetype'] = FILETYPES.get(filetype, filetype)
+    out['flags'] = [n for bit, n in MH_FLAGS if flags & bit]
 
     off = base + 32
     symoff = nsyms = stroff = 0
+    chained_data = None
     ordinals = []      # dylib load order, for two-level namespace attribution
     sections = {}      # (seg,sect) -> (offset, size)
 
@@ -127,7 +210,36 @@ def parse(data, base):
             fmt = lambda v: '%d.%d.%d' % (v >> 16, (v >> 8) & 0xff, v & 0xff)
             out['platform'], out['minos'], out['sdk'] = 'macOS', fmt(ver), fmt(sdk)
 
+        elif cmd == LC_DYLD_CHAINED_FIXUPS:
+            out['fixups'] = 'chained'
+            chained_data = struct.unpack_from('<II', data, off + 8)
+
+        elif cmd in (LC_DYLD_INFO, LC_DYLD_INFO_ONLY):
+            # Only classic if nothing later sets 'chained'; resolved after the loop.
+            out['fixups'] = out['fixups'] or 'classic'
+
+        elif cmd == LC_MAIN:
+            out['entry'] = 'LC_MAIN'
+        elif cmd == LC_UNIXTHREAD:
+            out['entry'] = out['entry'] or 'LC_UNIXTHREAD'
+
+        elif cmd == LC_RPATH:
+            noff, = struct.unpack_from('<I', data, off + 8)
+            end = data.index(b'\0', off + noff)
+            out['rpaths'].append(data[off + noff:end].decode(errors='replace'))
+
+        elif cmd == LC_CODE_SIGNATURE:
+            out['code_signature'] = True
+        elif cmd == LC_ENCRYPTION_INFO_64:
+            _o, _s, cryptid = struct.unpack_from('<III', data, off + 8)
+            out['encrypted'] = cryptid != 0
+
         off += cmdsize
+
+    if chained_data:
+        out['chained'] = _chained_detail(data, base, *chained_data)
+    out['tls'] = ('__DATA', '__thread_vars') in sections or \
+                 ('__DATA_CONST', '__thread_vars') in sections
 
     # Undefined externals, attributed to the dylib they are expected from.
     if nsyms:
@@ -173,6 +285,20 @@ def main():
         print()
         print('=== %s slice ===' % r['arch'])
         print('  platform      : %s, minos %s (SDK %s)' % (r['platform'], r['minos'], r['sdk']))
+        print('  filetype      : %s  [%s]' % (r['filetype'], ' '.join(r['flags'])))
+        fx = r['fixups'] or 'none'
+        if r['chained']:
+            fx += '  (ptr %s, %s, %s imports)' % (
+                '/'.join(r['chained']['pointer_formats']) or '?',
+                r['chained']['import_format'], r['chained']['imports'])
+        print('  fixups        : %s' % fx)
+        print('  entry         : %s%s%s%s' % (
+            r['entry'] or 'n/a',
+            ', code-signed' if r['code_signature'] else '',
+            ', TLS' if r['tls'] else '',
+            ', ENCRYPTED' if r['encrypted'] else ''))
+        if r['rpaths']:
+            print('  rpaths        : %s' % ', '.join(r['rpaths']))
         print('  dylibs        : %d strong, %d weak' % (len(r['dylibs']), len(r['weak_dylibs'])))
         for d in r['dylibs']:
             print('      %s' % d)
