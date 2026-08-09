@@ -180,8 +180,6 @@
 , xclockBuild
 , xeyesBuild
 , xpropBuild
-, xdpyinfoBuild
-, xsetrootBuild
 , thunarBuild
 , xfce4AppfinderBuild
 , xfce4PanelBuild
@@ -382,8 +380,6 @@ let
     # xprop is not optional garnish: /usr/libexec/openosx-xfce-session polls
     # _NET_SUPPORTING_WM_CHECK with it to know the window manager is up.
     xprop = xpropBuild;
-    xdpyinfo = xdpyinfoBuild;
-    xsetroot = xsetrootBuild;
     xclock = xclockBuild;
     xcalc = xcalcBuild;
     xmessage = xmessageBuild;

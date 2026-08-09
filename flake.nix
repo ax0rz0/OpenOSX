@@ -1967,9 +1967,16 @@
               libSM = xvfbLibSMBuild;
               inherit (pkgs) xorgproto;
             };
-          # Small X utilities. xprop is what the desktop session polls to learn
-          # that the window manager has claimed the screen; the other two are
-          # for diagnosing the GOP framebuffer from inside the guest.
+          # xprop: what the desktop session polls to learn that the window
+          # manager has claimed the screen.
+          #
+          # xdpyinfo and xsetroot would be useful for diagnosing the GOP
+          # framebuffer but are not built, because both hard-require libraries
+          # this tree does not produce: xdpyinfo 1.4.0's configure demands
+          # xext and xtst (they stopped being optional), and xsetroot 1.1.3
+          # demands xcursor. Adding them means first cross-building libXtst and
+          # a static libXcursor, which is a bigger job than the diagnostics are
+          # currently worth.
           xpropBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xprop.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -1979,35 +1986,6 @@
               libxcb = xcbBuild;
               libXau = xvfbLibXauBuild;
               libXdmcp = xvfbLibXdmcpBuild;
-              inherit (pkgs) xorgproto;
-            };
-          xdpyinfoBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xdpyinfo.nix {
-              inherit darwinCrossToolchain nativeLd;
-              libSystem = libSystemBuild;
-              xdpyinfo = pkgs.xorg.xdpyinfo;
-              utilmacros = pkgs.xorg.utilmacros;
-              libX11 = xlibBuild;
-              libxcb = xcbBuild;
-              libXau = xvfbLibXauBuild;
-              libXdmcp = xvfbLibXdmcpBuild;
-              inherit (pkgs) xorgproto;
-            };
-          xsetrootBuild =
-            if isDarwin then null else pkgs.callPackage ./nix/pkgs/x11/xsetroot.nix {
-              inherit darwinCrossToolchain nativeLd;
-              libSystem = libSystemBuild;
-              xsetroot = pkgs.xorg.xsetroot;
-              libX11 = xlibBuild;
-              libxcb = xcbBuild;
-              libXau = xvfbLibXauBuild;
-              libXdmcp = xvfbLibXdmcpBuild;
-              libXext = xvfbLibXextBuild;
-              libXmu = xvfbLibXmuBuild;
-              libXt = xvfbLibXtBuild;
-              libICE = xvfbLibICEBuild;
-              libSM = xvfbLibSMBuild;
-              xbitmaps = pkgs.xorg.xbitmaps;
               inherit (pkgs) xorgproto;
             };
           xclockBuild =
@@ -3126,7 +3104,7 @@
               startupNotificationBuild system systemConfigurationBuild systemStarterBuild tccBuild
               toyboxArm64Build toyboxBuild userlandBuild vteBuild xcalcBuild xcbBuild xcbCursorBuild
               xcbImageBuild xcbKeysymsBuild xcbRenderUtilBuild xcbUtilBuild xcbWmBuild xcbXrmBuild
-              xclockBuild xeyesBuild xpropBuild xdpyinfoBuild xsetrootBuild
+              xclockBuild xeyesBuild xpropBuild
               thunarBuild xfce4AppfinderBuild xfce4PanelBuild xfce4SessionBuild
               xfce4SettingsBuild xfce4TerminalBuild xfconfBuild xfdesktopBuild xfwm4Build xinitBuild
               xkbcommonBuild xkbcompBuild xkeyboardConfigBuild xlibBuild xlibLocaleBuild xmessageBuild
