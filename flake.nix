@@ -25,12 +25,21 @@
           # at it (requires --impure). Mirrors the SDK tarball's requireFile
           # pattern - never hardcode a personal machine path into this file.
           fbdoomExternalSrcEnv = builtins.getEnv "OPENOSX_FBDOOM_SOURCE_ENV";
+          # Unmodified third-party macOS binaries for compatibility testing
+          # (see docs/COMPAT_STATUS.md). Opt-in for the same reason as fbDOOM:
+          # they are somebody else's builds under their own licences, so they
+          # are not vendored here. Populate a directory with
+          # tools/compat/fetchbottles.py and point OPENOSX_COMPAT_CORPUS at it
+          # (requires --impure); the image stages it at /opt/compat-test.
+          compatCorpusEnv = builtins.getEnv "OPENOSX_COMPAT_CORPUS";
           # Component source trees (see nix/sources.nix).
           sources = import ./nix/sources.nix {
-            inherit pkgs sourceWith libSystemSourcePaths fbdoomExternalSrcEnv;
+            inherit pkgs sourceWith libSystemSourcePaths fbdoomExternalSrcEnv
+              compatCorpusEnv;
           };
           inherit (sources)
             fbdoomExternalSrc
+            compatCorpus
             chocolateDoomPatchedSrc
             kernelSource
             libSystemSource
@@ -3050,7 +3059,7 @@
           imageContents = import ./nix/image-contents.nix {
             inherit
               atspi2CoreBuild autoconfBuild automakeBuild bisonBuild bmakeBuild cairoBuild
-              cairoGobjectBuild cctoolsBuild coreFoundationBuild curlBuild darwinCrossToolchain
+              cairoGobjectBuild cctoolsBuild compatCorpus coreFoundationBuild curlBuild darwinCrossToolchain
               coreServicesBuild dbusBuild dilloBuild diskArbitrationBuild wineBuild dlsymTestBuild gsbaseTestBuild dmenuBuild exoBuild expatBuild fastfetchBuild
               libX11SharedBuild libxcbSharedBuild libXauSharedBuild libXdmcpSharedBuild
               libXextSharedBuild libXrenderSharedBuild libXfixesSharedBuild libXiSharedBuild

@@ -25,6 +25,9 @@
   #         prefers an Apple_HFS partition when deriving boot-uuid.
 , rootFsType ? "ext4"
 , testAudioFile ? null
+  # A directory of unmodified third-party macOS binaries, staged at
+  # /opt/compat-test. Opt-in via OPENOSX_COMPAT_CORPUS; see flake.nix.
+, compatCorpus ? null
 , imageFileName ? "openosx.img"
 , efiBinary ? "BOOTX64.EFI"
   # xnu-loader reads this off the ESP at \EFI\BOOT\boot-args.txt
@@ -592,6 +595,19 @@ EOF
 
     ${lib.optionalString (testAudioFile != null) ''
       cp ${testAudioFile} $staging/badapple.pcm
+    ''}
+
+    # Unmodified third-party macOS binaries, for the Tier 0 milestone in
+    # docs/COMPAT_STATUS.md. Running one exercises the platform gate, dylib
+    # resolution, two-level namespace binding, dyld startup and the syscall
+    # layer against a program that knows nothing about us - unlike every other
+    # binary in this image, which our own toolchain linked against our own
+    # libSystem and so could never have surprised us.
+    ${lib.optionalString (compatCorpus != null) ''
+      mkdir -p $staging/opt/compat-test
+      cp -rL ${compatCorpus}/. $staging/opt/compat-test/
+      chmod -R u+w $staging/opt/compat-test
+      find $staging/opt/compat-test -type f -perm -u+x -exec chmod 755 {} +
     ''}
 
     mkdir -p $staging/etc/ssl

@@ -3,7 +3,8 @@
 #
 # sourceWith filters the repo down to just the prefixes a component needs, so
 # editing an unrelated file does not invalidate its build.
-{ fbdoomExternalSrcEnv
+{ compatCorpusEnv ? ""
+, fbdoomExternalSrcEnv
 , libSystemSourcePaths
 , pkgs
 , sourceWith
@@ -13,6 +14,12 @@ let
   fbdoomExternalSrc =
     if fbdoomExternalSrcEnv == "" then null
     else builtins.path { path = /. + fbdoomExternalSrcEnv; name = "fbdoom-external-src"; };
+
+  # Third-party macOS binaries staged into the image for compat testing; see
+  # the OPENOSX_COMPAT_CORPUS comment in flake.nix.
+  compatCorpus =
+    if compatCorpusEnv == "" then null
+    else builtins.path { path = /. + compatCorpusEnv; name = "openosx-compat-corpus"; };
 
   chocolateDoomPatchedSrc = pkgs.runCommand "openosx-chocolate-doom-patched" { } ''
     mkdir -p $out
@@ -254,6 +261,7 @@ let
   };
 in {
   inherit
+    compatCorpus
     fbdoomExternalSrc
     chocolateDoomPatchedSrc
     kernelSource

@@ -9,6 +9,7 @@
 , cairoBuild
 , cairoGobjectBuild
 , cctoolsBuild
+, compatCorpus ? null
 , coreFoundationBuild
 , curlBuild
 , darwinCrossToolchain
@@ -633,6 +634,7 @@ let
         kc = kcBuild;
         xnuLoader = xnu-loader.packages.${system}.default;
         apfsprogs = pkgs.apfsprogs;
+        inherit compatCorpus;
         #testAudioFile = /home/vali/development/darwin/stillalive.pcm;
       };
       imageHfsBuild = pkgs.callPackage ../image.nix {
