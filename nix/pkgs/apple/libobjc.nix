@@ -43,6 +43,8 @@ let
     "objc-runtime-new" "objc-runtime-old" "objc-sel" "objc-sel-old"
     "objc-sel-set" "objc-sync" "objc-typeencoding" "objc-weak" "objc-zalloc"
     "Object" "Protocol"
+    # OpenOSX addition, not Apple source: opt-in diagnostic forward handler.
+    "pd_objc_forward"
   ];
   # x86_64 assembly.
   asmSrcs = if targetTriple == "arm64-apple-darwin20.4" then [
