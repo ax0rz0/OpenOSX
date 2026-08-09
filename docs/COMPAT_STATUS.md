@@ -125,7 +125,56 @@ for VLC) and the split changes character: some of it really is one function per
 symbol over working CF, and the rest is new subsystem work that happens to be
 spelled with a Foundation prefix.
 
-## Tier 0: every measured CLI binary now links
+## Tier 0: reached. Unmodified macOS binaries run on OpenOSX
+
+On 2026-08-09, three Homebrew x86_64 bottles executed on a booted OpenOSX
+image. Nothing about them was recompiled, relinked or patched; they are the
+exact Mach-O files Homebrew publishes, and unlike everything else in the image
+they were never built by this project's toolchain nor linked against this
+libSystem.
+
+```
+# /opt/compat-test/tree --version
+tree v2.1.1 (c) 1996 - 2023 by Steve Baker, Thomas Moore, Francesc Rocher, ...
+
+# /opt/compat-test/tree -L 1 /
+/
+|-- System
+|-- bin
+...
+16 directories, 1 file
+
+# /opt/compat-test/lz4 --version
+*** LZ4 command line interface 64-bits v1.9.4, by Yann Collet ***
+
+# /opt/compat-test/gzip --version
+gzip 1.13
+```
+
+`tree` did not merely start: it walked a real filesystem and printed it. The
+only dyld output on the console was `dyld: setting comm page to 0x800000000`,
+which is informational. No missing library, no unresolved symbol, no abort.
+
+That exercises, in order: the LC_BUILD_VERSION platform gate, dylib
+resolution, two-level namespace symbol binding, classic bind-opcode fixups,
+dyld startup, and the syscall layer - against a program that knows nothing
+about us.
+
+Reproduce with `tools/compat/fetchbottles.py` to populate a directory, then
+point `OPENOSX_COMPAT_CORPUS` at it and build `.#image-minimal --impure`.
+
+Two notes on how it was run, both of which cost time to learn:
+
+- **Use the TCG runner on an AMD host.** `.#kvm-runner` passes `-cpu host`,
+  which hands XNU an AuthenticAMD CPU; the kernel dies immediately after
+  handoff with the serial log stopping dead at `entry = 0x...`. `.#vm-runner`
+  passes `-cpu IvyBridge,vendor=GenuineIntel`, which is the masquerade XNU
+  needs. Any future KVM-on-AMD attempt also needs
+  `/sys/module/kvm/parameters/ignore_msrs` set to `Y`.
+- The minimal image has no `od`, and no networking (`en0 did not appear`).
+  Neither matters here, but both will confuse an unprepared test script.
+
+## What it took: every measured CLI binary links
 
 Eleven unmodified Homebrew x86_64 bottles, fetched with `fetchbottles.py` and
 diffed against `libSystem.exports`:
