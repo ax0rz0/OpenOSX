@@ -122,14 +122,27 @@ def _chained_detail(data, base, dataoff, datasize):
 
 
 def find_binary(path):
-    """Accept a bundle or a plain executable."""
+    """Accept a bundle or a plain executable.
+
+    Deliberately does not require the execute bit: a bundle pulled out of a
+    DMG with 7z (or any archive tool that drops HFS+ permissions) arrives
+    without one, and what makes a file the app binary is its Mach-O magic,
+    not its mode.
+    """
     if os.path.isdir(path) and path.rstrip('/').endswith('.app'):
         macos = os.path.join(path, 'Contents', 'MacOS')
         if os.path.isdir(macos):
             entries = [os.path.join(macos, e) for e in sorted(os.listdir(macos))]
-            files = [e for e in entries if os.path.isfile(e) and os.access(e, os.X_OK)]
-            if files:
-                return files[0]
+            magics = (b'\xcf\xfa\xed\xfe', b'\xca\xfe\xba\xbe')
+            for e in entries:
+                if not os.path.isfile(e):
+                    continue
+                try:
+                    with open(e, 'rb') as fh:
+                        if fh.read(4) in magics:
+                            return e
+                except OSError:
+                    continue
         raise SystemExit('no executable found in %s' % macos)
     return path
 

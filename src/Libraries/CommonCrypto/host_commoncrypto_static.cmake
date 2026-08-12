@@ -22,7 +22,13 @@ target_link_libraries(host_commoncrypto_static PRIVATE
 )
 
 target_sources(host_commoncrypto_static PRIVATE
-    libcn/pd_cc_digest_bridge.c
+    # pd_cc_digest_bridge.c is deliberately NOT here: it defines CC_MD5_Init/
+    # Update/Final/CC_MD5, and lib/CommonDigest.c below defines the same four
+    # via DIGEST_SHIMS(MD5), so compiling both into this archive is a
+    # duplicate-symbol failure the moment anything force-references CC_MD5.
+    # The bridge exists only for the ld64 self-host build, which compiles it
+    # directly by path (tools/cctools/ld64-selfhost/CMakeLists.txt) and does
+    # NOT compile CommonDigest.c, so it needs its own copy.
     libcn/adler32.c
     libcn/crc8.c
     libcn/crc8-icode.c

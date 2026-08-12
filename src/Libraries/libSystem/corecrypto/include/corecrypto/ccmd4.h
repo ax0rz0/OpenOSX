@@ -24,7 +24,14 @@
 
 #define CCMD4_BLOCK_SIZE   64
 #define CCMD4_OUTPUT_SIZE  16
-#define CCMD4_STATE_SIZE   88
+/*
+ * MD4's chaining state is four 32-bit words = 16 bytes, exactly like MD5
+ * (CCMD5_STATE_SIZE) and matching ccmd4_initial_state[4] in ccmd4.c. It was
+ * 88 here, which made ccdigest_init memcpy 88 bytes out of that 16-byte const
+ * array - a 72-byte over-read - and had to be corrected before CC_MD4 could be
+ * exported. See docs/COMPAT_STATUS.md.
+ */
+#define CCMD4_STATE_SIZE   16
 
 extern const uint32_t ccmd4_initial_state[4];
 
