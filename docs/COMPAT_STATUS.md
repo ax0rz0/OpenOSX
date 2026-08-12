@@ -69,11 +69,29 @@ in no `target_sources` list; `_fmodf` only wanted an export line; the last two
 are new code, because there is no prebuilt `libclang_rt.builtins` for this
 cross target.
 
-The six CommonCrypto digests are deliberately still open. `CC_MD5` is
-duplicately defined in `pd_cc_digest_bridge.c` within the same archive, so
-force-referencing it can fail the link, and `ccdigest_init` copies
-`di->state_size` (88) bytes out of the 16-byte `ccmd4_initial_state`, a
-72-byte over-read that wants fixing before MD4 is exported at all.
+The six CommonCrypto digests are now closed too, and closing them turned up two
+real bugs that a symbol count could never have caught. `CC_MD4`/`CC_MD5`
+Init/Update/Final are exported, and **The Powder Toy's libSystem dependency is
+fully satisfied** - the `libSystem` line has left its missing-by-library table
+entirely. Getting there:
+
+- `CCMD4_STATE_SIZE` was 88 against a 16-byte `ccmd4_initial_state[4]`, so
+  `ccdigest_init` over-read 72 bytes. Corrected to 16.
+- `CC_MD5` was defined twice in the guest `commoncrypto_static` archive (the
+  bridge and `CommonDigest.c`); the bridge is now dropped from the guest and
+  kept only for the ld64 self-host build.
+- **MD4 computed the wrong digest.** Its round-2 macro `G` was
+  `(x & z) | (y & ~z)` - MD5's G - instead of RFC 1320's majority function
+  `XY v XZ v YZ`. `F` and `H` are shared between the two, so only round 2 was
+  wrong, giving plausible-but-incorrect output. It survived because nothing in
+  the tree called MD4 until this import. Verified: MD4/MD5/SHA1 now match the
+  RFC 1320/1321 and FIPS 180 vectors through the real `ccdigest()` driver
+  before the symbols went on the export list.
+
+Powder Toy coverage is now **76.3%**, and everything left is framework work:
+AppKit 48, Security 42 (a TLS stack), CoreGraphics 38, then the Foundation and
+CoreFoundation ObjC classes and small CoreVideo/Metal/Carbon/IOKit tails. None
+of it is a libSystem function any more.
 
 The table below is the original measurement, kept as the baseline.
 
