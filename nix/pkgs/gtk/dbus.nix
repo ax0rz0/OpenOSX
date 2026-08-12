@@ -47,6 +47,15 @@ stdenv.mkDerivation {
       sed -i "/^    '$fn',\$/d" meson.build
     done
     sed -i "/^subdir('test')\$/d" meson.build
+
+    # Drop the setuid bit from the launch-helper chmod in the post-install
+    # script. WSL2's ext4 refuses to set setuid even as root, so this chmod
+    # aborts the whole meson install and takes the entire desktop image build
+    # down with it. The bit is not needed here: it is not meaningful in the nix
+    # store output, and in the OpenOSX guest everything runs as root, so a
+    # setuid-root helper is a no-op. Keep the executable bits.
+    sed -i 's/stat\.S_ISUID | stat\.S_IXUSR/stat.S_IXUSR/' meson_post_install.py
+
     patchShebangs .
   '';
 
