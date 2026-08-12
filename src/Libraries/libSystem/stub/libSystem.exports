@@ -1986,3 +1986,15 @@ _wcslcpy
 _wcsstr
 ___powidf2
 __availability_version_check
+#
+# CommonCrypto digests, the last of The Powder Toy's libSystem imports. Defined
+# by CommonDigest.c's DIGEST_SHIMS over corecrypto and verified against the RFC
+# 1320/1321 and FIPS 180 vectors before export - MD4 had two real bugs (an
+# 88-byte state over-read and MD5's round-2 function) that a symbol count would
+# never have caught.
+_CC_MD4_Init
+_CC_MD4_Update
+_CC_MD4_Final
+_CC_MD5_Init
+_CC_MD5_Update
+_CC_MD5_Final
