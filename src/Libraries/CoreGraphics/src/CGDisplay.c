@@ -22,6 +22,12 @@
 
 #define OPENOSX_MAIN_DISPLAY ((CGDirectDisplayID)1)
 
+/* Option key an app may pass to CGDisplayCopyAllDisplayModes to also list
+ * duplicate low-resolution (HiDPI-scaled) modes. We report one mode and ignore
+ * the option, but the symbol must exist for the binary to link. */
+const CFStringRef kCGDisplayShowDuplicateLowResolutionModes =
+    CFSTR("kCGDisplayShowDuplicateLowResolutionModes");
+
 /* Read the framebuffer geometry once and cache it. PDGOPOpen touches IOKit, so
  * it is not something to repeat on every CGDisplayBounds call. */
 static PDGOPFramebuffer g_fb;
