@@ -1963,14 +1963,21 @@ _yn
 _ynf
 #
 # Imported by unmodified third-party macOS binaries (see docs/COMPAT_STATUS.md).
-# All of these are already compiled into the link - openlibm is -force_load'ed
-# and fdatasync is a generated syscall stub - and were reaching the shipped
-# dylib only to be discarded by -dead_strip for want of an export line.
+# All of these are already compiled into the link - openlibm is -force_load'ed -
+# and were reaching the shipped dylib only to be discarded by -dead_strip for
+# want of an export line.
+#
+# _fdatasync is deliberately NOT exported. macOS has no fdatasync (it uses
+# fcntl F_FULLFSYNC), so the SDK's <unistd.h> never declares it. Exporting the
+# symbol made cross-compiled packages' meson has_function('fdatasync') link
+# check pass, so they took their Linux path and then failed to compile against
+# the SDK header with an implicit-declaration error (xfconf did exactly this).
+# Providing a Linux-ism macOS lacks does more harm than good; the one bottle
+# that imported it (gzip) is a Tier 0 test binary, not core.
 _lgamma_r
 _lgammaf_r
 _frexpl
 _timegm
-_fdatasync
 _scalb
 _fmodf
 #
