@@ -148,6 +148,7 @@
 , netsurfBuild
 , objcTestBuild
 , openglFrameworkBuild
+, coregraphicsBuild
 , opensshBuild
 , opensslBuild
 , pangoBuild
@@ -471,6 +472,7 @@ let
     diskArbitration = diskArbitrationBuild;
     iomediacheck = iomediacheckBuild;
     opengl-framework = openglFrameworkBuild;
+    coregraphics = coregraphicsBuild;
     i3 = i3Build;
     i3status = i3statusShimBuild;
     startup-notification = startupNotificationBuild;

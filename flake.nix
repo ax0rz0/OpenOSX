@@ -2656,6 +2656,19 @@
               libXdmcp = libXdmcpSharedBuild;
               src = ./src/Libraries/OpenGL;
             };
+          # CoreGraphics.framework: geometry, CGColor/CGColorSpace CFTypes over
+          # the shipped CoreFoundation, and CGDirectDisplay over PDGOP (whose
+          # source is compiled straight in). The keystone the GUI frameworks
+          # link against.
+          coregraphicsBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/coregraphics.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              corefoundation = coreFoundationBuild;
+              iokit = iokitBuild;
+              pdgopSrc = ./src/Libraries/PDGOP;
+              src = ./src/Libraries/CoreGraphics;
+            };
           # arm64 twins of the remaining image packages and their dependency
           # closure, generated from the x86 wiring: toolchain/triple/libSystem
           # come from mkArm64Build, and each package's own OpenOSX deps are
@@ -3098,7 +3111,7 @@
               libpngBuild libutf8procBuild libwapcapletBuild libwnckBuild libxfce4uiBuild
               libxfce4utilBuild libxfce4windowingBuild libxml2Build libzDylibBuild mesaBuild
               mesaDemosBuild migcomDarwinBuild mkPureDarwinBuild clangCrossBuild cmakeBuild kcToolsGuestBuild mesonBuild nanoBuild nativeLd ncursesBuild ninjaBuild
-              netsurfBuild objcTestBuild openglFrameworkBuild opensshBuild opensslBuild
+              netsurfBuild objcTestBuild openglFrameworkBuild coregraphicsBuild opensshBuild opensslBuild
               pangoBuild pcre2Build pdVirglShimBuild pkgconfBuild pkgs pythonBuild
               securityBuild splitBaseSystemArm64VirtMinimal splitBaseSystemArm64VirtMinimalRelease
               startupNotificationBuild system systemConfigurationBuild systemStarterBuild tccBuild
