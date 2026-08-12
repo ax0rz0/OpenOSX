@@ -77,7 +77,12 @@ typedef uint32_t UINT4;
   }
 
 #define F(x, y, z) (((x) & (y)) | ((~x) & (z)))
-#define G(x, y, z) (((x) & (z)) | ((y) & (~z)))
+/* RFC 1320 round 2 is the majority function XY v XZ v YZ. This previously read
+ * (x & z) | (y & ~z), which is MD5's G, not MD4's - so round 2 mixed wrong and
+ * every MD4 digest came out incorrect. It went unnoticed because nothing in
+ * the tree called MD4 until The Powder Toy's CC_MD4 import. F and H are
+ * identical between MD4 and MD5, which is why only round 2 was affected. */
+#define G(x, y, z) (((x) & (y)) | ((x) & (z)) | ((y) & (z)))
 #define H(x, y, z) ((x) ^ (y) ^ (z))
 #define I(x, y, z) ((y) ^ ((x) | (~z)))
 
