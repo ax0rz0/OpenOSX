@@ -90,10 +90,18 @@ static void *dl_loop(void *arg)
                 dl->callback((CVDisplayLinkRef)dl, &inNow, &inOutputTime,
                              0, NULL, dl->userInfo);
             next += OPENOSX_PERIOD_NS;
+            /* Drop missed frames instead of catching up. OpenOSX renders in
+             * software, so a callback (often the render itself) can overrun a
+             * 16.67 ms period; without this the loop would busy-fire back to
+             * back trying to catch up and never sleep. Real CVDisplayLink
+             * drops frames the same way. */
+            t = now_ns(dl);
+            if (next + OPENOSX_PERIOD_NS < t)
+                next = t;
         } else {
-            struct timespec sleep = { 0, (long)(next - t) };
-            if (sleep.tv_nsec > 2000000) sleep.tv_nsec = 2000000; /* cap 2ms slices */
-            nanosleep(&sleep, NULL);
+            uint64_t wait = next - t;
+            struct timespec sleep = { 0, (long)(wait > 2000000 ? 2000000 : wait) };
+            nanosleep(&sleep, NULL);   /* 2 ms slices so Stop() is responsive */
         }
     }
     return NULL;
