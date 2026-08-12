@@ -99,6 +99,17 @@ stdenv.mkDerivation {
     export CXXFLAGS="$CFLAGS"
     export LDFLAGS="-isysroot $DARWIN_SDK_ROOT -fuse-ld=${nativeLd}/bin/ld -nostdlib -L${libSystem}/usr/lib -L${openssl}/lib ${lib.concatMapStringsSep " " (dep: "-L${dep}/lib") xDeps} -Wl,-force_load,${libxcb}/lib/libxcb.a -Wl,-force_load,${libXau}/lib/libXau.a -Wl,-force_load,${libXdmcp}/lib/libXdmcp.a -lfreetype -lfontconfig -Wl,-force_load,${expat}/lib/libexpat.a -Wl,-force_load,${openssl}/lib/libssl.a -Wl,-force_load,${openssl}/lib/libcrypto.a -Wl,-dylib_file,/usr/lib/system/libdyld.dylib:${libSystem}/usr/lib/system/libdyld.dylib -Wl,-dylinker_install_name,/usr/lib/dyld -Wl,-platform_version,macos,11.0,11.5 -Wl,-undefined,dynamic_lookup -lSystem"
 
+    # fltk-config appends -lpthread to dillo's link, but OpenOSX folds pthread
+    # into libSystem and ships no standalone libpthread, so with -nostdlib ld
+    # errors "library not found for -lpthread". Provide a link-time stub that
+    # points at libSystem; the pthread symbols come from the -lSystem already on
+    # the line at runtime. Local to dillo, so it does not change libSystem's
+    # hash and rebuild the whole guest. (The faithful fix is a libpthread
+    # reexport stub in libSystem itself; do that on the next full rebuild.)
+    mkdir -p pthread-stub
+    ln -sf ${libSystem}/usr/lib/libSystem.B.dylib pthread-stub/libpthread.dylib
+    export LDFLAGS="-L$PWD/pthread-stub $LDFLAGS"
+
     ./configure \
       --host=${targetTriple} \
       --build=$(cc -dumpmachine) \
