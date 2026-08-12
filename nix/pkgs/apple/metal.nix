@@ -45,11 +45,16 @@ stdenv.mkDerivation {
     mkdir -p fheaders/Foundation
     cp ${foundation}/usr/include/Foundation/*.h fheaders/Foundation/ 2>/dev/null || true
 
+    # <CoreFoundation/...> that Foundation's headers pull in must resolve to our
+    # flattened CF include dir, not the SDK framework.
+    mkdir -p cf-headers
+    ln -s ${corefoundation}/include cf-headers/CoreFoundation
+
     ${cc} -isysroot "$DARWIN_SDK_ROOT" -dynamiclib \
       -x objective-c -fno-objc-arc -fobjc-runtime=macosx \
       -Ifheaders \
+      -Icf-headers \
       -I${foundation}/usr/include \
-      -I${corefoundation}/include \
       -I${libobjc}/usr/include \
       -I${libSystem}/usr/include \
       -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector \

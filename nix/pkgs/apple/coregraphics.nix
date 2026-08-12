@@ -43,14 +43,22 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
+    # Our CoreFoundation installs its headers (including the private CFRuntime.h)
+    # flattened into $out/include, with no CoreFoundation/ subdir. Stage a
+    # "CoreFoundation/" symlink so <CoreFoundation/CFRuntime.h> resolves to ours
+    # rather than the SDK's (which has no CFRuntime.h) - the same trick
+    # foundation.nix uses.
+    mkdir -p cf-headers
+    ln -s ${corefoundation}/include cf-headers/CoreFoundation
+
     # PDGOP is not a standalone package - it is a ~170-line IOKit framebuffer
     # client built inside the CMake tree - so compile its source straight into
     # CoreGraphics. It links against IOKit like ioreg/iomediacheck do.
     ${darwinCrossToolchain}/bin/${targetTriple}-clang \
       -isysroot "$DARWIN_SDK_ROOT" -dynamiclib \
+      -Icf-headers \
       -I${src}/include \
       -I${pdgopSrc}/include \
-      -I${corefoundation}/usr/include \
       -I${libSystem}/usr/include \
       -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector \
       -fuse-ld=${nativeLd}/bin/ld -nostdlib -Wl,-Z \

@@ -13,6 +13,7 @@
  * null/infinite rectangle special cases that trip up naive implementations.
  */
 #include <CoreGraphics/CGGeometry.h>
+#include <CoreGraphics/CGAffineTransform.h>   /* CGAffineTransform is not in CGGeometry.h */
 #include <math.h>
 
 const CGPoint CGPointZero = { 0.0, 0.0 };

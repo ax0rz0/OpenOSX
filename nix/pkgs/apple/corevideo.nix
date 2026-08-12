@@ -40,9 +40,14 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
+    # Our CoreFoundation ships CFRuntime.h flattened in $out/include; stage a
+    # CoreFoundation/ symlink so <CoreFoundation/CFRuntime.h> resolves to ours.
+    mkdir -p cf-headers
+    ln -s ${corefoundation}/include cf-headers/CoreFoundation
+
     ${darwinCrossToolchain}/bin/${targetTriple}-clang \
       -isysroot "$DARWIN_SDK_ROOT" -dynamiclib \
-      -I${corefoundation}/usr/include \
+      -Icf-headers \
       -I${libSystem}/usr/include \
       -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -fno-stack-protector \
       -fuse-ld=${nativeLd}/bin/ld -nostdlib -Wl,-Z \
