@@ -1,0 +1,14 @@
+# Exported symbols of OpenOSX CoreVideo.framework. CVReturn codes and CVTime
+# flags are SDK enum constants, not symbols, and are not listed.
+_CVDisplayLinkGetTypeID
+_CVDisplayLinkCreateWithActiveCGDisplays
+_CVDisplayLinkCreateWithCGDisplay
+_CVDisplayLinkSetOutputCallback
+_CVDisplayLinkStart
+_CVDisplayLinkStop
+_CVDisplayLinkGetNominalOutputVideoRefreshPeriod
+_CVDisplayLinkSetCurrentCGDisplay
+_CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext
+_CVDisplayLinkIsRunning
+_CVDisplayLinkRetain
+_CVDisplayLinkRelease

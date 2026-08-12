@@ -149,6 +149,8 @@
 , objcTestBuild
 , openglFrameworkBuild
 , coregraphicsBuild
+, corevideoBuild
+, metalBuild
 , opensshBuild
 , opensslBuild
 , pangoBuild
@@ -473,6 +475,8 @@ let
     iomediacheck = iomediacheckBuild;
     opengl-framework = openglFrameworkBuild;
     coregraphics = coregraphicsBuild;
+    corevideo = corevideoBuild;
+    metal = metalBuild;
     i3 = i3Build;
     i3status = i3statusShimBuild;
     startup-notification = startupNotificationBuild;
