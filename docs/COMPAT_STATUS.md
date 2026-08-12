@@ -247,6 +247,45 @@ into a build-time link error rather than a runtime failure. A Homebrew bottle
 would be the first program to arrive with expectations we did not get to
 negotiate.
 
+## Three frameworks brought up: CoreGraphics, CoreVideo, Metal
+
+The Powder Toy is now at **83.5%** symbol coverage (from 74.5%), because three
+frameworks it depends on now build and export what it imports. Measured against
+a complete 49-library inventory; each framework's line has left the
+missing-by-library table entirely.
+
+| Framework | install name | closes | how |
+|---|---|---|---|
+| CoreGraphics | `.../CoreGraphics.framework/.../CoreGraphics` | 38 | geometry math, CGColor/CGColorSpace CFTypes, CGDirectDisplay over PDGOP |
+| CoreVideo | `.../CoreVideo.framework/.../CoreVideo` | 7 | CVDisplayLink as a 60 Hz timer thread |
+| Metal | `.../Metal.framework/.../Metal` | 7 | nil-device probe stub + 5 empty descriptor classes |
+
+None are stubs where it counts. CoreGraphics reports the *real* framebuffer
+geometry through PDGOP (`CGDisplayBounds`, the display mode), its out-of-line
+geometry math passed 18/18 known-value checks before it shipped, and CGColor is
+a genuine CFType registered against the shipped CoreFoundation with the same
+`_CFRuntimeRegisterClass` skeleton `DiskArbitration/DADisk.c` uses. CoreVideo's
+display link fires a real `CVTimeStamp` from `mach_absolute_time` and drops
+frames rather than spiralling when a callback overruns a period - the correct
+behaviour precisely where OpenOSX is slow. Metal returns nil from
+`MTLCreateSystemDefaultDevice`, which is the documented "no Metal here" signal
+that makes SDL2 fall back to OpenGL.
+
+Building each one (not just writing it) caught a real SDK-header subtlety every
+time: CoreGraphics collided with the five static-inline shadows the SDK macro's
+to `__`-prefixed functions (`CGAffineTransformMake`, `CGPointApplyAffineTransform`,
+`CGSizeApplyAffineTransform`, `CGPointEqualToPoint`, `CGSizeEqualToSize` - the
+complete set, confirmed by grepping the extracted headers), and CoreVideo's
+`CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext` had to match the SDK's exact
+`CGLContextObj`/`CGLPixelFormatObj` signature.
+
+What remains for The Powder Toy to *link*: AppKit 48, Security 42, Foundation
+14, CoreFoundation 7, Carbon 5, IOKit 3, CoreServices 2. Linking is necessary
+but not sufficient - AppKit also has to *be* a window server (the Cocotron
+structural core in [AQUA_UI_PLAN.md](AQUA_UI_PLAN.md)), and Security's 42 are the
+Secure Transport TLS surface, a wrapper over the already-built OpenSSL that
+needs live-handshake testing before it can be trusted.
+
 ## The third axis, finally measured: what SDL2 asks of Cocoa
 
 `objcscan.py` reads ObjC class metadata and the `LC_DYLD_INFO` bind opcodes
