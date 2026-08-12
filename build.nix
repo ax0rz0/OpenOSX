@@ -299,6 +299,16 @@ EOF
     mkdir -p $out/usr/lib/system
     cp build-nix/src/Libraries/libSystem/stub/libSystem.B.dylib $out/usr/lib/
     cp -P build-nix/src/Libraries/libSystem/stub/libSystem.dylib $out/usr/lib/
+
+    # Reexport stubs for the libraries macOS folds into libSystem. OpenOSX (like
+    # Apple) builds pthread and libm into libSystem rather than as standalone
+    # dylibs, but plenty of software links -lpthread / -lm (dillo picks up
+    # -lpthread from fltk-config). Real macOS ships these as reexport stubs at
+    # /usr/lib, so a symlink to libSystem.B.dylib is the faithful equivalent:
+    # -lpthread resolves and the symbols come from libSystem at runtime.
+    ln -sf libSystem.B.dylib $out/usr/lib/libpthread.dylib
+    ln -sf libSystem.B.dylib $out/usr/lib/libm.dylib
+    ln -sf libSystem.B.dylib $out/usr/lib/libdl.dylib
     cp build-nix/src/Libraries/libSystem/libdyld/libdyld.dylib $out/usr/lib/system/
     if [ -e build-nix/src/Libraries/libSystem/libsystem_kernel/libsystem_kernel.a ]; then
       cp build-nix/src/Libraries/libSystem/libsystem_kernel/libsystem_kernel.a $out/usr/lib/system/
