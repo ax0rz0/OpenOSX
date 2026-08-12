@@ -193,17 +193,16 @@ CVReturn CVDisplayLinkSetCurrentCGDisplay(CVDisplayLinkRef ref, CGDirectDisplayI
 }
 
 /* SDL2 calls this to bind the link to whatever display a GL context is on. We
- * have one display, so it is a successful no-op beyond recording intent. */
+ * have one display, so it is a successful no-op beyond recording intent. The
+ * signature must match the SDK's declaration exactly (CGLContextObj /
+ * CGLPixelFormatObj), which CVDisplayLink.h brings into scope. */
 CVReturn CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext(CVDisplayLinkRef ref,
-                                                           void *glContext, void *pixelFormat)
+                                                           CGLContextObj glContext,
+                                                           CGLPixelFormatObj pixelFormat)
 {
     (void)glContext; (void)pixelFormat;
     return ref ? kCVReturnSuccess : kCVReturnError;
 }
-
-CVReturn CVDisplayLinkSetCurrentCGDisplayFromOpenGLContextInternal(CVDisplayLinkRef ref,
-                                                                   void *a, void *b)
-{ return CVDisplayLinkSetCurrentCGDisplayFromOpenGLContext(ref, a, b); }
 
 Boolean CVDisplayLinkIsRunning(CVDisplayLinkRef ref)
 {

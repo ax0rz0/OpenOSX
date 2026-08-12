@@ -16,6 +16,15 @@
 #include <CoreGraphics/CGAffineTransform.h>   /* CGAffineTransform is not in CGGeometry.h */
 #include <math.h>
 
+/* The SDK header provides static-inline shadows for exactly these three,
+ * macro'd to __-prefixed inline functions (CGAffineTransform.h:123/133/143).
+ * Undefine the macros so our out-of-line definitions below emit the real
+ * exported symbols instead of redefining the SDK's inlines. Every other
+ * function here is a plain CG_EXTERN in the header and needs no such undef. */
+#undef CGAffineTransformMake
+#undef CGPointApplyAffineTransform
+#undef CGSizeApplyAffineTransform
+
 const CGPoint CGPointZero = { 0.0, 0.0 };
 const CGSize  CGSizeZero  = { 0.0, 0.0 };
 const CGRect  CGRectZero  = { { 0.0, 0.0 }, { 0.0, 0.0 } };
