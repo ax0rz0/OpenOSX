@@ -2198,6 +2198,13 @@ __Unwind_GetTextRelBase
 _getprotobynumber
 _os_signpost_enabled
 ___os_signpost_emit_with_name_impl
+# The single-underscore C spellings are the ones binaries actually import:
+# os_signpost_event_emit() expands to a call to _os_signpost_emit_with_name_impl.
+# node 20 was the last symbol outstanding after the runtime sweep and the
+# double-underscore variant did not satisfy it.
+__os_signpost_emit_with_name_impl
+__os_signpost_emit_impl
+__os_signpost_emit_unreliably_impl
 # openlibm declares these __fenv_static inline (= static), so libSystem published
 # none; pd_libSystem_compat.c defines them with real external linkage.
 _fegetround

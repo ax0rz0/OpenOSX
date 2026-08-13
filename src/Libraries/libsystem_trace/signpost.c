@@ -59,6 +59,48 @@ void __os_signpost_emit_unreliably_impl(os_log_t log,
 {
 }
 
+/*
+ * Single-underscore spellings. These are the ones that actually appear in
+ * binaries: <os/signpost.h>'s os_signpost_event_emit() and friends expand to a
+ * call to _os_signpost_emit_with_name_impl, so a macOS build imports the Mach-O
+ * symbol __os_signpost_emit_with_name_impl - one underscore fewer than the
+ * double-underscore forms above, which nothing calls.
+ *
+ * node 20's macOS build is what surfaced this: it was the last symbol
+ * outstanding after the runtime sweep, and exporting the double-underscore
+ * variant did not satisfy it.
+ *
+ * Still no-ops, like the rest of this placeholder file - signposts are
+ * instrumentation, and doing nothing is a correct implementation of "no tracing
+ * subscriber". What matters is that the symbol resolves so the image loads.
+ */
+void _os_signpost_emit_with_name_impl(os_log_t log,
+    os_signpost_type_t type,
+    os_signpost_id_t spid,
+    const char *name,
+    const char *format,
+    ...)
+{
+}
+
+void _os_signpost_emit_impl(os_log_t log,
+    os_signpost_type_t type,
+    os_signpost_id_t spid,
+    const char *name,
+    const char *format,
+    ...)
+{
+}
+
+void _os_signpost_emit_unreliably_impl(os_log_t log,
+    os_signpost_type_t type,
+    os_signpost_id_t spid,
+    const char *name,
+    const char *format,
+    ...)
+{
+}
+
 bool os_signpost_enabled(os_log_t log)
 {
     return false;
