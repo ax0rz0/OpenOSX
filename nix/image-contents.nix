@@ -386,14 +386,7 @@ let
     xclock = xclockBuild;
     xcalc = xcalcBuild;
     xmessage = xmessageBuild;
-    # TEMPORARILY EXCLUDED: dillo/curl/git all fail to link with
-    # "ld: library not found for -lz" - their configure appends a trailing -lz
-    # that needs a Darwin libz.dylib, but only the nixpkgs zlib (.a/.so) is on
-    # their path. The fix is to put libzDylibBuild (OpenOSX's guest libz.dylib)
-    # on each one's -L path; done separately. Excluded here so the desktop image
-    # - whose whole XFCE core builds fine - can build and boot now. These are
-    # non-desktop extras (a browser and two CLI tools), not part of the session.
-    # dillo = dilloBuild;
+    dillo = dilloBuild;
     libz-dylib = libzDylibBuild;
     libcurl-dylib = libcurlDylibBuild;
     dbus = dbusBuild;
@@ -457,9 +450,9 @@ let
     toybox = toyboxBuild;
     file = fileBuild;
     openssl = opensslBuild;
-    # curl = curlBuild;   # TEMPORARILY EXCLUDED: -lz link failure (see note above)
+    curl = curlBuild;
     openssh = opensshBuild;
-    # git = gitBuild;   # TEMPORARILY EXCLUDED: -lz link failure (see note above)
+    git = gitBuild;
     migcomDarwin = migcomDarwinBuild;
     ioreg = ioregBuild;
     xkbcommon = xkbcommonBuild;

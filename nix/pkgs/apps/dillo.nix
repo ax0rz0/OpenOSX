@@ -29,6 +29,8 @@
 , freetype2
 , expat
 , xorgproto
+, libzDylib
+, libiconv
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
 
@@ -109,6 +111,12 @@ stdenv.mkDerivation {
     mkdir -p pthread-stub
     ln -sf ${libSystem}/usr/lib/libSystem.B.dylib pthread-stub/libpthread.dylib
     export LDFLAGS="-L$PWD/pthread-stub $LDFLAGS"
+
+    # dillo's Makefile also appends -lz and -liconv. Point them at the guest
+    # libz.dylib (install_name /usr/lib/libz.1.dylib) and libiconv, both of
+    # which the image already stages, so the link resolves and the runtime
+    # references match what is on the image.
+    export LDFLAGS="-L${libzDylib}/usr/lib -L${libiconv}/usr/lib $LDFLAGS"
 
     ./configure \
       --host=${targetTriple} \

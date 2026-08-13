@@ -2271,6 +2271,11 @@
               fontconfig = fontconfigBuild;
               freetype2 = freetype2Build;
               expat = expatBuild;
+              # dillo's Makefile appends -lz -liconv (fltk-config plus its own
+              # configure), so give it the guest libz.dylib and libiconv for
+              # those to resolve.
+              libzDylib = libzDylibBuild;
+              libiconv = libiconvBuild;
               inherit (pkgs) xorgproto;
             };
           ncursesBuild =
