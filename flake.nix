@@ -2872,6 +2872,7 @@
               inherit darwinCrossToolchain nativeLd;
               libSystem = libSystemBuild;
               corefoundation = coreFoundationBuild;
+              openssl = opensslBuild;
               src = "${securitySource}/src/Libraries/Security";
             };
           mkSystemConfigurationBuild = { corefoundation, libobjc, security }:

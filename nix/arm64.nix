@@ -442,6 +442,7 @@ let
   };
   securityArm64Build = mkArm64Build ./pkgs/apple/security.nix {
     corefoundation = coreFoundationArm64Build;
+    openssl = opensslArm64Build;
     src = "${securitySource}/src/Libraries/Security";
   };
   systemConfigurationArm64Build =

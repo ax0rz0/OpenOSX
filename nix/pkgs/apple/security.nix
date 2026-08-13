@@ -5,6 +5,7 @@
 , nativeLd
 , libSystem
 , corefoundation
+, openssl
 , src
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
@@ -35,15 +36,28 @@ stdenv.mkDerivation {
     tar xf ${sdkTarball} -C sdk
     export DARWIN_SDK_ROOT="$PWD/sdk/MacOSX11.3.sdk"
 
+    # CoreFoundation's headers are reached as <CoreFoundation/...>, so give the
+    # compiler a directory whose *child* is named CoreFoundation - the same
+    # symlink trick CoreGraphics/CoreVideo/Metal use.
+    mkdir -p cf-headers
+    ln -s ${corefoundation}/include cf-headers/CoreFoundation
+
+    # SecureTransport.c compiles against the SDK's own Security headers, so it
+    # uses Apple's enum names directly and static-asserts the values st_core.h
+    # transcribed by hand. st_core.c is the only file that sees OpenSSL.
     ${darwinCrossToolchain}/bin/${targetTriple}-clang \
       -isysroot "$DARWIN_SDK_ROOT" -dynamiclib \
-      -I${src}/include -I${corefoundation}/include \
+      -I${src}/include -I$PWD/cf-headers -I${openssl}/include \
       -fuse-ld=${nativeLd}/bin/ld -nostdlib \
       -L${libSystem}/usr/lib -L${corefoundation}/usr/lib \
       -Wl,-platform_version,macos,11.0,11.5 \
       -Wl,-install_name,${installName} \
+      -Wl,-force_load,${openssl}/lib/libssl.a \
+      -Wl,-force_load,${openssl}/lib/libcrypto.a \
       -lCoreFoundation -lSystem \
       ${src}/Security.c \
+      ${src}/securetransport/st_core.c \
+      ${src}/securetransport/SecureTransport.c \
       -o Security
 
     runHook postBuild
