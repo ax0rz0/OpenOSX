@@ -42,12 +42,32 @@ stdenv.mkDerivation {
     mkdir -p cf-headers
     ln -s ${corefoundation}/include cf-headers/CoreFoundation
 
-    # SecureTransport.c compiles against the SDK's own Security headers, so it
-    # uses Apple's enum names directly and static-asserts the values st_core.h
-    # transcribed by hand. st_core.c is the only file that sees OpenSSL.
-    ${darwinCrossToolchain}/bin/${targetTriple}-clang \
-      -isysroot "$DARWIN_SDK_ROOT" -dynamiclib \
-      -I${src}/include -I$PWD/cf-headers -I${openssl}/include \
+    CLANG="${darwinCrossToolchain}/bin/${targetTriple}-clang"
+
+    # Compiled separately, and the include paths are the reason. OpenOSX ships
+    # its own cut-down <Security/SecBase.h>, which has no SecCertificateRef or
+    # SecKeyRef in it. Putting -I${src}/include on SecureTransport.c's line lets
+    # that header win over the SDK's, and the SDK's own SecCertificate.h then
+    # fails to parse against it. So Security.c gets our headers, and the
+    # Secure Transport files see only the SDK's.
+    $CLANG -isysroot "$DARWIN_SDK_ROOT" -c \
+      -I${src}/include -I$PWD/cf-headers \
+      ${src}/Security.c -o Security.o
+
+    # st_core.c is the only file here that sees OpenSSL; it has no
+    # CoreFoundation and no Security headers at all, by design.
+    $CLANG -isysroot "$DARWIN_SDK_ROOT" -c \
+      -I${openssl}/include \
+      ${src}/securetransport/st_core.c -o st_core.o
+
+    # SecureTransport.c compiles against the SDK's Security headers, so it uses
+    # Apple's enum names directly and static-asserts the values st_core.h
+    # transcribed by hand.
+    $CLANG -isysroot "$DARWIN_SDK_ROOT" -c \
+      -I$PWD/cf-headers \
+      ${src}/securetransport/SecureTransport.c -o SecureTransport.o
+
+    $CLANG -isysroot "$DARWIN_SDK_ROOT" -dynamiclib \
       -fuse-ld=${nativeLd}/bin/ld -nostdlib \
       -L${libSystem}/usr/lib -L${corefoundation}/usr/lib \
       -Wl,-platform_version,macos,11.0,11.5 \
@@ -55,9 +75,7 @@ stdenv.mkDerivation {
       -Wl,-force_load,${openssl}/lib/libssl.a \
       -Wl,-force_load,${openssl}/lib/libcrypto.a \
       -lCoreFoundation -lSystem \
-      ${src}/Security.c \
-      ${src}/securetransport/st_core.c \
-      ${src}/securetransport/SecureTransport.c \
+      Security.o st_core.o SecureTransport.o \
       -o Security
 
     runHook postBuild
