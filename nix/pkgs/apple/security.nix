@@ -67,15 +67,24 @@ stdenv.mkDerivation {
       -I$PWD/cf-headers \
       ${src}/securetransport/SecureTransport.c -o SecureTransport.o
 
+    # -exported_symbols_list + -dead_strip. OpenSSL is linked in statically, and
+    # without the allow-list its 10,728 symbols - every X509_*, EVP_*, BIO_* and
+    # SSL_* - are exported from Security.framework. An app carrying its own
+    # OpenSSL could then bind to ours, and version-skewed crypto that silently
+    # half-works is a bad way to find that out. -dead_strip then drops the
+    # OpenSSL nothing reaches, which is most of it.
+    #
+    # No -force_load: the whole point is to pull in only what st_core.c uses.
     $CLANG -isysroot "$DARWIN_SDK_ROOT" -dynamiclib \
       -fuse-ld=${nativeLd}/bin/ld -nostdlib \
       -L${libSystem}/usr/lib -L${corefoundation}/usr/lib \
       -Wl,-platform_version,macos,11.0,11.5 \
       -Wl,-install_name,${installName} \
-      -Wl,-force_load,${openssl}/lib/libssl.a \
-      -Wl,-force_load,${openssl}/lib/libcrypto.a \
+      -Wl,-exported_symbols_list,${src}/Security.exports \
+      -Wl,-dead_strip \
       -lCoreFoundation -lSystem \
       Security.o st_core.o SecureTransport.o \
+      ${openssl}/lib/libssl.a ${openssl}/lib/libcrypto.a \
       -o Security
 
     runHook postBuild

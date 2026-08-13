@@ -1,0 +1,121 @@
+# Security.framework's export surface.
+#
+# Security links OpenSSL statically, which without this file leaks 10,728
+# symbols - every X509_*, EVP_*, BIO_* and SSL_* in libcrypto and libssl - out
+# of the framework. That is not cosmetic: an app that also carries its own
+# OpenSSL can bind to ours instead of its own, and version-skewed crypto that
+# silently half-works is a bad way to find out.
+#
+# It also gives tools/compat/coverage.py an allow-list to measure against, the
+# same way libSystem.exports does, so Security's coverage can be tracked without
+# a build.
+#
+# Anything not listed here is an implementation detail. Adding a symbol means
+# committing to it.
+
+# --- Secure Transport (TLS) -------------------------------------------------
+_SSLClose
+_SSLContextGetTypeID
+_SSLCopyPeerCertificates
+_SSLCopyPeerTrust
+_SSLCreateContext
+_SSLDisposeContext
+_SSLGetAllowsAnyRoot
+_SSLGetBufferedReadSize
+_SSLGetClientCertificateState
+_SSLGetConnection
+_SSLGetEnableCertVerify
+_SSLGetNegotiatedCipher
+_SSLGetNegotiatedProtocolVersion
+_SSLGetPeerDomainName
+_SSLGetPeerDomainNameLength
+_SSLGetPeerID
+_SSLGetProtocolVersionMax
+_SSLGetProtocolVersionMin
+_SSLGetSessionOption
+_SSLGetSessionState
+_SSLHandshake
+_SSLNewContext
+_SSLRead
+_SSLSetAllowsAnyRoot
+_SSLSetAllowsExpiredCerts
+_SSLSetAllowsExpiredRoots
+_SSLSetConnection
+_SSLSetEnableCertVerify
+_SSLSetIOFuncs
+_SSLSetPeerDomainName
+_SSLSetPeerID
+_SSLSetProtocolVersionMax
+_SSLSetProtocolVersionMin
+_SSLSetSessionOption
+_SSLSetTrustedRoots
+_SSLWrite
+
+# --- certificates, trust, policies ------------------------------------------
+_SecCertificateCopyData
+_SecCertificateCopySubjectSummary
+_SecCertificateCreateWithData
+_SecCertificateGetTypeID
+_SecPolicyCreateBasicX509
+_SecPolicyCreateSSL
+_SecPolicyGetTypeID
+_SecTrustCreateWithCertificates
+_SecTrustEvaluate
+_SecTrustEvaluateWithError
+_SecTrustGetCertificateAtIndex
+_SecTrustGetCertificateCount
+_SecTrustGetTrustResult
+_SecTrustGetTypeID
+_SecTrustSetAnchorCertificates
+_SecTrustSetAnchorCertificatesOnly
+_SecTrustSetPolicies
+_SecTrustSettingsCopyCertificates
+
+# --- randomness -------------------------------------------------------------
+_SecRandomCopyBytes
+_kSecRandomDefault
+
+# --- keychain / SecItem (honest-failure stubs, see Security.c) --------------
+_SecItemAdd
+_SecItemCopyMatching
+_SecItemDelete
+_SecItemExport
+_SecItemUpdate
+_SecKeychainAddGenericPassword
+_SecKeychainFindGenericPassword
+_SecKeychainGetUserInteractionAllowed
+_SecKeychainItemCopyAttributesAndData
+_SecKeychainItemDelete
+_SecKeychainItemFreeAttributesAndData
+_SecKeychainItemModifyAttributesAndData
+_SecKeychainSearchCopyNext
+_SecKeychainSearchCreateFromAttributes
+_SecKeychainSetUserInteractionAllowed
+_kSecAttrAccount
+_kSecAttrLabel
+_kSecAttrServer
+_kSecAttrService
+_kSecClass
+_kSecClassGenericPassword
+_kSecClassInternetPassword
+_kSecMatchLimit
+_kSecMatchLimitAll
+_kSecMatchLimitOne
+_kSecReturnAttributes
+_kSecReturnData
+_kSecValueData
+
+# --- code signing identity / entitlements ------------------------------------
+_SecTaskCopySigningIdentifier
+_SecTaskCopyValueForEntitlement
+_SecTaskCopyValuesForEntitlements
+_SecTaskCreateFromSelf
+_SecTaskCreateWithAuditToken
+_SecTaskGetTypeID
+
+# --- Authorization Services ---------------------------------------------------
+_AuthorizationCopyRights
+_AuthorizationCreate
+_AuthorizationCreateFromExternalForm
+_AuthorizationFree
+_AuthorizationMakeExternalForm
