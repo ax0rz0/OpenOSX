@@ -2005,3 +2005,17 @@ _CC_MD4_Final
 _CC_MD5_Init
 _CC_MD5_Update
 _CC_MD5_Final
+
+# --- already implemented in libSystem, previously just not published ---------
+# Found by measuring seven real macOS language runtimes (Homebrew's own builds
+# of python, openjdk, node, ruby, perl, lua, tcl-tk) against what this file
+# exports. Each of these is already defined in the dylib; without a line here it
+# is simply unreachable, so the cost of shipping them is one line each.
+_chflags
+_duplocale
+_fegetround
+_fesetround
+_fsetattrlist
+_getprotobyname
+_proc_listpids
+_unw_getcontext
