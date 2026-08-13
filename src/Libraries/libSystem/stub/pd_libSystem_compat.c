@@ -1050,6 +1050,37 @@ __udivti3(unsigned __int128 a, unsigned __int128 b)
 }
 
 /*
+ * __udivmodti4: quotient and remainder in one pass, same reason as __udivti3.
+ * compiler-rt's own __udivti3 is a thin wrapper over this, so doing the long
+ * division once and handing back both halves is strictly less work than the
+ * caller dividing and then multiplying back to recover the remainder.
+ *
+ * `rem` may be NULL - compiler-rt allows that, and callers that only want the
+ * quotient pass it. python's macOS build imports this.
+ */
+unsigned __int128
+__udivmodti4(unsigned __int128 a, unsigned __int128 b, unsigned __int128 *rem)
+{
+    unsigned __int128 quotient = 0;
+    unsigned __int128 remainder = 0;
+
+    if (b == 0) {
+        /* real compiler-rt traps here; we have nothing to trap into */
+        if (rem) *rem = 0;
+        return 0;
+    }
+    for (int i = 127; i >= 0; i--) {
+        remainder = (remainder << 1) | ((a >> i) & 1);
+        if (remainder >= b) {
+            remainder -= b;
+            quotient |= ((unsigned __int128)1 << i);
+        }
+    }
+    if (rem) *rem = remainder;
+    return quotient;
+}
+
+/*
  * __divti3: the signed counterpart, same reason. Divide the magnitudes with
  * __udivti3 and apply the sign, which is what compiler-rt does.
  */
