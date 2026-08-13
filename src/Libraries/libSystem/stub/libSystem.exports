@@ -2188,11 +2188,13 @@ __tlv_atexit
 ___udivmodti4
 
 # --- the tail of the runtime gap ---------------------------------------------
-_Unwind_Backtrace
-_Unwind_GetCFA
-_Unwind_GetDataRelBase
-_Unwind_GetIPInfo
-_Unwind_GetTextRelBase
+# Double underscore: the C function is _Unwind_Backtrace, so the Mach-O symbol
+# carries the usual extra leading underscore on top of that.
+__Unwind_Backtrace
+__Unwind_GetCFA
+__Unwind_GetDataRelBase
+__Unwind_GetIPInfo
+__Unwind_GetTextRelBase
 _getprotobynumber
 _os_signpost_enabled
 ___os_signpost_emit_with_name_impl
