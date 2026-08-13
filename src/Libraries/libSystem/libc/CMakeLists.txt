@@ -136,6 +136,12 @@ target_sources(libc_static PRIVATE
     gen/FreeBSD/utime.c         # git
     gen/pd_wait.c                # _wait forwarder (__weak_reference alias not emitted)
     compat-43/FreeBSD/killpg.c   # _killpg (zsh job control)
+    compat-43/FreeBSD/setpgrp.c  # _setpgrp (python)
+    compat-43/FreeBSD/setrgid.c  # _setrgid (perl, ruby)
+    compat-43/FreeBSD/setruid.c  # _setruid (perl, ruby)
+    gen/FreeBSD/ftok.c           # _ftok (perl SysV IPC)
+    gen/FreeBSD/lockf.c          # _lockf (python)
+    gen/FreeBSD/ctermid.c        # _ctermid / _ctermid_r (perl, python)
     gen/FreeBSD/nice.c           # _nice (zsh BGNICE backgrounded-job priority)
     gen/FreeBSD/popen.c          # popen/pclose
     gen/FreeBSD/pause.c          # _pause (init halt loop)
@@ -192,6 +198,7 @@ target_sources(libc_static PRIVATE
     stdio/FreeBSD/vswprintf.c    # _vswprintf_l (swprintf's engine)
     stdio/FreeBSD/swprintf.c     # _swprintf
     locale/FreeBSD/mbsrtowcs.c   # _mbsrtowcs
+    locale/FreeBSD/wcsftime.c    # _wcsftime / _wcsftime_l (openjdk, python)
     locale/FreeBSD/nextwctype.c  # _nextwctype (tr [:class:] iteration)
     stdlib/FreeBSD/merge.c       # _mergesort (tr)
     nls/FreeBSD/msgcat.c         # _catopen/_catgets/_catclose (uniq NLS)
@@ -260,6 +267,7 @@ target_sources(libc_static PRIVATE
     gen/clock_gettime.c          # _clock_gettime / _clock_settime
     gen/FreeBSD/sethostname.c    # _sethostname
     net/FreeBSD/inet_ntoa.c      # _inet_ntoa
+    net/FreeBSD/sockatmark.c     # _sockatmark (perl)
     net/inet_ntop.c              # _inet_ntop (inet_ntoa's formatter)
     net/inet_pton.c              # _inet_pton (libresolv res_init/dns.c server-address parsing)
     string/FreeBSD/wmemcmp.c     # _wmemcmp (TRE regexec wide compares)
@@ -287,6 +295,7 @@ target_sources(libc_static PRIVATE
     gen/FreeBSD/alarm.c          # _alarm
     gen/FreeBSD/fmtcheck.c       # _fmtcheck (file(1) locale-safe strerror formatting)
     secure/strcat_chk.c          # ___strcat_chk
+    secure/strncat_chk.c         # ___strncat_chk (openjdk, python)
     # POSIX regex: Apple's TRE engine (regcomp/regexec) + BSD regerror.
     regex/FreeBSD/regerror.c
     regex/TRE/lib/regcomp.c
@@ -380,6 +389,7 @@ target_sources(libc_static PRIVATE
     string/FreeBSD/strnstr.c     # _strnstr
     os/pd_assumes.c               # os_assumes/os_assert real-contract impl (see file comment: real os/assumes.c needs firehose/os_log private ABI logd doesn't back here)
     emulated/lchflags.c           # _lchflags (real launchctl.c)
+    emulated/lchmod.c             # _lchmod (python, ruby)
     emulated/flock.c              # _flock
     emulated/lutimes.c            # _lutimes (setattrlist-based, real Apple source)
     emulated/copyfile.c           # _copyfile/_fcopyfile + copyfile_state_* (see file comment for what is carried across)
@@ -587,6 +597,7 @@ target_sources(libc_internal_static PRIVATE
     gen/FreeBSD/closedir.c       # _closedir
     gen/FreeBSD/rewinddir.c      # _rewinddir$INODE64 / _rewinddir
     gen/FreeBSD/telldir.c        # telldir/seekdir support used by the above
+    gen/FreeBSD/seekdir.c        # _seekdir$INODE64 (node, perl, ruby)
     gen/FreeBSD/getcwd.c         # _getcwd / ___private_getcwd
     gen/FreeBSD/getpagesize.c    # _getpagesize (pulled by telldir)
     stdlib/FreeBSD/reallocf.c    # _reallocf (pulled by telldir/getcwd)
@@ -827,4 +838,5 @@ target_compile_options(libc_internal_static PRIVATE
 set_source_files_properties(
     gen/FreeBSD/opendir.c gen/FreeBSD/readdir.c
     gen/FreeBSD/closedir.c gen/FreeBSD/telldir.c gen/FreeBSD/rewinddir.c
+    gen/FreeBSD/seekdir.c
     PROPERTIES COMPILE_FLAGS "-include${CMAKE_CURRENT_SOURCE_DIR}/gen/__dirent.h")

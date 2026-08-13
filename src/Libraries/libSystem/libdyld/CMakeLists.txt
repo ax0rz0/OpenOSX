@@ -148,7 +148,17 @@ target_link_options(libdyld PRIVATE
     -Wl,-u,__NSGetExecutablePath
     # clang @available() helper: nothing inside libdyld calls it (only external
     # binaries do, via libSystem's reexport), so dead_strip would drop it.
-    -Wl,-u,___isPlatformVersionAtLeast)
+    -Wl,-u,___isPlatformVersionAtLeast
+    # Thread-local variable support, same story. threadLocalVariables.c says it
+    # outright: "linked images with TLV have references to this symbol, but it
+    # is never used at runtime". Nothing in the tree reaches _tlv_atexit either -
+    # its one caller, __cxa_thread_atexit, is itself unreachable because
+    # libcxxabi deliberately excludes cxa_thread_atexit.cpp. So both are
+    # dead-stripped without a root here, and then naming them in
+    # libSystem.exports fails the link rather than exporting anything.
+    # node, openjdk and ruby all carry thread-locals.
+    -Wl,-u,__tlv_bootstrap
+    -Wl,-u,__tlv_atexit)
 if(CMAKE_HOST_APPLE)
     set(_libdyld_apple_ld_stub_dir ${CMAKE_CURRENT_BINARY_DIR}/apple-ld-stubs)
     set(_libdyld_apple_ld_pthread_stub ${_libdyld_apple_ld_stub_dir}/libsystem_pthread.tbd)

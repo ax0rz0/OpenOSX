@@ -2165,3 +2165,23 @@ _sigwait$UNIX2003
 _tcdrain
 _waitid
 _wcsxfrm
+
+# --- newly compiled into libc, plus the two libdyld TLV roots ---------------
+# Each of these needed a source file added to a target_sources list (or, for the
+# __tlv_ pair, a -Wl,-u root in libdyld) before the export line could resolve.
+# The file was present in the tree the whole time and simply not built.
+_ftok
+_lockf
+_lchmod
+_setpgrp
+_setrgid
+_setruid
+_ctermid
+_ctermid_r
+_sockatmark
+___strncat_chk
+_wcsftime
+_wcsftime_l
+_seekdir$INODE64
+__tlv_bootstrap
+__tlv_atexit
