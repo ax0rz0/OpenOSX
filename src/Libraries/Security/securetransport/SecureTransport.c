@@ -29,6 +29,7 @@
 #include <CoreFoundation/CFRuntime.h>
 
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -431,7 +432,9 @@ OSStatus SecTrustGetTrustResult(SecTrustRef trust, SecTrustResultType *result)
     return errSecSuccess;
 }
 
-Boolean SecTrustEvaluateWithError(SecTrustRef trust, CFErrorRef *error)
+/* Returns C99 `bool`, not `Boolean` - the SDK differs from the rest of the
+ * framework here, and Boolean is unsigned char, so the two do not merge. */
+bool SecTrustEvaluateWithError(SecTrustRef trust, CFErrorRef *error)
 {
     SecTrustResultType res = kSecTrustResultInvalid;
     struct __SecTrust *t = (struct __SecTrust *)trust;
