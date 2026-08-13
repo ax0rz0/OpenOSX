@@ -108,6 +108,26 @@ Two further notes:
 - **Sun RPC and NIS are not worth doing.** Legacy python module dependencies,
   deprecated on macOS itself, reached by nothing real. Listed for completeness.
 
+## Putting them in an image
+
+The staging mechanism already exists — `OPENOSX_COMPAT_CORPUS` points at a
+directory and `image.nix` copies it to `/opt/compat-test` in the guest. So no
+code change is needed, only the corpus:
+
+```bash
+tools/compat/fetch-runtimes.sh                    # 292 MB: python, ruby, perl, lua, tcl-tk, node
+tools/compat/fetch-runtimes.sh --all              # + openjdk, 690 MB total
+OPENOSX_COMPAT_CORPUS=/root/mac-runtimes nix build .#image
+```
+
+Extracted sizes, measured: lua <1 MB, tcl-tk 42, python 66, node 68, perl 75,
+ruby 108, openjdk 333.
+
+The root partition is 4096 MB (`image.nix` `rootMB`) and the base system already
+occupies most of it, which is the only reason openjdk is opt-in — it is not a
+compatibility question, it is a third of a gigabyte. `--all` needs `rootMB`
+raised to match.
+
 ## Reproducing
 
 ```bash
