@@ -2019,3 +2019,28 @@ _fsetattrlist
 _getprotobyname
 _proc_listpids
 _unw_getcontext
+
+# --- CommonCrypto digests -----------------------------------------------------
+# SHA-224/256/384/512 were already implemented in CommonDigest.c and were being
+# dead-stripped for want of a line here; SHA-1 is newly added alongside them.
+# ruby's macOS build imports SHA-1, SHA-384 and SHA-512.
+_CC_SHA1_Init
+_CC_SHA1_Update
+_CC_SHA1_Final
+_CC_SHA1
+_CC_SHA224_Init
+_CC_SHA224_Update
+_CC_SHA224_Final
+_CC_SHA224
+_CC_SHA256_Init
+_CC_SHA256_Update
+_CC_SHA256_Final
+_CC_SHA256
+_CC_SHA384_Init
+_CC_SHA384_Update
+_CC_SHA384_Final
+_CC_SHA384
+_CC_SHA512_Init
+_CC_SHA512_Update
+_CC_SHA512_Final
+_CC_SHA512

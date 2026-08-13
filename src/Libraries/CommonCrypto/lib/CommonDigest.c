@@ -456,8 +456,91 @@ int CC_MD2_Final(unsigned char *md, CC_MD2_CTX *c)
  
  */
 
+/*
+ * SHA-1. The public CC_SHA1_CTX keeps OpenSSL's field names (h0..h4, Nl, Nh,
+ * data[16], num) for source compatibility, so as with SHA-256 the real layout
+ * is declared privately and the public one is cast to it. Only the size has to
+ * agree, and it does: 8 + 20 + 64 rounds to the public struct's 96 bytes.
+ *
+ * Added because ruby's macOS build imports CC_SHA1_{Init,Update,Final} and the
+ * file had every other digest but this one.
+ */
+typedef struct CC_SHA1state_x
+{
+    uint64_t count;
+    uint32_t hash[5];
+    uint32_t wbuf[16];
+} CC_SHA1_CTX_X;
+
+int
+CC_SHA1_Init(CC_SHA1_CTX *x)
+{
+    CC_SHA1_CTX_X *c = (CC_SHA1_CTX_X *) x;
+    const struct ccdigest_info *di = CCDigestGetDigestInfo(kCCDigestSHA1);
+    CC_DEBUG_LOG("Entering\n");
+    ASSERT(sizeof(CC_SHA1_CTX) >= sizeof(CC_SHA1_CTX_X));
+    ASSERT(di->state_size == CC_SHA1_DIGEST_LENGTH);
+    ASSERT(di->block_size == CC_SHA1_BLOCK_BYTES);
+    cc_clear(CC_SHA1_DIGEST_LENGTH, c->hash);
+    cc_clear(CC_SHA1_BLOCK_BYTES, c->wbuf);
+    c->count = 0;
+    memcpy(c->hash, di->initial_state, di->state_size);
+    return CC_COMPAT_DIGEST_RETURN;
+}
+
+int
+CC_SHA1_Update(CC_SHA1_CTX *x, const void *data, CC_LONG len)
+{
+    const struct ccdigest_info *di = CCDigestGetDigestInfo(kCCDigestSHA1);
+    CC_SHA1_CTX_X *c = (CC_SHA1_CTX_X *) x;
+    uint64_t totalLen = c->count;
+    size_t curlen = totalLen % di->block_size;
+    uint8_t *bufptr = (uint8_t *) c->wbuf;
+    struct ccdigest_state *state = (struct ccdigest_state *) c->hash;
+
+    CC_DEBUG_LOG("Entering\n");
+    if (!len || !data) return CC_COMPAT_DIGEST_RETURN;
+    c->count += len;
+
+    ccdigest_process(di, bufptr, state, curlen, len, data);
+
+    return CC_COMPAT_DIGEST_RETURN;
+}
+
+int
+CC_SHA1_Final(unsigned char *md, CC_SHA1_CTX *x)
+{
+    const struct ccdigest_info *di = CCDigestGetDigestInfo(kCCDigestSHA1);
+    CC_SHA1_CTX_X *c = (CC_SHA1_CTX_X *) x;
+    uint64_t totalLen = c->count;
+    size_t curlen = totalLen % di->block_size;
+    uint8_t *bufptr = (uint8_t *) c->wbuf;
+    struct ccdigest_state *state = (struct ccdigest_state *) c->hash;
+
+    CC_DEBUG_LOG("Entering\n");
+    if (!md) return CC_COMPAT_DIGEST_RETURN;
+
+    ccdigest_finalize(di, bufptr, state, curlen, totalLen);
+
+    for (int i = 0; i < 5; i++) CC_STORE32_BE(c->hash[i], md + (4 * i));
+
+    return CC_COMPAT_DIGEST_RETURN;
+}
+
+unsigned char *
+CC_SHA1(const void *data, CC_LONG len, unsigned char *md)
+{
+    CC_SHA1_CTX ctx;
+    CC_DEBUG_LOG("Entering\n");
+    if (!md) return NULL;
+    CC_SHA1_Init(&ctx);
+    CC_SHA1_Update(&ctx, data, len);
+    CC_SHA1_Final(md, &ctx);
+    return md;
+}
+
 typedef struct CC_SHA256state_x
-{   
+{
     uint64_t count;
     uint32_t hash[8];
     uint32_t wbuf[16];
