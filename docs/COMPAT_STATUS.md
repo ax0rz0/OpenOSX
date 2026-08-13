@@ -247,6 +247,41 @@ into a build-time link error rather than a runtime failure. A Homebrew bottle
 would be the first program to arrive with expectations we did not get to
 negotiate.
 
+## The desktop boots
+
+The full `.#image` builds and boots to a painted XFCE desktop: XNU 20.5.0 ->
+ext4 root -> launchd -> `pd-console-login` -> `startx` -> Xorg on the real
+1280x800 GOP framebuffer -> xfwm4, xfce4-panel and xfdesktop, with the Dawn
+wallpaper as the seeded backdrop. Under TCG it reaches the bare X server in
+about two minutes and finishes painting the desktop around four; the frames are
+stable from six minutes on. Reproduce with
+`tools/testing/boot-desktop-screenshot.sh`.
+
+Getting there took five distinct real failures, each found by building cleanly
+and reading the leaf error rather than the propagation:
+
+1. **Build parallelism.** `max-jobs = auto` with `cores = 0` is 12 jobs each
+   using all 12 cores - roughly 144 concurrent compilers. It exhausted the VM
+   and killed WSL twice, and those hard terminations corrupted the nix store.
+   Capped to `max-jobs = 6`, `cores = 2`.
+2. **dbus setuid.** `meson_post_install.py` chmods `S_ISUID` on
+   `dbus-daemon-launch-helper`; WSL2's ext4 refuses the setuid bit even as root,
+   so the chmod raised PermissionError and aborted the whole meson install,
+   taking all of XFCE with it. The bit is meaningless here (the guest runs as
+   root), so it is dropped in postPatch.
+3. **Store corruption.** glib's output and several source archives had been
+   truncated by the crashes. `nix-store --verify --check-contents --repair`
+   fixed most; glib needed `--repair-path` specifically, because a GC root held
+   it and `--delete --ignore-liveness` would not remove it.
+4. **`_fdatasync`.** Exporting it (for a Homebrew bottle) made cross-compiled
+   packages' `has_function('fdatasync')` link check pass, so xfconf took its
+   Linux path and then failed to compile against the Apple header, which never
+   declares it. macOS has no fdatasync; exporting a Linux-ism it lacks does more
+   harm than good, so it was removed.
+5. **`-lpthread` / `-lz` / `-liconv` in dillo.** OpenOSX folds pthread into
+   libSystem and ships no standalone libpthread, and dillo had no zlib or iconv
+   on its link path at all while its Makefile appended all three.
+
 ## Three frameworks brought up: CoreGraphics, CoreVideo, Metal
 
 The Powder Toy is now at **83.5%** symbol coverage (from 74.5%), because three
