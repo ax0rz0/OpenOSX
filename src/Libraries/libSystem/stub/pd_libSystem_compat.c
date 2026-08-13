@@ -1050,6 +1050,85 @@ __udivti3(unsigned __int128 a, unsigned __int128 b)
 }
 
 /*
+ * fegetround / fesetround.
+ *
+ * openlibm has these, but its header declares them `__fenv_static inline`,
+ * which resolves to `static` - so every translation unit gets its own private
+ * copy and libSystem publishes none. nm reports the name as defined, which is
+ * exactly the trap that made an earlier attempt to simply add them to
+ * libSystem.exports fail the whole link ("Undefined symbols ... referenced from
+ * -exported_symbol[s_list] command line option").
+ *
+ * So define them here with explicit external linkage. The asm labels are what
+ * let this coexist with the header's static inline without a redeclaration
+ * conflict: the C names are private, the emitted symbols are the real ones.
+ * openlibm's own callers keep binding to their local copies, which is fine -
+ * this is the same arithmetic.
+ *
+ * Standard x86-64 FreeBSD implementation: the rounding mode lives in bits
+ * 10-11 of the x87 control word, and in the SSE control word shifted left by 3.
+ * Both units must agree or float behaviour differs depending on which
+ * instruction selection the compiler happened to make.
+ *
+ * perl's macOS build imports both.
+ */
+#define OPENOSX_FE_ROUND_MASK   0x0C00
+#define OPENOSX_SSE_ROUND_SHIFT 3
+
+int __openosx_fegetround(void) __asm__("_fegetround");
+int __openosx_fegetround(void)
+{
+    unsigned short control;
+    __asm__ __volatile__("fnstcw %0" : "=m" (control));
+    return control & OPENOSX_FE_ROUND_MASK;
+}
+
+int __openosx_fesetround(int round) __asm__("_fesetround");
+int __openosx_fesetround(int round)
+{
+    unsigned short control;
+    unsigned int mxcsr;
+
+    if (round & ~OPENOSX_FE_ROUND_MASK)
+        return -1;
+
+    __asm__ __volatile__("fnstcw %0" : "=m" (control));
+    control &= (unsigned short)~OPENOSX_FE_ROUND_MASK;
+    control |= (unsigned short)round;
+    __asm__ __volatile__("fldcw %0" : : "m" (control));
+
+    __asm__ __volatile__("stmxcsr %0" : "=m" (mxcsr));
+    mxcsr &= ~(OPENOSX_FE_ROUND_MASK << OPENOSX_SSE_ROUND_SHIFT);
+    mxcsr |= ((unsigned int)round << OPENOSX_SSE_ROUND_SHIFT);
+    __asm__ __volatile__("ldmxcsr %0" : : "m" (mxcsr));
+
+    return 0;
+}
+
+/*
+ * sigwait.
+ *
+ * libpthread compiles against a signal.h whose declaration carries
+ * __DARWIN_ALIAS_C, so the only definition it emits is the UNIX2003
+ * conformance spelling - the linker says as much: "maybe you meant:
+ * ___sigwait, _sigwait$UNIX2003". Real macOS publishes both names, and
+ * python's macOS build imports the plain one, so forward it.
+ *
+ * Both names must be reached through asm labels: '$' is not valid in a C
+ * identifier, and declaring plain `sigwait` here would pick up the same
+ * __DARWIN_ALIAS_C label and define the symbol that already exists.
+ */
+struct __openosx_sigset_placeholder;
+extern int __openosx_sigwait_unix2003(const void *set, int *sig)
+    __asm__("_sigwait$UNIX2003");
+
+int __openosx_sigwait(const void *set, int *sig) __asm__("_sigwait");
+int __openosx_sigwait(const void *set, int *sig)
+{
+    return __openosx_sigwait_unix2003(set, sig);
+}
+
+/*
  * __udivmodti4: quotient and remainder in one pass, same reason as __udivti3.
  * compiler-rt's own __udivti3 is a thin wrapper over this, so doing the long
  * division once and handing back both halves is strictly less work than the

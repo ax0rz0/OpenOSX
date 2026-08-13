@@ -2157,11 +2157,11 @@ _posix_spawnattr_setpgroup
 _preadv
 _pwritev
 _renameat
-# sigwait: our libpthread compiles against a signal.h whose declaration carries
-# __DARWIN_ALIAS_C, so the only definition produced is the UNIX2003-conformance
-# spelling. Naming plain _sigwait here fails the link ('maybe you meant:
-# ___sigwait, _sigwait$UNIX2003'). Exporting what actually exists.
+# sigwait: libpthread only emits the UNIX2003-conformance spelling, because its
+# signal.h declaration carries __DARWIN_ALIAS_C. Real macOS publishes both, and
+# python imports the plain one, so pd_libSystem_compat.c forwards it.
 _sigwait$UNIX2003
+_sigwait
 _tcdrain
 _waitid
 _wcsxfrm
@@ -2186,3 +2186,17 @@ _seekdir$INODE64
 __tlv_bootstrap
 __tlv_atexit
 ___udivmodti4
+
+# --- the tail of the runtime gap ---------------------------------------------
+_Unwind_Backtrace
+_Unwind_GetCFA
+_Unwind_GetDataRelBase
+_Unwind_GetIPInfo
+_Unwind_GetTextRelBase
+_getprotobynumber
+_os_signpost_enabled
+___os_signpost_emit_with_name_impl
+# openlibm declares these __fenv_static inline (= static), so libSystem published
+# none; pd_libSystem_compat.c defines them with real external linkage.
+_fegetround
+_fesetround
