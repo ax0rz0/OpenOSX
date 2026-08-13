@@ -191,6 +191,30 @@ int32_t st_peer_trust_result(st_ctx *c);
  * it, and never surface it as the reason a connection was allowed. */
 const char *st_last_error_string(st_ctx *c);
 
+/* ------------------------------------------------------- trust, standalone --
+ *
+ * SecTrustEvaluate, without a session. This is the load-bearing part of the
+ * whole framework rather than an accessory: curl (and therefore every app in
+ * the Tier-1 corpus that links libcurl) drives Secure Transport with
+ * kSSLSessionOptionBreakOnServerAuth and then evaluates the chain itself
+ * through SecTrustSetAnchorCertificates + SecTrustEvaluate. Whatever this
+ * function decides *is* the security decision for those apps; SSLHandshake has
+ * already been told to stand aside.
+ *
+ * certs are DER, leaf first. anchors are DER trust roots. anchors_only=1 means
+ * exactly those anchors and nothing from the system store, which is what
+ * SecTrustSetAnchorCertificatesOnly(true) asks for. hostname may be NULL to
+ * skip the name check - callers that pass NULL are choosing not to check, and
+ * for a TLS client that is a bug.
+ *
+ * Returns ST_ERR_SUCCESS, or the specific ST_ERR_* describing the refusal.
+ */
+int32_t st_verify_chain(const uint8_t *const *certs,   const size_t *cert_lens,
+                        size_t ncerts,
+                        const uint8_t *const *anchors, const size_t *anchor_lens,
+                        size_t nanchors, int anchors_only,
+                        const char *hostname, const char *default_ca_file);
+
 #ifdef __cplusplus
 }
 #endif

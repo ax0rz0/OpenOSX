@@ -1009,3 +1009,90 @@ const char *st_last_error_string(st_ctx *c)
 {
     return (c && c->errbuf[0]) ? c->errbuf : "";
 }
+
+/* ------------------------------------------------------ trust, standalone -- */
+
+static X509 *st_d2i(const uint8_t *der, size_t len)
+{
+    const unsigned char *p = der;
+    if (!der || !len || len > (size_t)LONG_MAX) return NULL;
+    return d2i_X509(NULL, &p, (long)len);
+}
+
+int32_t st_verify_chain(const uint8_t *const *certs,   const size_t *cert_lens,
+                        size_t ncerts,
+                        const uint8_t *const *anchors, const size_t *anchor_lens,
+                        size_t nanchors, int anchors_only,
+                        const char *hostname, const char *default_ca_file)
+{
+    X509_STORE     *store = NULL;
+    X509_STORE_CTX *ctx   = NULL;
+    STACK_OF(X509) *untrusted = NULL;
+    X509           *leaf  = NULL;
+    int32_t         out   = ST_ERR_XCERT_CHAIN_INVALID;
+    size_t          i;
+    int             rc;
+
+    if (!certs || !cert_lens || !ncerts) return ST_ERR_PARAM;
+
+    leaf = st_d2i(certs[0], cert_lens[0]);
+    if (!leaf) { ERR_clear_error(); return ST_ERR_BAD_CERT; }
+
+    store = X509_STORE_new();
+    if (!store) { X509_free(leaf); return ST_ERR_ALLOCATE; }
+
+    /* anchors_only means exactly the caller's anchors. Quietly falling back to
+     * the system store when the caller asked for pinning would defeat the
+     * entire point of pinning. */
+    if (!anchors_only) {
+        const char *ca = default_ca_file ? default_ca_file : "/etc/ssl/cert.pem";
+        if (!X509_STORE_load_locations(store, ca, NULL))
+            ERR_clear_error();      /* anchors alone may still be enough */
+    }
+    for (i = 0; i < nanchors; i++) {
+        X509 *a = st_d2i(anchors[i], anchor_lens[i]);
+        if (!a) { ERR_clear_error(); continue; }
+        X509_STORE_add_cert(store, a);
+        X509_free(a);
+    }
+
+    untrusted = sk_X509_new_null();
+    if (!untrusted) { out = ST_ERR_ALLOCATE; goto done; }
+    for (i = 1; i < ncerts; i++) {
+        X509 *x = st_d2i(certs[i], cert_lens[i]);
+        if (!x) { ERR_clear_error(); continue; }
+        if (!sk_X509_push(untrusted, x)) X509_free(x);
+    }
+
+    ctx = X509_STORE_CTX_new();
+    if (!ctx) { out = ST_ERR_ALLOCATE; goto done; }
+    if (!X509_STORE_CTX_init(ctx, store, leaf, untrusted)) {
+        out = ST_ERR_INTERNAL; goto done;
+    }
+
+    if (hostname && *hostname) {
+        X509_VERIFY_PARAM *p = X509_STORE_CTX_get0_param(ctx);
+        X509_VERIFY_PARAM_set_hostflags(p, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+        if (!X509_VERIFY_PARAM_set1_host(p, hostname, strlen(hostname))) {
+            out = ST_ERR_INTERNAL; goto done;
+        }
+    }
+
+    rc = X509_verify_cert(ctx);
+    if (rc == 1) {
+        out = ST_ERR_SUCCESS;
+    } else {
+        out = st_map_x509_err(X509_STORE_CTX_get_error(ctx));
+        /* X509_verify_cert can fail without setting a specific error. Never let
+         * that collapse into success. */
+        if (out == ST_ERR_SUCCESS) out = ST_ERR_XCERT_CHAIN_INVALID;
+    }
+
+done:
+    if (ctx)   X509_STORE_CTX_free(ctx);
+    if (untrusted) sk_X509_pop_free(untrusted, X509_free);
+    if (store) X509_STORE_free(store);
+    if (leaf)  X509_free(leaf);
+    ERR_clear_error();
+    return out;
+}

@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -136,7 +137,9 @@ static int32_t cb_write(void *conn, const void *data, size_t *len)
     ssize_t n;
 
     while (put < want) {
-        n = send(fd, (const char *)data + put, want - put, 0);
+        /* MSG_NOSIGNAL: writing to a peer that has gone away must surface as
+         * EPIPE we can report, not a signal that kills the process. */
+        n = send(fd, (const char *)data + put, want - put, MSG_NOSIGNAL);
         if (n > 0) { put += (size_t)n; continue; }
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
             *len = put;
@@ -257,11 +260,108 @@ static const char *errname(int32_t e)
     }
 }
 
+/* ---------------------------------------------- standalone trust evaluation -
+ * This is what curl actually relies on: it puts Secure Transport in
+ * BreakOnServerAuth mode and then judges the chain itself through
+ * SecTrustEvaluate. So these cases decide whether a curl-linked app is
+ * protected, regardless of how well SSLHandshake behaves.
+ */
+static unsigned char *pem_to_der(const char *name, size_t *len)
+{
+    char  path[512];
+    BIO  *b;
+    X509 *x;
+    unsigned char *der = NULL;
+    int   n;
+
+    snprintf(path, sizeof path, "%s/%s", g_fixture_dir, name);
+    b = BIO_new_file(path, "r");
+    if (!b) { fprintf(stderr, "cannot open %s\n", path); exit(2); }
+    x = PEM_read_bio_X509(b, NULL, NULL, NULL);
+    BIO_free(b);
+    if (!x) { fprintf(stderr, "cannot parse %s\n", path); exit(2); }
+    n = i2d_X509(x, &der);
+    X509_free(x);
+    if (n <= 0) exit(2);
+    *len = (size_t)n;
+    return der;
+}
+
+static void test_trust(void)
+{
+    unsigned char *ca, *good, *expired, *self, *wrong;
+    size_t ca_n, good_n, exp_n, self_n, wrong_n;
+    const uint8_t *chain[1], *anchors[1];
+    size_t chain_n[1], anchor_n[1];
+    int32_t r;
+
+    ca      = pem_to_der("ca.pem",         &ca_n);
+    good    = pem_to_der("good.pem",       &good_n);
+    expired = pem_to_der("expired.pem",    &exp_n);
+    self    = pem_to_der("selfsigned.pem", &self_n);
+    wrong   = pem_to_der("wronghost.pem",  &wrong_n);
+
+    anchors[0] = ca;  anchor_n[0] = ca_n;
+
+#define TRUST(leaf, leaf_n, host, only)                                        \
+    (chain[0] = (leaf), chain_n[0] = (leaf_n),                                 \
+     st_verify_chain(chain, chain_n, 1, anchors, anchor_n, 1, (only), (host),  \
+                     NULL))
+
+    r = TRUST(good, good_n, "localhost", 1);
+    CHECK(r == ST_ERR_SUCCESS, "good chain rejected: %s", errname(r));
+    printf("    good vs our CA                -> %s\n", errname(r));
+
+    r = TRUST(expired, exp_n, "localhost", 1);
+    CHECK(r == ST_ERR_CERT_EXPIRED, "expected errSSLCertExpired, got %s",
+          errname(r));
+    printf("    expired vs our CA             -> %s\n", errname(r));
+
+    r = TRUST(self, self_n, "localhost", 1);
+    CHECK(r != ST_ERR_SUCCESS, "self-signed accepted against our CA");
+    printf("    self-signed vs our CA         -> %s\n", errname(r));
+
+    r = TRUST(wrong, wrong_n, "localhost", 1);
+    CHECK(r == ST_ERR_HOST_NAME_MISMATCH,
+          "expected errSSLHostNameMismatch, got %s", errname(r));
+    printf("    wrong hostname vs our CA      -> %s\n", errname(r));
+
+    /* Pinning: anchors_only must mean *only*. If a real chain that the system
+     * store would happily accept still passes here when we pinned to an
+     * unrelated anchor, pinning is decorative. */
+    {
+        const uint8_t *only_self[1]; size_t only_self_n[1];
+        only_self[0] = self; only_self_n[0] = self_n;
+        chain[0] = good; chain_n[0] = good_n;
+        r = st_verify_chain(chain, chain_n, 1, only_self, only_self_n, 1,
+                            1 /* anchors_only */, "localhost", NULL);
+        CHECK(r != ST_ERR_SUCCESS,
+              "pinned to an unrelated anchor but the chain still verified");
+        printf("    good pinned to WRONG anchor   -> %s\n", errname(r));
+    }
+
+    /* No hostname means no name check - correct, but only because the caller
+     * explicitly asked for that. Recorded so the behaviour is deliberate. */
+    r = TRUST(wrong, wrong_n, NULL, 1);
+    CHECK(r == ST_ERR_SUCCESS,
+          "chain valid but rejected when no hostname was requested: %s",
+          errname(r));
+    printf("    wrong hostname, no name check -> %s\n", errname(r));
+
+#undef TRUST
+    OPENSSL_free(ca); OPENSSL_free(good); OPENSSL_free(expired);
+    OPENSSL_free(self); OPENSSL_free(wrong);
+}
+
 int main(int argc, char **argv)
 {
     struct outcome o;
 
     if (argc > 1) g_fixture_dir = argv[1];
+    /* Unbuffered: if a case does crash, the output up to that point is what
+     * says which one, and block buffering throws exactly that away. */
+    setvbuf(stdout, NULL, _IONBF, 0);
+    signal(SIGPIPE, SIG_IGN);
     SSL_library_init();
     SSL_load_error_strings();
 
@@ -333,6 +433,10 @@ int main(int argc, char **argv)
           "expected success with verification off, got %s",
           errname(o.handshake));
     printf("    -> %s\n", errname(o.handshake));
+
+    /* --- SecTrustEvaluate's engine, standalone --------------------------- */
+    printf("\n  standalone chain verification (SecTrustEvaluate's engine)\n");
+    test_trust();
 
     printf("\n%d checks, %d failures\n", g_checks, g_failures);
     return g_failures ? 1 : 0;
