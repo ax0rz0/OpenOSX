@@ -2047,3 +2047,121 @@ _CC_SHA512_Init
 _CC_SHA512_Update
 _CC_SHA512_Final
 _CC_SHA512
+
+# =============================================================================
+# What seven real macOS language runtimes still wanted, and libSystem already
+# had. See docs/MACOS_RUNTIMES.md.
+#
+# Almost none of this is new code. Most are syscall stubs that
+# create-syscalls.pl already emits into syscalls.a with an explicit .globl, or
+# functions sitting in already-compiled objects with external linkage - they
+# were simply never published, and -dead_strip then removed them.
+#
+# Every entry here was checked for the fegetround trap: a symbol that nm reports
+# as defined but that has LOCAL linkage cannot be named in an export list, and
+# naming it fails the whole link.
+# =============================================================================
+# POSIX + SysV IPC (13)
+_msgctl
+_msgget
+_msgrcv
+_msgsnd
+_sem_close
+_sem_open
+_sem_post
+_sem_trywait
+_sem_unlink
+_sem_wait
+_semctl
+_semget
+_semop
+
+# ndbm + Sun RPC + NIS (9)
+_dbm_clearerr
+_dbm_close
+_dbm_delete
+_dbm_error
+_dbm_fetch
+_dbm_firstkey
+_dbm_nextkey
+_dbm_open
+_dbm_store
+
+# BSD netdb enumeration (14)
+_endhostent
+_endnetent
+_endprotoent
+_endservent
+_gethostent
+_getnetbyaddr
+_getnetbyname
+_getnetent
+_getprotoent
+_getservent
+_sethostent
+_setnetent
+_setprotoent
+_setservent
+
+# dyld introspection + legacy NS* loader API (16)
+_NSAddressOfSymbol
+_NSCreateObjectFileImageFromMemory
+_NSDestroyObjectFileImage
+_NSLibraryNameForModule
+_NSLinkEditError
+_NSLinkModule
+_NSLookupAndBindSymbol
+_NSLookupSymbolInImage
+_NSLookupSymbolInModule
+_NSModuleForSymbol
+_NSUnLinkModule
+__dyld_get_image_header
+__dyld_get_image_name
+__dyld_get_image_vmaddr_slide
+__dyld_image_count
+__dyld_shared_cache_contains_path
+
+# libunwind, thread-locals and compiler-rt (9)
+_fmaxl
+_logbl
+_modff
+_unw_get_proc_name
+_unw_get_reg
+_unw_init_local
+_unw_set_reg
+_unw_step
+
+# Mach VM, filesystem attributes and $INODE64 aliases (16)
+_clonefile
+_disconnectx
+_fgetattrlist
+_fts_close$INODE64
+_fts_open$INODE64
+_fts_read$INODE64
+_getsectdata
+_mach_make_memory_entry_64
+_mach_vm_remap
+_proc_regionfilename
+_task_swap_exception_ports
+_telldir$INODE64
+_vm_read
+_vm_region_recurse_64
+_voucher_mach_msg_set
+
+# assorted libc (16)
+_clock_getres
+_forkpty
+_getitimer
+_mkfifo
+_posix_spawnattr_setpgroup
+_preadv
+_pwritev
+_renameat
+# sigwait: our libpthread compiles against a signal.h whose declaration carries
+# __DARWIN_ALIAS_C, so the only definition produced is the UNIX2003-conformance
+# spelling. Naming plain _sigwait here fails the link ('maybe you meant:
+# ___sigwait, _sigwait$UNIX2003'). Exporting what actually exists.
+_sigwait$UNIX2003
+_tcdrain
+_waitid
+_wcsxfrm
