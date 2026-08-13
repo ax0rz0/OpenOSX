@@ -2011,10 +2011,13 @@ _CC_MD5_Final
 # of python, openjdk, node, ruby, perl, lua, tcl-tk) against what this file
 # exports. Each of these is already defined in the dylib; without a line here it
 # is simply unreachable, so the cost of shipping them is one line each.
+#
+# fegetround/fesetround looked like they belonged here and do not: openlibm
+# defines them as *local* symbols, so nm --defined-only sees them but an export
+# list cannot reach them, and naming them here fails the link outright. They are
+# genuinely missing work, not a free win.
 _chflags
 _duplocale
-_fegetround
-_fesetround
 _fsetattrlist
 _getprotobyname
 _proc_listpids

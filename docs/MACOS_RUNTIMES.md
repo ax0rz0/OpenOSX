@@ -51,8 +51,8 @@ This is where the real surface is, and it is all libSystem:
 
 ## The work list
 
-**135 distinct libSystem symbols**, of which **8 were already implemented** and
-merely unexported (now fixed in `libSystem.exports`). The remaining ~120 fall
+**135 distinct libSystem symbols**, of which **6 were already implemented** and
+merely unexported (now fixed in `libSystem.exports`). The remaining ~129 fall
 into a handful of coherent groups rather than a long tail:
 
 | group | count | notes |
@@ -75,6 +75,10 @@ Two observations worth keeping:
 - **The `$INODE64` group is aliasing, not implementation.** macOS renamed the
   64-bit-inode variants at the symbol level; we have `seekdir`, we just do not
   publish `seekdir$INODE64`.
+- **"Already defined" has to mean *globally* defined.** `fegetround` and
+  `fesetround` show up under `nm --defined-only` but openlibm defines them as
+  local symbols, so an export list cannot reach them and naming them fails the
+  link. Two of the eight apparent free wins were this.
 - **Sun RPC and NIS are the least worth doing.** They are legacy python module
   dependencies, deprecated on macOS itself, and nothing an actual script
   reaches. They are listed for completeness, not as a target.
