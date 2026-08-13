@@ -762,9 +762,114 @@ EOF
   </property>
 </channel>
 EOF
+      # Panel layout. Structure and the p= snap codes are taken from
+      # xfce4-panel's own etc/xdg/xfce4/panel/default.xml, not from memory:
+      # p=6 is the top edge, p=10 the bottom. Its defaults are also where the
+      # dark menu bar came from - dark-mode is true there.
+      #
+      # Three changes carry most of the impression:
+      #   - a LIGHT menu bar rather than a dark one
+      #   - no tasklist and no pager in it. A menu bar showing one button per
+      #     open window is the single most XFCE-looking thing on the screen.
+      #   - a taller dock, so the launchers read as a dock rather than a second
+      #     toolbar.
+      cat > $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfce4-panel" version="1.0">
+  <property name="configver" type="int" value="2"/>
+  <property name="panels" type="array">
+    <value type="int" value="1"/>
+    <value type="int" value="2"/>
+    <property name="dark-mode" type="bool" value="false"/>
+    <property name="panel-1" type="empty">
+      <property name="position" type="string" value="p=6;x=0;y=0"/>
+      <property name="length" type="uint" value="100"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="icon-size" type="uint" value="16"/>
+      <property name="size" type="uint" value="24"/>
+      <property name="background-style" type="uint" value="1"/>
+      <property name="background-rgba" type="array">
+        <value type="double" value="0.960784"/>
+        <value type="double" value="0.956863"/>
+        <value type="double" value="0.952941"/>
+        <value type="double" value="0.920000"/>
+      </property>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="1"/>
+        <value type="int" value="3"/>
+        <value type="int" value="6"/>
+        <value type="int" value="8"/>
+      </property>
+    </property>
+    <property name="panel-2" type="empty">
+      <property name="autohide-behavior" type="uint" value="1"/>
+      <property name="position" type="string" value="p=10;x=0;y=0"/>
+      <property name="length" type="uint" value="1"/>
+      <property name="position-locked" type="bool" value="true"/>
+      <property name="size" type="uint" value="56"/>
+      <property name="icon-size" type="uint" value="40"/>
+      <property name="background-style" type="uint" value="1"/>
+      <property name="background-rgba" type="array">
+        <value type="double" value="0.960784"/>
+        <value type="double" value="0.956863"/>
+        <value type="double" value="0.952941"/>
+        <value type="double" value="0.780000"/>
+      </property>
+      <property name="plugin-ids" type="array">
+        <value type="int" value="13"/>
+        <value type="int" value="14"/>
+        <value type="int" value="15"/>
+        <value type="int" value="16"/>
+        <value type="int" value="17"/>
+        <value type="int" value="18"/>
+      </property>
+    </property>
+  </property>
+  <property name="plugins" type="empty">
+    <property name="plugin-1" type="string" value="applicationsmenu">
+      <property name="show-button-title" type="bool" value="true"/>
+      <property name="button-title" type="string" value="OpenOSX"/>
+    </property>
+    <property name="plugin-3" type="string" value="separator">
+      <property name="expand" type="bool" value="true"/>
+      <property name="style" type="uint" value="0"/>
+    </property>
+    <property name="plugin-6" type="string" value="systray">
+      <property name="square-icons" type="bool" value="true"/>
+    </property>
+    <property name="plugin-8" type="string" value="clock">
+      <property name="mode" type="uint" value="2"/>
+      <property name="digital-time-format" type="string" value="%a %e %b  %l:%M %p"/>
+    </property>
+    <property name="plugin-13" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="xfce4-file-manager.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-14" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="xfce4-terminal-emulator.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-15" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="xfce4-web-browser.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-16" type="string" value="launcher">
+      <property name="items" type="array">
+        <value type="string" value="xfce4-appfinder.desktop"/>
+      </property>
+    </property>
+    <property name="plugin-17" type="string" value="separator"/>
+    <property name="plugin-18" type="string" value="showdesktop"/>
+  </property>
+</channel>
+EOF
       chmod 644 \
         $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml \
-        $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
+        $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml \
+        $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-panel.xml
     ''}
 
     # Unmodified third-party macOS binaries, for the Tier 0 milestone in
