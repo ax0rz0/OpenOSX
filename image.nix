@@ -28,6 +28,8 @@
   # A directory of unmodified third-party macOS binaries, staged at
   # /opt/compat-test. Opt-in via OPENOSX_COMPAT_CORPUS; see flake.nix.
 , compatCorpus ? null
+  # share/themes/OpenOSX-Aqua - xfwm4 decorations plus the GTK 3 theme.
+, aquaTheme ? null
 , imageFileName ? "openosx.img"
 , efiBinary ? "BOOTX64.EFI"
   # xnu-loader reads this off the ESP at \EFI\BOOT\boot-args.txt
@@ -691,6 +693,73 @@ EOF
 </channel>
 EOF
     chmod 644 $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfce4-desktop.xml
+
+    # The Aqua theme, plus the xfconf defaults that select it. Both halves have
+    # to be named, and named the same: xfwm4's `theme` styles the titlebar while
+    # xsettings' `Net/ThemeName` styles everything below it, and setting only one
+    # gives you a window that looks like two operating systems glued together.
+    ${lib.optionalString (aquaTheme != null) ''
+      mkdir -p $staging/usr/share/themes
+      cp -rL ${aquaTheme}/share/themes/. $staging/usr/share/themes/
+      chmod -R u+w $staging/usr/share/themes
+      find $staging/usr/share/themes -type f -exec chmod 644 {} +
+      find $staging/usr/share/themes -type d -exec chmod 755 {} +
+
+      cat > $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xfwm4" version="1.0">
+  <property name="general" type="empty">
+    <property name="theme" type="string" value="OpenOSX-Aqua"/>
+    <!-- Buttons left, title centred. themerc sets this too, but xfconf wins
+         over the theme file, so an unset key here would quietly restore
+         xfwm4's own right-hand layout. -->
+    <property name="button_layout" type="string" value="OHM|"/>
+    <property name="title_alignment" type="string" value="center"/>
+    <property name="title_font" type="string" value="Sans Bold 9"/>
+    <property name="click_to_focus" type="bool" value="true"/>
+    <property name="focus_new" type="bool" value="true"/>
+    <property name="snap_to_border" type="bool" value="true"/>
+    <property name="snap_to_windows" type="bool" value="true"/>
+    <property name="box_move" type="bool" value="false"/>
+    <property name="box_resize" type="bool" value="false"/>
+    <!-- Software rendering only in a VM, so compositing costs more than the
+         shadows are worth. -->
+    <property name="use_compositing" type="bool" value="false"/>
+    <property name="workspace_count" type="int" value="2"/>
+  </property>
+</channel>
+EOF
+
+      cat > $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<channel name="xsettings" version="1.0">
+  <property name="Net" type="empty">
+    <property name="ThemeName" type="string" value="OpenOSX-Aqua"/>
+    <property name="IconThemeName" type="string" value="Adwaita"/>
+    <property name="DoubleClickTime" type="int" value="400"/>
+    <property name="CursorBlink" type="bool" value="true"/>
+  </property>
+  <property name="Gtk" type="empty">
+    <!-- No icons in menus or on buttons: that is a large part of why a GTK
+         app reads as Linux at a glance. -->
+    <property name="ButtonImages" type="bool" value="false"/>
+    <property name="MenuImages" type="bool" value="false"/>
+    <property name="FontName" type="string" value="Sans 9"/>
+    <property name="MonospaceFontName" type="string" value="Monospace 9"/>
+    <property name="DecorationLayout" type="string" value="close,minimize,maximize:"/>
+  </property>
+  <property name="Xft" type="empty">
+    <property name="Antialias" type="int" value="1"/>
+    <property name="Hinting" type="int" value="1"/>
+    <property name="HintStyle" type="string" value="hintslight"/>
+    <property name="RGBA" type="string" value="rgb"/>
+  </property>
+</channel>
+EOF
+      chmod 644 \
+        $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xfwm4.xml \
+        $staging/etc/xdg/xfce4/xfconf/xfce-perchannel-xml/xsettings.xml
+    ''}
 
     # Unmodified third-party macOS binaries, for the Tier 0 milestone in
     # docs/COMPAT_STATUS.md. Running one exercises the platform gate, dylib

@@ -1,0 +1,263 @@
+/*
+ * OpenOSX Aqua - GTK 3 theme.
+ *
+ * Written as a small override layer on top of Adwaita rather than as a
+ * from-scratch theme. A complete GTK theme is several thousand lines and breaks
+ * on every widget the author forgot; this changes the ~30 things that actually
+ * carry the impression - colours, corner radius, control height, the sidebar,
+ * selection blue - and lets Adwaita handle the long tail correctly.
+ *
+ * Everything is stated in terms of @define-color where GTK allows it, so the
+ * palette can be adjusted in one place.
+ */
+
+@import url("resource:///org/gtk/libgtk/theme/Adwaita/gtk-contained.css");
+
+/* ------------------------------------------------------------- palette --- */
+@define-color aqua_accent          #0a6fd8;   /* selection / focus blue */
+@define-color aqua_accent_text     #ffffff;
+@define-color aqua_bg              #ececec;   /* window chrome */
+@define-color aqua_bg_alt          #f6f6f6;   /* content areas */
+@define-color aqua_sidebar         #e8e6e4;   /* translucent-looking sidebar */
+@define-color aqua_text            #1d1d1f;
+@define-color aqua_text_dim        #86868b;
+@define-color aqua_line            #d4d1ce;   /* hairline separators */
+@define-color aqua_control         #ffffff;
+@define-color aqua_control_border  #c6c3c0;
+
+@define-color theme_bg_color       @aqua_bg;
+@define-color theme_base_color     @aqua_bg_alt;
+@define-color theme_fg_color       @aqua_text;
+@define-color theme_text_color     @aqua_text;
+@define-color theme_selected_bg_color @aqua_accent;
+@define-color theme_selected_fg_color @aqua_accent_text;
+@define-color borders              @aqua_line;
+@define-color insensitive_fg_color @aqua_text_dim;
+
+* {
+    /* Kill Adwaita's focus dashes; the accent ring below replaces them. */
+    outline-style: none;
+    -gtk-outline-radius: 6px;
+}
+
+/* --------------------------------------------------------------- text ---- */
+window, .background {
+    background-color: @aqua_bg;
+    color: @aqua_text;
+}
+
+/* ------------------------------------------------------------ headerbar -- */
+headerbar, .titlebar {
+    background-image: linear-gradient(to bottom, #f6f5f4, #e4e2e0);
+    border-bottom: 1px solid @aqua_line;
+    box-shadow: none;
+    min-height: 28px;
+    padding: 0 6px;
+}
+headerbar .title {
+    font-weight: 700;
+    font-size: 0.95em;
+    color: @aqua_text;
+}
+headerbar:backdrop, .titlebar:backdrop {
+    background-image: linear-gradient(to bottom, #f2f2f1, #ecebea);
+    color: @aqua_text_dim;
+}
+
+/* ------------------------------------------------------------- controls -- */
+button {
+    /* Short, rounded and white, with a hairline rather than a bevel. This is
+     * the single biggest tell: GTK's default button is taller and greyer. */
+    min-height: 22px;
+    padding: 2px 12px;
+    border-radius: 6px;
+    border: 1px solid @aqua_control_border;
+    background-image: linear-gradient(to bottom, #ffffff, #f4f3f2);
+    color: @aqua_text;
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.05);
+    text-shadow: none;
+}
+button:hover {
+    background-image: linear-gradient(to bottom, #ffffff, #ececec);
+}
+button:active, button:checked {
+    background-image: linear-gradient(to bottom, #d8d6d4, #cfcdcb);
+    box-shadow: none;
+}
+button:disabled {
+    background-image: none;
+    background-color: #f2f1f0;
+    color: @aqua_text_dim;
+}
+button.suggested-action {
+    background-image: linear-gradient(to bottom, #3d8ee4, @aqua_accent);
+    border-color: #0a5fb4;
+    color: #ffffff;
+}
+
+entry, spinbutton {
+    min-height: 22px;
+    border-radius: 6px;
+    border: 1px solid @aqua_control_border;
+    background-color: @aqua_control;
+    padding: 2px 8px;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+entry:focus, spinbutton:focus {
+    border-color: @aqua_accent;
+    box-shadow: 0 0 0 3px alpha(@aqua_accent, 0.25);
+}
+
+checkbutton check, radiobutton radio {
+    min-width: 14px;
+    min-height: 14px;
+    border-radius: 4px;
+    border: 1px solid @aqua_control_border;
+    background-image: linear-gradient(to bottom, #ffffff, #f2f1f0);
+}
+radiobutton radio { border-radius: 100%; }
+checkbutton check:checked, radiobutton radio:checked {
+    background-image: linear-gradient(to bottom, #3d8ee4, @aqua_accent);
+    border-color: #0a5fb4;
+}
+
+/* Pill switches rather than GTK's rectangle. */
+switch {
+    border-radius: 100px;
+    min-width: 40px;
+    min-height: 22px;
+    background-color: #d8d6d4;
+    border: 1px solid @aqua_control_border;
+}
+switch:checked {
+    background-color: #34c759;
+    border-color: #28a745;
+}
+switch slider {
+    border-radius: 100px;
+    min-width: 18px;
+    min-height: 18px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* --------------------------------------------------------------- lists --- */
+.sidebar, placessidebar, stacksidebar list {
+    background-color: @aqua_sidebar;
+    border-right: 1px solid @aqua_line;
+}
+.sidebar row, placessidebar row {
+    border-radius: 6px;
+    margin: 1px 6px;
+    min-height: 26px;
+}
+.sidebar row:selected, placessidebar row:selected {
+    background-color: alpha(@aqua_accent, 0.90);
+    color: #ffffff;
+}
+list row:selected, treeview:selected, iconview:selected,
+flowbox flowboxchild:selected {
+    background-color: @aqua_accent;
+    color: @aqua_accent_text;
+}
+treeview.view {
+    background-color: @aqua_bg_alt;
+}
+treeview.view:selected:backdrop {
+    background-color: #d4d1ce;
+    color: @aqua_text;
+}
+
+/* --------------------------------------------------------------- menus --- */
+menubar, .menubar {
+    background-color: transparent;
+    color: @aqua_text;
+    box-shadow: none;
+    border: none;
+}
+menubar > menuitem {
+    padding: 2px 10px;
+    border-radius: 5px;
+}
+menubar > menuitem:hover {
+    background-color: @aqua_accent;
+    color: #ffffff;
+    box-shadow: none;
+}
+menu, .menu, popover.background {
+    background-color: #f7f6f5;
+    border: 1px solid @aqua_line;
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
+}
+menu menuitem, popover.background modelbutton {
+    border-radius: 5px;
+    min-height: 22px;
+    padding: 2px 8px;
+}
+menu menuitem:hover, popover.background modelbutton:hover {
+    background-color: @aqua_accent;
+    color: #ffffff;
+}
+separator { background-color: @aqua_line; min-height: 1px; min-width: 1px; }
+
+/* ------------------------------------------------------------ notebooks -- */
+notebook > header {
+    background-color: @aqua_bg;
+    border-color: @aqua_line;
+}
+notebook > header > tabs > tab {
+    min-height: 24px;
+    padding: 2px 14px;
+    border-radius: 6px 6px 0 0;
+    color: @aqua_text_dim;
+}
+notebook > header > tabs > tab:checked {
+    background-image: linear-gradient(to bottom, #ffffff, #f2f1f0);
+    color: @aqua_text;
+}
+
+/* ------------------------------------------------------------ scrollbar -- */
+scrollbar {
+    background-color: transparent;
+    border: none;
+}
+scrollbar slider {
+    /* Thin, dark, inset, and rounded - and no stepper buttons at all. */
+    min-width: 8px;
+    min-height: 8px;
+    border-radius: 100px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    background-color: rgba(0, 0, 0, 0.28);
+}
+scrollbar slider:hover { background-color: rgba(0, 0, 0, 0.45); }
+scrollbar button { min-width: 0; min-height: 0; -gtk-icon-source: none; }
+
+/* ------------------------------------------------------------- toolbars -- */
+toolbar, .toolbar {
+    background-image: linear-gradient(to bottom, #f6f5f4, #ebe9e7);
+    border-bottom: 1px solid @aqua_line;
+    padding: 3px;
+}
+
+tooltip.background {
+    background-color: rgba(38, 38, 40, 0.94);
+    color: #ffffff;
+    border-radius: 6px;
+    border: none;
+}
+
+progressbar progress, scale highlight {
+    background-image: linear-gradient(to bottom, #3d8ee4, @aqua_accent);
+    border-radius: 100px;
+}
+scale slider {
+    background-image: linear-gradient(to bottom, #ffffff, #f0efee);
+    border: 1px solid @aqua_control_border;
+    border-radius: 100%;
+    min-width: 16px;
+    min-height: 16px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}

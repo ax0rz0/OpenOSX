@@ -638,12 +638,19 @@ let
       };
       imageExtraPackages = lib.attrValues imageExtraPackageSet
         ++ lib.optional (fbdoomExternalSrc != null) fbdoomBuild;
+      # Host-side: the theme is data files and generated PNGs, so it is built
+      # with the build machine's python rather than cross-compiled.
+      aquaThemeBuild = pkgs.callPackage ./pkgs/desktop/aqua-theme.nix {
+        src = ../src/Desktop/themes;
+        wmThemeScript = ../tools/branding/make-wm-theme.py;
+      };
       imageBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystem;
         extraPackages = imageExtraPackages;
         kc = kcBuild;
         xnuLoader = xnu-loader.packages.${system}.default;
         apfsprogs = pkgs.apfsprogs;
+        aquaTheme = aquaThemeBuild;
         inherit compatCorpus;
         #testAudioFile = /home/vali/development/darwin/stillalive.pcm;
       };
