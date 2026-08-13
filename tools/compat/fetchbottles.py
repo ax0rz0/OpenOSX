@@ -67,14 +67,25 @@ def _get(url, token=None, accept=None, binary=False):
     return raw if binary else json.loads(raw)
 
 
+def api_path(formula):
+    """Formula name as it appears in a ghcr.io repository path.
+
+    Versioned formulae are written `python@3.11` by brew but published as
+    `homebrew/core/python/3.11` - the '@' becomes a path separator. Passing the
+    '@' through unchanged gets an HTTP 400 from the registry, which reads like a
+    network problem rather than a naming one.
+    """
+    return formula.replace('@', '/')
+
+
 def token_for(formula):
     url = ('%s/token?service=ghcr.io&scope=repository:%s/%s:pull'
-           % (REGISTRY, REPO, formula))
+           % (REGISTRY, REPO, api_path(formula)))
     return _get(url)['token']
 
 
 def tags_for(formula, token):
-    url = '%s/v2/%s/%s/tags/list' % (REGISTRY, REPO, formula)
+    url = '%s/v2/%s/%s/tags/list' % (REGISTRY, REPO, api_path(formula))
     return _get(url, token).get('tags', [])
 
 
@@ -84,7 +95,7 @@ def find_bottle(formula, token, tag, target):
     Homebrew names the arm64 variants `arm64_<target>`; the bare `<target>`
     suffix is Intel, which is what we want.
     """
-    url = '%s/v2/%s/%s/manifests/%s' % (REGISTRY, REPO, formula, tag)
+    url = '%s/v2/%s/%s/manifests/%s' % (REGISTRY, REPO, api_path(formula), tag)
     try:
         index = _get(url, token, INDEX_MEDIA)
     except (urllib.error.HTTPError, urllib.error.URLError, ValueError):
@@ -106,26 +117,42 @@ def fetch(formula, target, outdir):
         digest = find_bottle(formula, token, tag, target)
         if not digest:
             continue
-        url = '%s/v2/%s/%s/manifests/%s' % (REGISTRY, REPO, formula, digest)
+        url = '%s/v2/%s/%s/manifests/%s' % (REGISTRY, REPO, api_path(formula), digest)
         manifest = _get(url, token, MANIFEST_MEDIA)
         layers = manifest.get('layers') or []
         if not layers:
             continue
-        blob = '%s/v2/%s/%s/blobs/%s' % (REGISTRY, REPO, formula, layers[0]['digest'])
+        blob = '%s/v2/%s/%s/blobs/%s' % (REGISTRY, REPO, api_path(formula), layers[0]['digest'])
         raw = _get(blob, token, binary=True)
 
         dest = outdir                          # the tarball already roots at <formula>/
         os.makedirs(dest, exist_ok=True)
+        skipped = 0
         with tarfile.open(fileobj=io.BytesIO(raw)) as tf:
-            # Bottles are Homebrew's own artefacts, but extract defensively.
-            members = [m for m in tf.getmembers()
-                       if not m.name.startswith('/') and '..' not in m.name.split('/')]
+            members = []
+            for m in tf.getmembers():
+                if m.name.startswith('/') or '..' in m.name.split('/'):
+                    skipped += 1
+                    continue
+                # Bottles are relocatable, so they are full of links pointing at
+                # the Cellar prefix a Mac would have installed them to
+                # (/usr/local/opt/...). Those resolve to nothing here, and
+                # Python's `data` tar filter refuses the archive outright rather
+                # than skipping them - which is what killed openjdk, node and
+                # lua. Drop them: this corpus exists to be read by machoscan,
+                # and a dangling symlink carries no imports.
+                link = m.linkname or ''
+                if (m.issym() or m.islnk()) and (
+                        link.startswith('/') or '..' in link.split('/')):
+                    skipped += 1
+                    continue
+                members.append(m)
             try:
-                tf.extractall(dest, members=members, filter='data')
+                tf.extractall(dest, members=members, filter='tar')
             except TypeError:                  # filter= is Python 3.12+
                 tf.extractall(dest, members=members)
         return {'formula': formula, 'tag': tag, 'target': target,
-                'bytes': len(raw), 'path': dest}, None
+                'bytes': len(raw), 'path': dest, 'skipped_links': skipped}, None
     return None, 'no %s bottle in any of %d tags' % (target, len(tags))
 
 
@@ -175,8 +202,11 @@ def main():
             info, err = None, str(e)
         if info:
             n = len(executables(info['path']))
-            print('  %-12s %-22s %6.1f KiB  %d Mach-O' %
-                  (f, info['tag'], info['bytes'] / 1024.0, n))
+            note = ''
+            if info.get('skipped_links'):
+                note = '  (%d relocatable links skipped)' % info['skipped_links']
+            print('  %-14s %-22s %8.1f KiB  %4d Mach-O%s' %
+                  (f, info['tag'], info['bytes'] / 1024.0, n, note))
             got.append(info)
         else:
             print('  %-12s %s' % (f, err))
