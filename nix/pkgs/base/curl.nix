@@ -9,6 +9,7 @@
 , curl
 , openssl
 , zlib
+, perl
 , targetTriple ? "x86_64-apple-darwin20.4"
 }:
 
@@ -27,6 +28,13 @@ stdenv.mkDerivation {
   pname = "openosx-curl";
   inherit (curl) version;
   src = curl.src;
+
+  # curl's docs/ Makefile renders man pages with perl regardless of
+  # --disable-manual (mk-ca-bundle.1, curl-config.1, wcurl.1), and without it
+  # the build dies with "/usr/bin/env: 'perl': No such file or directory",
+  # taking git down with it. A host tool only - nothing perl-related reaches
+  # the guest.
+  nativeBuildInputs = [ perl ];
 
   configurePhase = ''
     runHook preConfigure
