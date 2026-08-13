@@ -257,10 +257,21 @@ def titlebar_segment(w, active):
 THEMERC = """\
 # OpenOSX Aqua - xfwm4 theme
 #
-# Buttons live on the left, in close|hide|maximize order, with the title
-# centred in what is left. `button_layout` uses xfwm4's letter codes:
-#   O close   H hide (minimise)   M maximise   T title   S shade   | spacer
-button_layout=OHM|T|
+# Buttons live on the left, close|minimise|maximise, with the title centred in
+# what is left.
+#
+# The letter codes are NOT the mnemonic ones. Read out of xfwm4-settings' own
+# UI, where each draggable button widget is id="button-layout-<letter>" next to
+# its label:
+#
+#   C close    H minimise   M maximise
+#   O MENU     T STICK      S shade      | the title, which cannot be removed
+#
+# So "O" is the window menu, not "open/close", and "T" is stick, not title. An
+# earlier version of this file said OHM| and would have shipped a titlebar whose
+# red dot opened the window menu and which had no close button at all - an
+# unrecognised or misread letter is skipped silently rather than erroring.
+button_layout=CHM|
 button_offset=8
 button_spacing=2
 title_horizontal_offset=0

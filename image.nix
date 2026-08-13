@@ -712,8 +712,14 @@ EOF
     <property name="theme" type="string" value="OpenOSX-Aqua"/>
     <!-- Buttons left, title centred. themerc sets this too, but xfconf wins
          over the theme file, so an unset key here would quietly restore
-         xfwm4's own right-hand layout. -->
-    <property name="button_layout" type="string" value="OHM|"/>
+         xfwm4's own right-hand layout.
+
+         C=close H=minimise M=maximise, and the letters are not the mnemonic
+         ones: O is the window MENU and T is STICK. Verified against
+         xfwm4-settings' embedded UI, where each draggable button is
+         id="button-layout-<letter>" beside its label. "OHM|" - which this was -
+         means menu/minimise/maximise and ships no close button at all. -->
+    <property name="button_layout" type="string" value="CHM|"/>
     <property name="title_alignment" type="string" value="center"/>
     <property name="title_font" type="string" value="Sans Bold 9"/>
     <property name="click_to_focus" type="bool" value="true"/>
