@@ -68,8 +68,14 @@ plus the whole legacy `NS*`/dyld-introspection surface from
 `$INODE64` aliases. They were in the objects all along and then removed by
 `-dead_strip` for want of a line in `libSystem.exports`.
 
-**Measured result: 135 → 22 remaining**, of which 9 are the deliberate Sun
-RPC/NIS skips. libSystem went from 1969 to 2089 exported symbols.
+**Measured result: 135 → 11 remaining**, of which **10 are the deliberate Sun
+RPC/NIS skips**. libSystem went from 1969 to 2101 exported symbols.
+
+The last genuinely outstanding one was `__os_signpost_emit_with_name_impl`
+(node), and it was an underscore count: `os_signpost_event_emit()` expands to a
+call to `_os_signpost_emit_with_name_impl`, one underscore fewer than the
+`__os_signpost_*` forms `libsystem_trace/signpost.c` defined. Fixed; pending a
+rebuild to confirm.
 
 ### Four ways a symbol can look present and not be
 
