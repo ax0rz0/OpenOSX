@@ -335,5 +335,93 @@ def main():
         print('\nwrote %s' % out)
 
 
+# --------------------------------------------------------------------------
+# Convenience entry points.
+#
+# These exist because the raw API has been misused three separate times, always
+# silently and always producing a confident empty answer:
+#
+#   - slices() yields (cputype, offset), NOT (offset, size). Unpacking it the
+#     other way passes the CPU type to parse() as a file offset, every parse
+#     raises, and a caller's `except: continue` swallows the lot.
+#   - parse() returns 'dylibs' and 'undefined'. There are no keys named
+#     'libraries' or 'imports', so .get() on those returns None and the caller
+#     concludes the binary imports nothing.
+#
+# A scan that returns nothing looks exactly like a finding, which is what makes
+# this class of mistake expensive. Use these instead of hand-rolling the loop.
+
+
+MACHO_MAGICS = (
+    bytes.fromhex("cffaedfe"),   # MH_MAGIC_64, little endian
+    bytes.fromhex("cafebabe"),   # FAT_MAGIC (universal binary)
+    bytes.fromhex("cefaedfe"),   # MH_MAGIC, 32-bit
+)
+
+
+def is_macho(path):
+    """True if path is a Mach-O file, by magic rather than by permission bits.
+
+    Extraction from a DMG or a tarball routinely drops the execute bit, so
+    testing for it misses most of a corpus.
+    """
+    try:
+        with open(path, "rb") as fh:
+            return fh.read(4) in MACHO_MAGICS
+    except OSError:
+        return False
+
+
+def scan(path):
+    """Every 64-bit slice of one Mach-O, parsed. Returns a list of dicts.
+
+    Each dict is parse()'s output plus 'cputype'. Raises nothing for a
+    non-Mach-O - it returns an empty list, so `for s in scan(p)` is safe.
+    """
+    try:
+        data = open(path, 'rb').read()
+    except OSError:
+        return []
+    out = []
+    for cputype, base in slices(data):
+        try:
+            info = parse(data, base)
+        except Exception:
+            continue
+        info['cputype'] = cputype
+        out.append(info)
+    return out
+
+
+def walk_machos(root):
+    """Yield (path, slice_info) for every Mach-O slice under root.
+
+    Symlinks are skipped: a relocatable bottle is full of links pointing at a
+    Cellar prefix that does not exist here, and following them double-counts
+    the ones that do resolve.
+    """
+    for dirpath, _dirs, files in os.walk(root):
+        for f in files:
+            p = os.path.join(dirpath, f)
+            if os.path.islink(p) or not is_macho(p):
+                continue
+            for info in scan(p):
+                yield p, info
+
+
+def imports_by_library(info):
+    """{library path: [symbol, ...]} for one slice, from parse()'s 'undefined'."""
+    out = {}
+    for u in (info.get('undefined') or []):
+        out.setdefault(u.get('library') or '', []).append(u.get('symbol'))
+    return out
+
+
+def links_against(info, needle):
+    """True if any linked dylib's path contains needle (e.g. 'Cocoa')."""
+    return any(needle in str(d) for d in (info.get('dylibs') or [])) or            any(needle in str(d) for d in (info.get('weak_dylibs') or []))
+
+
+
 if __name__ == '__main__':
     main()
