@@ -20,7 +20,33 @@ keytool, jar, jshell, wish8.6 and 32 other binaries** that link Cocoa and then
 never touch a single AppKit symbol. They fail today at load, on the framework's
 absence, not on anything they use.
 
-That is a few lines of nix for a third of the corpus.
+**Built and verified.** `nix/pkgs/apple/cocoa.nix` produces a 4,248-byte
+x86_64 Mach-O dylib whose `LC_ID_DYLIB` is exactly
+`/System/Library/Frameworks/Cocoa.framework/Versions/A/Cocoa`. Measured, the 33
+binaries it unblocks are:
+
+```
+jar        jarsigner  java       javac      javadoc    javap      jcmd
+jconsole   jdb        jdeprscan  jdeps      jfr        jhsdb      jimage
+jinfo      jlink      jmap       jmod       jpackage   jps        jrunscript
+jshell     jstack     jstat      jstatd     jwebserver keytool    rmiregistry
+serialver  wish8.6    libawt.dylib  libjawt.dylib  libinstrument.dylib
+```
+
+It deliberately re-exports nothing. An `LC_REEXPORT_DYLIB` naming a dylib that
+is not present fails at load — worse than the absence it replaces — and AppKit
+does not exist yet. Foundation is left out too, even though it exists: a binary
+that resolves Foundation symbols through Cocoa today and through AppKit
+tomorrow is a binding whose meaning silently changes.
+
+### Measuring this took three corrections to the scanning code
+
+All the same class of error, and all silent. `machoscan.parse` returns
+`dylibs` and `undefined` — not `libraries`/`imports`. And `slices()` yields
+`(cputype, offset)`, not `(offset, size)`; passing the CPU type as a file offset
+makes every `parse()` raise into an `except` that swallows it. The first run of
+this scan confidently reported **zero** Cocoa linkers. A scan that returns
+nothing looks exactly like a finding.
 
 ## NSGeometry belongs in Foundation
 
