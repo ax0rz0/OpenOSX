@@ -150,6 +150,7 @@
 , openglFrameworkBuild
 , coregraphicsBuild
 , corevideoBuild
+, cocoaBuild
 , metalBuild
 , opensshBuild
 , opensslBuild
@@ -477,6 +478,7 @@ let
     coregraphics = coregraphicsBuild;
     corevideo = corevideoBuild;
     metal = metalBuild;
+    cocoa = cocoaBuild;
     i3 = i3Build;
     i3status = i3statusShimBuild;
     startup-notification = startupNotificationBuild;

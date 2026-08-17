@@ -2684,6 +2684,16 @@
             };
           # Metal.framework: nil-device probe stub so Metal-probing apps fall
           # back to OpenGL. No driver.
+          # Cocoa is an umbrella with no code of its own. 33 binaries in the
+          # measured corpus - the whole JDK toolchain - link it and import
+          # nothing from it, so they fail on its absence alone. It needs only
+          # libSystem: no objc, no Foundation, nothing to re-export yet.
+          cocoaBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/cocoa.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              src = ./src/Libraries/Cocoa;
+            };
           metalBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/metal.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -3136,7 +3146,7 @@
               libpngBuild libutf8procBuild libwapcapletBuild libwnckBuild libxfce4uiBuild
               libxfce4utilBuild libxfce4windowingBuild libxml2Build libzDylibBuild mesaBuild
               mesaDemosBuild migcomDarwinBuild mkPureDarwinBuild clangCrossBuild cmakeBuild kcToolsGuestBuild mesonBuild nanoBuild nativeLd ncursesBuild ninjaBuild
-              netsurfBuild objcTestBuild openglFrameworkBuild coregraphicsBuild corevideoBuild metalBuild opensshBuild opensslBuild
+              netsurfBuild objcTestBuild openglFrameworkBuild coregraphicsBuild corevideoBuild metalBuild cocoaBuild opensshBuild opensslBuild
               pangoBuild pcre2Build pdVirglShimBuild pkgconfBuild pkgs pythonBuild
               securityBuild splitBaseSystemArm64VirtMinimal splitBaseSystemArm64VirtMinimalRelease
               startupNotificationBuild system systemConfigurationBuild systemStarterBuild tccBuild
