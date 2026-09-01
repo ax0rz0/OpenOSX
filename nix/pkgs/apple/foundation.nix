@@ -36,6 +36,13 @@ let
     "Collections.subproj/NSDictionary"
     "URL.subproj/NSURL"
     "Runtime.subproj/NSError"
+    # Everything openjdk's libjli.dylib needs, and nothing more. Measured: it
+    # references two Foundation classes and sends five selectors -
+    # blockOperationWithBlock:, drain, init, start, and
+    # performSelectorOnMainThread:withObject:waitUntilDone:
+    "Runtime.subproj/NSAutoreleasePool"
+    "Runtime.subproj/NSObjectMainThread"
+    "Operation.subproj/NSBlockOperation"
   ];
 in
 stdenv.mkDerivation {
@@ -60,7 +67,7 @@ stdenv.mkDerivation {
     # these sources and its own real Foundation.framework/*.h must not be
     # picked up here.
     mkdir -p foundation-headers/Foundation
-    find Runtime.subproj String.subproj Collections.subproj URL.subproj -name '*.h' -exec cp {} foundation-headers/Foundation/ \;
+    find Runtime.subproj String.subproj Collections.subproj URL.subproj Operation.subproj -name '*.h' -exec cp {} foundation-headers/Foundation/ \;
 
     # corefoundation.nix installs its headers flattened into $out/include
     # (no "CoreFoundation/" subdirectory) - stage the same
@@ -118,9 +125,9 @@ stdenv.mkDerivation {
     ln -s C "$frameworkDir/Versions/Current"
     ln -s Versions/Current/Foundation "$frameworkDir/Foundation"
     mkdir -p "$frameworkDir/Versions/C/Headers"
-    find Runtime.subproj String.subproj Collections.subproj URL.subproj -name '*.h'       -exec cp {} "$frameworkDir/Versions/C/Headers/" \;
+    find Runtime.subproj String.subproj Collections.subproj URL.subproj Operation.subproj -name '*.h'       -exec cp {} "$frameworkDir/Versions/C/Headers/" \;
     ln -s Versions/Current/Headers "$frameworkDir/Headers"
-    find Runtime.subproj String.subproj Collections.subproj URL.subproj -name '*.h' -exec cp {} $out/usr/include/Foundation/ \;
+    find Runtime.subproj String.subproj Collections.subproj URL.subproj Operation.subproj -name '*.h' -exec cp {} $out/usr/include/Foundation/ \;
     runHook postInstall
   '';
 
