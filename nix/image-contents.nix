@@ -725,7 +725,11 @@ let
         imageFileName = "openosx-arm64-virt-minimal-release.img";
         bootArgs = "serial=3 -noprogress ahci_debug=1 kext=0xffff io=0xffff";
       };
-      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild gsbaseTestBuild ];
+      # libz-dylib is here because node and openjdk both fail at load with
+      # "Library not loaded: /usr/lib/libz.1.dylib" without it. It was already
+      # built for the guest and simply absent from the minimal image's set - a
+      # missing package, not a missing implementation.
+      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild gsbaseTestBuild libzDylibBuild ];
       imageStrippedBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystemStripped;
         extraPackages = strippedExtraPackages;

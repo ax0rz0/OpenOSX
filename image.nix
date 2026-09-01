@@ -320,7 +320,10 @@ if [ -d /opt/compat-test ] && [ ! -e /etc/openosx/no-compat-smoke ]; then
     # code, turning five dyld load failures into five confident PASS lines.
     out=$("$bin" "$@" 2>&1)
     rc=$?
-    out=$(printf '%s' "$out" | head -3 | tr '
+    # 6 lines, not 3: ruby prints three "not loaded" warnings about its gem
+    # paths before it gets to the answer, and trimming at 3 hid the fact that it
+    # had run correctly.
+    out=$(printf '%s' "$out" | head -6 | tr '
 ' ' ')
     if [ $rc -eq 0 ]; then
       echo "openosx-compat: $name PASS rc=0 :: $out"
