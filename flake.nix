@@ -173,6 +173,14 @@
             # source tree here, so it is a genuine libSystem input - unlike the
             # frameworks above it, which are not.
             "src/Libraries/objc4"
+            # libdispatch's data.m and object.m import <Foundation/NSString.h>
+            # under USE_OBJC=1. Kept whole rather than split: Foundation mixes
+            # headers and .m files in the same subprojs, so there is no directory
+            # boundary to cut along, and listing individual headers would break
+            # the moment a new class is added to the umbrella. The prize here was
+            # CoreFoundation - 98 sources and the bridging work - and that stays
+            # out.
+            "src/Libraries/Foundation"
             "src/Libraries/libSystem"
             "src/Libraries/libdarwin"
             "src/Libraries/libsystem_trace"
