@@ -733,7 +733,7 @@ let
       # "Library not loaded: /usr/lib/libz.1.dylib"; with it, java's next error
       # is the Cocoa umbrella, which is exactly what that umbrella exists for.
       # Missing packages, not missing implementations.
-      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild gsbaseTestBuild libzDylibBuild cocoaBuild securityBuild applicationServicesBuild ];
+      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild gsbaseTestBuild libzDylibBuild cocoaBuild securityBuild applicationServicesBuild foundationBuild ];
       imageStrippedBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystemStripped;
         extraPackages = strippedExtraPackages;
