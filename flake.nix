@@ -181,6 +181,15 @@
             # CoreFoundation - 98 sources and the bridging work - and that stays
             # out.
             "src/Libraries/Foundation"
+            # Foundation's NSObjCRuntime.h includes <CoreFoundation/CFAvailability.h>.
+            # CF mixes headers and sources in the same subprojs (Base.subproj is
+            # 18 .h and 10 .c), so there is no boundary to cut along here either.
+            #
+            # This costs less than it looks: CoreFoundation is its own derivation,
+            # so `nix build .#corefoundation` validates a CF change in minutes
+            # regardless of libSystem's hash. The coupling only bites on a full
+            # image build, which is a once-per-batch cost anyway.
+            "src/Libraries/CoreFoundation"
             "src/Libraries/libSystem"
             "src/Libraries/libdarwin"
             "src/Libraries/libsystem_trace"
