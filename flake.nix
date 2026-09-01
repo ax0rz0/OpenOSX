@@ -167,6 +167,12 @@
             # which lives here. Found by the narrowed build failing loudly on
             # exactly that header, which is the behaviour this filter should have.
             "src/Libraries/llvm-libc"
+            # libdispatch's os/object.h and object_internal.h include
+            # <objc/NSObject.h> and <objc/objc.h>: dispatch objects are ObjC
+            # objects under OS_OBJECT_USE_OBJC. Headers come from the objc4
+            # source tree here, so it is a genuine libSystem input - unlike the
+            # frameworks above it, which are not.
+            "src/Libraries/objc4"
             "src/Libraries/libSystem"
             "src/Libraries/libdarwin"
             "src/Libraries/libsystem_trace"
