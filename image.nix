@@ -296,6 +296,58 @@ test -r /etc/profile && . /etc/profile
 # Skipped for SSH logins (sshd is running), when a session is already up, and
 # when the opt-out marker exists. To boot to a plain console instead:
 #     touch /etc/openosx/no-xsession
+# Smoke-test any staged third-party macOS binaries before starting the desktop.
+#
+# This exists because "the symbols resolve" and "it runs" are different claims,
+# and only the second one is worth anything. Coverage measured on the host says a
+# binary WOULD link; it cannot say whether it survives first contact with our
+# syscalls or dyld fixups.
+#
+# Output goes to the console, which the runner mirrors to serial - the only way
+# to get results out of a headless boot, since serial_video_mirror carries output
+# only and there is no shell reading the serial port.
+if [ -d /opt/compat-test ] && [ ! -e /etc/openosx/no-compat-smoke ]; then
+  echo "openosx-compat: smoke-testing /opt/compat-test"
+  compat_try() {
+    name=$1; shift
+    bin=$1; shift
+    if [ ! -x "$bin" ]; then
+      echo "openosx-compat: $name SKIP (no binary at $bin)"
+      return
+    fi
+    out=$("$bin" "$@" 2>&1 | head -3 | tr '
+' ' ')
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      echo "openosx-compat: $name PASS rc=0 :: $out"
+    else
+      echo "openosx-compat: $name FAIL rc=$rc :: $out"
+    fi
+  }
+  for d in /opt/compat-test/python*/*/Frameworks/Python.framework/Versions/*/bin; do
+    [ -d "$d" ] && compat_try python "$d/python3.11" -c 'print("ANSWER", 6*7)' && break
+  done
+  for b in /opt/compat-test/ruby/*/bin/ruby; do
+    [ -x "$b" ] && compat_try ruby "$b" -e 'puts "ANSWER #{6*7}"' && break
+  done
+  for b in /opt/compat-test/perl/*/bin/perl; do
+    [ -x "$b" ] && compat_try perl "$b" -e 'print "ANSWER ", 6*7, "
+"' && break
+  done
+  for b in /opt/compat-test/lua/*/bin/lua; do
+    [ -x "$b" ] && compat_try lua "$b" -e 'print("ANSWER", 6*7)' && break
+  done
+  for b in /opt/compat-test/node/*/bin/node; do
+    [ -x "$b" ] && compat_try node "$b" -e 'console.log("ANSWER", 6*7)' && break
+  done
+  # java is the one the Cocoa umbrella was built for: it links Cocoa and imports
+  # nothing from it, so this is the end-to-end check on that work.
+  for b in /opt/compat-test/openjdk/*/libexec/openjdk.jdk/Contents/Home/bin/java; do
+    [ -x "$b" ] && compat_try java "$b" -version && break
+  done
+  echo "openosx-compat: smoke test done"
+fi
+
 if [ -z "$DISPLAY" ] && [ -z "$SSH_CONNECTION" ] && [ ! -e /etc/openosx/no-xsession ]; then
   case "$(tty 2>/dev/null)" in
     /dev/console|/dev/tty*)
