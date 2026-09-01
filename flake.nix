@@ -163,6 +163,10 @@
             # sibling directories rather than from their own CMakeLists.
             "src/Libraries/libcxx"
             "src/Libraries/libunwind"
+            # libcxx's from_chars_floating_point.h includes <shared/fp_bits.h>,
+            # which lives here. Found by the narrowed build failing loudly on
+            # exactly that header, which is the behaviour this filter should have.
+            "src/Libraries/llvm-libc"
             "src/Libraries/libSystem"
             "src/Libraries/libdarwin"
             "src/Libraries/libsystem_trace"
