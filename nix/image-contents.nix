@@ -725,11 +725,13 @@ let
         imageFileName = "openosx-arm64-virt-minimal-release.img";
         bootArgs = "serial=3 -noprogress ahci_debug=1 kext=0xffff io=0xffff";
       };
-      # libz-dylib is here because node and openjdk both fail at load with
-      # "Library not loaded: /usr/lib/libz.1.dylib" without it. It was already
-      # built for the guest and simply absent from the minimal image's set - a
-      # missing package, not a missing implementation.
-      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild gsbaseTestBuild libzDylibBuild ];
+      # libz-dylib and cocoa are here for the same reason: both were already
+      # built for the guest and simply absent from the minimal image's set.
+      # Without libz, node and openjdk fail at load on
+      # "Library not loaded: /usr/lib/libz.1.dylib"; with it, java's next error
+      # is the Cocoa umbrella, which is exactly what that umbrella exists for.
+      # Missing packages, not missing implementations.
+      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild gsbaseTestBuild libzDylibBuild cocoaBuild ];
       imageStrippedBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystemStripped;
         extraPackages = strippedExtraPackages;
