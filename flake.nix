@@ -140,7 +140,47 @@
             "src/Kernel/xnu/bsd/uuid"
             "src/Kernel/xnu/bsd/kern/makesyscalls.sh"
             "src/Kernel/xnu/bsd/kern/syscalls.master"
-            "src/Libraries"
+            # Was a blanket "src/Libraries", which meant every framework in the
+            # tree - CoreFoundation, Foundation, CoreGraphics, Security, Cocoa -
+            # was part of libSystem's source hash. Editing any of them rebuilt
+            # libSystem and therefore the entire guest: 4+ hours for a one-line
+            # change to a framework libSystem does not even know about. That is
+            # the single biggest reason Foundation is still 443 lines.
+            #
+            # This list is exactly the directories src/Libraries/CMakeLists.txt
+            # configures (its foreach at line 1), plus the three cross-references
+            # those directories actually make. Anything not listed is skipped by
+            # that file's `if(EXISTS .../CMakeLists.txt)` guard, so omitting a
+            # framework is not a silent breakage - it is the intended behaviour.
+            "src/Libraries/CMakeLists.txt"
+            "src/Libraries/AvailabilityVersions"
+            "src/Libraries/architecture"
+            "src/Libraries/CrashReporterClient"
+            "src/Libraries/CommonCrypto"
+            "src/Libraries/clang_bootstrap"
+            "src/Libraries/libcxxabi"
+            # libcxxabi/CMakeLists.txt builds the unwinder and libc++ from these
+            # sibling directories rather than from their own CMakeLists.
+            "src/Libraries/libcxx"
+            "src/Libraries/libunwind"
+            "src/Libraries/libSystem"
+            "src/Libraries/libdarwin"
+            "src/Libraries/libsystem_trace"
+            "src/Libraries/mDNSResponder"
+            "src/Libraries/libresolv"
+            "src/Libraries/libSystemConfiguration"
+            "src/Libraries/XPC"
+            "src/Libraries/syslog"
+            "src/Libraries/SystemConfiguration"
+            "src/Libraries/DiskArbitration"
+            "src/Libraries/dyld"
+            "src/Libraries/IOKit"
+            "src/Libraries/PDGOP"
+            # SystemConfiguration and DiskArbitration include Security/Authorization.h,
+            # SecBase.h, SecItem.h, SecKeychain.h and SecTask.h. Headers only -
+            # Security's own sources stay out, so Secure Transport work no longer
+            # rebuilds the guest either.
+            "src/Libraries/Security/include"
             "src/Libraries/libSystem/libmalloc/compat-include"
             "tools/mig"
             # libobjc needs the mach-o getsection helpers compiled into libSystem.
