@@ -746,7 +746,10 @@ let
         inherit compatCorpus;
         imageFileName = "openosx-minimal.img";
         espMB = 64;
-        rootMB = 384;
+        # 384 MB is right for a bare minimal image, but the compat corpus is
+        # hundreds of megabytes of third-party binaries - the full runtime set is
+        # 690 MB - so make room only when one is actually staged.
+        rootMB = if compatCorpus != null then 2048 else 384;
         bootArgs = "debug=0x219 -nogzalloc_mode keepsyms=1 serial=3 gopconsole=1 -noprogress gen9_debug=1";
       };
       imageMinimalBuildDebug = pkgs.callPackage ../image.nix {
