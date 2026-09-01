@@ -88,7 +88,7 @@ stdenv.mkDerivation {
       -fuse-ld=${nativeLd}/bin/ld -nostdlib \
       -L${libSystem}/usr/lib -L${libobjc}/usr/lib -L${corefoundation}/usr/lib \
       -Wl,-platform_version,macos,11.0,11.5 \
-      -Wl,-install_name,/usr/lib/libFoundation.dylib \
+      -Wl,-install_name,/System/Library/Frameworks/Foundation.framework/Versions/C/Foundation \
       -Wl,-fixup_chains \
       -lobjc -lCoreFoundation -lSystem \
       -o libFoundation.dylib $objs
@@ -100,6 +100,26 @@ stdenv.mkDerivation {
     runHook preInstall
     mkdir -p $out/usr/lib $out/usr/include/Foundation
     cp libFoundation.dylib $out/usr/lib/
+
+    # Also install the framework layout, because that is the path binaries
+    # actually ask dyld for:
+    #   /System/Library/Frameworks/Foundation.framework/Versions/C/Foundation
+    #
+    # Note the C. Foundation is one of the frameworks that never moved off its
+    # historical version letter - it is Versions/C where almost everything else
+    # is Versions/A - and a binary asking for C does not fall back to A.
+    #
+    # openjdk's libjli.dylib is what surfaced this: Foundation was built and
+    # staged, but only as /usr/lib/libFoundation.dylib, so the framework path
+    # did not exist and java failed at load with "image not found".
+    frameworkDir="$out/System/Library/Frameworks/Foundation.framework"
+    mkdir -p "$frameworkDir/Versions/C"
+    cp libFoundation.dylib "$frameworkDir/Versions/C/Foundation"
+    ln -s C "$frameworkDir/Versions/Current"
+    ln -s Versions/Current/Foundation "$frameworkDir/Foundation"
+    mkdir -p "$frameworkDir/Versions/C/Headers"
+    find Runtime.subproj String.subproj Collections.subproj URL.subproj -name '*.h'       -exec cp {} "$frameworkDir/Versions/C/Headers/" \;
+    ln -s Versions/Current/Headers "$frameworkDir/Headers"
     find Runtime.subproj String.subproj Collections.subproj URL.subproj -name '*.h' -exec cp {} $out/usr/include/Foundation/ \;
     runHook postInstall
   '';
