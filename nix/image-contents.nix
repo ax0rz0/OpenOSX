@@ -150,6 +150,7 @@
 , openglFrameworkBuild
 , coregraphicsBuild
 , corevideoBuild
+, applicationServicesBuild
 , cocoaBuild
 , metalBuild
 , opensshBuild
@@ -479,6 +480,7 @@ let
     corevideo = corevideoBuild;
     metal = metalBuild;
     cocoa = cocoaBuild;
+    applicationservices = applicationServicesBuild;
     i3 = i3Build;
     i3status = i3statusShimBuild;
     startup-notification = startupNotificationBuild;
@@ -731,7 +733,7 @@ let
       # "Library not loaded: /usr/lib/libz.1.dylib"; with it, java's next error
       # is the Cocoa umbrella, which is exactly what that umbrella exists for.
       # Missing packages, not missing implementations.
-      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild gsbaseTestBuild libzDylibBuild cocoaBuild ];
+      strippedExtraPackages = [ zshBuild toyboxBuild libiconvBuild coreFoundationBuild icuCoreBuild iokitBuild coreServicesBuild libcxxabiDylibBuild libcxxDylibBuild libcxxTestBuild libobjcBuild objcTestBuild gsbaseTestBuild libzDylibBuild cocoaBuild securityBuild applicationServicesBuild ];
       imageStrippedBuild = pkgs.callPackage ../image.nix {
         baseSystem = splitBaseSystemStripped;
         extraPackages = strippedExtraPackages;

@@ -2761,6 +2761,14 @@
               libSystem = libSystemBuild;
               src = ./src/Libraries/Cocoa;
             };
+          # Same shape as cocoaBuild: an umbrella that binaries link and do not
+          # use. openjdk's java links it and imports nothing from it.
+          applicationServicesBuild =
+            if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/applicationservices.nix {
+              inherit darwinCrossToolchain nativeLd;
+              libSystem = libSystemBuild;
+              src = ./src/Libraries/ApplicationServices;
+            };
           metalBuild =
             if isDarwin then null else pkgs.callPackage ./nix/pkgs/apple/metal.nix {
               inherit darwinCrossToolchain nativeLd;
@@ -3213,7 +3221,7 @@
               libpngBuild libutf8procBuild libwapcapletBuild libwnckBuild libxfce4uiBuild
               libxfce4utilBuild libxfce4windowingBuild libxml2Build libzDylibBuild mesaBuild
               mesaDemosBuild migcomDarwinBuild mkPureDarwinBuild clangCrossBuild cmakeBuild kcToolsGuestBuild mesonBuild nanoBuild nativeLd ncursesBuild ninjaBuild
-              netsurfBuild objcTestBuild openglFrameworkBuild coregraphicsBuild corevideoBuild metalBuild cocoaBuild opensshBuild opensslBuild
+              netsurfBuild objcTestBuild openglFrameworkBuild coregraphicsBuild corevideoBuild metalBuild cocoaBuild applicationServicesBuild opensshBuild opensslBuild
               pangoBuild pcre2Build pdVirglShimBuild pkgconfBuild pkgs pythonBuild
               securityBuild splitBaseSystemArm64VirtMinimal splitBaseSystemArm64VirtMinimalRelease
               startupNotificationBuild system systemConfigurationBuild systemStarterBuild tccBuild
