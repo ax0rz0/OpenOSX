@@ -315,9 +315,13 @@ if [ -d /opt/compat-test ] && [ ! -e /etc/openosx/no-compat-smoke ]; then
       echo "openosx-compat: $name SKIP (no binary at $bin)"
       return
     fi
-    out=$("$bin" "$@" 2>&1 | head -3 | tr '
-' ' ')
+    # Capture the status of the BINARY, not of the pipeline's last stage. An
+    # earlier version read $? after `| head -3` and so reported head's exit
+    # code, turning five dyld load failures into five confident PASS lines.
+    out=$("$bin" "$@" 2>&1)
     rc=$?
+    out=$(printf '%s' "$out" | head -3 | tr '
+' ' ')
     if [ $rc -eq 0 ]; then
       echo "openosx-compat: $name PASS rc=0 :: $out"
     else
