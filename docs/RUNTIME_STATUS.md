@@ -73,12 +73,31 @@ libjvm needs only libSystem (226 symbols) and libc++ (5), and **every one
 resolves** — the only apparent miss, `dyld_stub_binder`, is re-exported from
 libdyld and is a known false positive in `coverage.py`.
 
-What distinguishes libjvm from everything that loads: it is the only one with
-`HAS_TLV_DESCRIPTORS` and thread-local storage. `libjli` and Python have neither.
-That makes dyld's thread-local variable setup for `dlopen`'d images the next
-thing to investigate. `threadLocalVariables.c` and all three
-`ImageLoaderMachO*.cpp` are compiled into our dyld, so this is a behaviour
-question, not a missing-file one.
+What distinguishes libjvm from everything that loads is that it is the only
+binary in the corpus with thread-local storage - and a source investigation
+**ruled that out** as the cause. dyld2 never touches `S_THREAD_LOCAL_*` sections
+at load time by design; dlopen'd and launch-time images reach the same TLV
+initialisation through the same add-image callback; and libpthread provides
+everything the TLV runtime needs. Twenty-one claims verified line by line, none
+refuted.
+
+What it found instead is that **the error message carried no information.**
+`"image not loaded"` is not a dyld string. It is emitted by OpenOSX's own dlopen
+shim (`pd_libSystem_compat.c:220`) for *every* failed dlopen. dyld had recorded
+the real reason - `dlopen_internal` throws, the catch at `dyldAPIs.cpp:1666`
+formats it, `dlerrorSet` writes it into the helper-table buffer - but dyld's
+`dlerror()` checks `hasPerThreadBufferFor_dlerror()` before reading, and the
+stub hard-coded that to `false` (`pd_libSystem_init.c:122`). So every dlopen
+failure in the system discarded its diagnosis and fell back to the placeholder.
+
+Fixed in the stub: the helper answers `true`, and the buffer grows on demand
+instead of returning `NULL` for messages over 512 bytes - which `dlerrorSet`
+dereferences unchecked, so a long "no suitable image found... tried:" message
+was a segfault inside dyld rather than a report. **Next step is simply to
+rebuild libSystem and run java again: it will print the actual cause.** The
+remaining candidates from the investigation are code-signature registration,
+weak-definition coalescing (libjvm is the only C++ image in the corpus), and
+initializer-pointer validation - all of which produce distinct messages.
 
 ## Two lessons that cost build cycles
 
