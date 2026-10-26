@@ -1,0 +1,21 @@
+[    0.360] INFO  ax3d_gfx::instance: vulkan instance created (loader 1.4.357, validation off, debug utils on); shared process-wide and kept until exit
+[    0.362] INFO  ax3d_gfx::device: adapter 0: NVIDIA GeForce RTX 4070 (NVIDIA, discrete GPU, Vulkan 1.4.351, driver NVIDIA 617.14, 12010 MiB local)
+[    0.475] INFO  ax3d_gfx::device: device created on NVIDIA GeForce RTX 4070 (NVIDIA discrete GPU), queue family 0, bindless true, anisotropy true
+[    0.475] INFO  ax3d_render::renderer: shader directory C:\Users\poopy\OneDrive\Documents\claude-workspace\ax3d\bin\../shaders
+[    0.483] INFO  ax3d_render::resources: bindless texture table with 4096 slots
+[    0.486] INFO  ax3d_render::shaders: shader 'mesh.vert' loaded (1454 words)
+[    0.495] INFO  ax3d_render::shaders: shader 'pbr.frag' loaded (12010 words)
+[    0.497] INFO  ax3d_render::shaders: shader 'shadow.vert' loaded (1078 words)
+[    0.498] INFO  ax3d_render::shaders: shader 'shadow.frag' loaded (1138 words)
+[    0.498] INFO  ax3d_render::shaders: shader 'fullscreen.vert' loaded (269 words)
+[    0.500] INFO  ax3d_render::shaders: shader 'sky.frag' loaded (1854 words)
+[    0.500] INFO  ax3d_render::shaders: shader 'lines.vert' loaded (252 words)
+[    0.500] INFO  ax3d_render::shaders: shader 'lines.frag' loaded (89 words)
+[    0.622] INFO  ax3d_render::shaders: shader 'lightshadow.vert' loaded (1203 words)
+[    0.644] INFO  ax3d_render::shaders: shader 'ibl_sky.frag' loaded (2496 words)
+[    0.650] INFO  ax3d_render::shaders: shader 'ibl_irradiance.frag' loaded (2666 words)
+[    0.654] INFO  ax3d_render::shaders: shader 'ibl_prefilter.frag' loaded (2521 words)
+[    0.659] INFO  ax3d_render::shaders: shader 'ibl_brdf.frag' loaded (2511 words)
+[    0.663] INFO  ax3d_render::ibl: image-based lighting: sky cube 128x128, irradiance 32x32, prefiltered 128x128 with 7 levels, split sum table 128x128; first bake 1.59 ms
+[    0.668] INFO  ax3d::engine: ax3d 0.1.0 on NVIDIA GeForce RTX 4070 (NVIDIA), headless 960x540
+[    0.669] INFO  ax3d::audio: audio: silent on 'silent' at 48000 Hz
